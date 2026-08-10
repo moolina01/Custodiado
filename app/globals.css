@@ -24,3 +24,308 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* -----------------------------------------------------------------------
+ * Custodio landing page
+ * Global styles (resets, keyframes, hover states) used by the components
+ * in `components/custodio/`. Kept here instead of an injected <style> tag
+ * so they're parsed once as a real stylesheet instead of on every render.
+ * --------------------------------------------------------------------- */
+.custodio-landing {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: #f6f9f8;
+  color: #0f241f;
+  line-height: 1.5;
+  overflow-x: hidden;
+  letter-spacing: -0.011em;
+}
+.custodio-landing a {
+  color: #0e3a34;
+  text-decoration: none;
+}
+.custodio-landing a:hover {
+  color: #f28c38;
+}
+.custodio-landing * {
+  box-sizing: border-box;
+}
+
+/* -----------------------------------------------------------------------
+ * Custodio deal flow (/flujo)
+ * Same reset as `.custodio-landing` plus the focus ring for the wizard's
+ * text inputs, which inline styles can't express (no `:focus` support).
+ * --------------------------------------------------------------------- */
+.flujo-page {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: #f6f9f8;
+  color: #0f241f;
+  line-height: 1.5;
+  min-height: 100vh;
+  letter-spacing: -0.011em;
+}
+.flujo-page a {
+  color: #0e3a34;
+  text-decoration: none;
+}
+.flujo-page a:hover {
+  color: #f28c38;
+}
+.flujo-page * {
+  box-sizing: border-box;
+}
+.flujo-input {
+  font-family: inherit;
+}
+.flujo-input:focus {
+  outline: none;
+  border-color: #0f6e5c !important;
+  box-shadow: 0 0 0 3px rgba(15, 110, 92, 0.12);
+}
+
+@keyframes qrPulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(0.94);
+  }
+}
+@keyframes dotBlink {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes qrSweep2 {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(220%);
+  }
+}
+@media (min-width: 720px) {
+  .nav-link {
+    display: inline-block !important;
+  }
+}
+@media (max-width: 760px) {
+  .flujo-notas {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+}
+@media (max-width: 720px) {
+  .paso-fila {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+}
+@media (max-width: 980px) {
+  .tri-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+@media (max-width: 660px) {
+  .tri-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+@keyframes codeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes codeFlip {
+  0%,
+  8% {
+    opacity: 0;
+    transform: translateY(10px) rotateX(-55deg);
+  }
+  16%,
+  62% {
+    opacity: 1;
+    transform: none;
+  }
+  72%,
+  92% {
+    opacity: 1;
+    transform: none;
+    background: #fdecdc;
+    border-color: #f3d8b8;
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes statusSwap {
+  0%,
+  60% {
+    opacity: 1;
+    visibility: visible;
+  }
+  66%,
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+@keyframes statusSwapIn {
+  0%,
+  62% {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(4px);
+  }
+  70%,
+  96% {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+@keyframes underlineIn {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes marqueeScroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.marquee-track {
+  animation: marqueeScroll 26s linear infinite;
+}
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+@keyframes auroraA {
+  0% {
+    transform: translate3d(-6%, -4%, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(8%, 6%, 0) scale(1.14);
+  }
+  100% {
+    transform: translate3d(-6%, -4%, 0) scale(1);
+  }
+}
+@keyframes auroraB {
+  0% {
+    transform: translate3d(5%, 4%, 0) scale(1.08);
+  }
+  50% {
+    transform: translate3d(-7%, -5%, 0) scale(0.94);
+  }
+  100% {
+    transform: translate3d(5%, 4%, 0) scale(1.08);
+  }
+}
+@keyframes beamSway {
+  0%,
+  100% {
+    transform: translateX(-50%) rotate(-6deg);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateX(-50%) rotate(6deg);
+    opacity: 0.8;
+  }
+}
+@keyframes livePulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(45, 138, 86, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgba(45, 138, 86, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(45, 138, 86, 0);
+  }
+}
+@keyframes ctaShine {
+  0% {
+    transform: translateX(-120%);
+  }
+  55% {
+    transform: translateX(220%);
+  }
+  100% {
+    transform: translateX(220%);
+  }
+}
+@keyframes tickerCycle {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  5%,
+  28% {
+    opacity: 1;
+    transform: none;
+  }
+  33% {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+@keyframes floatChip {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+@media (max-width: 1160px) {
+  .hero-chip {
+    display: none !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aurora,
+  .hero-beam,
+  .cta-shine,
+  .hero-chip,
+  .ticker-item {
+    animation: none !important;
+  }
+}
+.nav-link:hover:not(.nav-link-outline) {
+  background: #e9efed;
+  color: #0f241f;
+}
+.nav-link-outline:hover {
+  border-color: #0e3a34;
+}
+.nav-cta:hover {
+  background: #0a2b27;
+}
