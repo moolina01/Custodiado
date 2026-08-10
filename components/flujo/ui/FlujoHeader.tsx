@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { ROLE_BADGE_LABEL } from "./data";
-import { colors, roleColor } from "./theme";
-import type { Role } from "./types";
+import { ROLE_BADGE_LABEL } from "../data";
+import { colors, roleColor } from "../theme";
+import type { Role } from "../types";
 
 type FlujoHeaderProps = { role: Role };
 

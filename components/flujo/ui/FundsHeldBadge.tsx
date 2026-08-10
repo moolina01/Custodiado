@@ -1,4 +1,4 @@
-import { colors } from "./theme";
+import { colors } from "../theme";
 
 /** "Fondos retenidos · $X" pill shown once the buyer's money is in escrow (bank-details and coordination steps). */
 export default function FundsHeldBadge({ summaryAmount }: { summaryAmount: string }) {

@@ -1,5 +1,5 @@
-import FormField from "../FormField";
-import StepHeading from "../StepHeading";
+import FormField from "../ui/FormField";
+import StepHeading from "../ui/StepHeading";
 import { colors } from "../theme";
 import type { Role, WizardFields } from "../types";
 

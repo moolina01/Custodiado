@@ -1,7 +1,7 @@
-import Card from "../Card";
-import OutcomeCircle, { UndoIcon } from "../OutcomeCircle";
-import StepHeading from "../StepHeading";
-import SummaryRow from "../SummaryRow";
+import Card from "../ui/Card";
+import OutcomeCircle, { UndoIcon } from "../ui/OutcomeCircle";
+import StepHeading from "../ui/StepHeading";
+import SummaryRow from "../ui/SummaryRow";
 import { colors } from "../theme";
 
 type CanceladoStepProps = {

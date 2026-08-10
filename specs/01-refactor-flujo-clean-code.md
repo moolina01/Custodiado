@@ -1,6 +1,6 @@
 # SPEC 01 — Refactor de `components/flujo` para legibilidad (clean code)
 
-> **Status:** Aprobado
+> **Status:** Implementado
 > **Depends on:** Ninguno
 > **Date:** 2026-08-10
 > **Objective:** Reorganizar y simplificar los archivos de `components/flujo` (descomponiendo `FlujoApp.tsx` y agrupando los componentes presentacionales) respaldado por una suite de tests de caracterización con Vitest, sin cambiar el comportamiento observable del wizard salvo ajustes menores de copy o visuales.

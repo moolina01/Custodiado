@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import { colors } from "./theme";
+import { colors } from "../theme";
 
 type CardProps = {
   children: ReactNode;

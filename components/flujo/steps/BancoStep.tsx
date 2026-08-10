@@ -1,7 +1,7 @@
-import FormField from "../FormField";
-import FundsHeldBadge from "../FundsHeldBadge";
-import SelectField from "../SelectField";
-import StepHeading from "../StepHeading";
+import FormField from "../ui/FormField";
+import FundsHeldBadge from "../ui/FundsHeldBadge";
+import SelectField from "../ui/SelectField";
+import StepHeading from "../ui/StepHeading";
 import { colors } from "../theme";
 import { CHILE_BANKS } from "@/lib/fintoc/banks";
 import { isValidRut } from "@/lib/rut";

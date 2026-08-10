@@ -1,8 +1,8 @@
-import Callout from "../Callout";
-import Card from "../Card";
-import FormField from "../FormField";
-import StepHeading from "../StepHeading";
-import SummaryRow from "../SummaryRow";
+import Callout from "../ui/Callout";
+import Card from "../ui/Card";
+import FormField from "../ui/FormField";
+import StepHeading from "../ui/StepHeading";
+import SummaryRow from "../ui/SummaryRow";
 import { colors } from "../theme";
 import type { Role } from "../types";
 

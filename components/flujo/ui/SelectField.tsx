@@ -1,4 +1,4 @@
-import { colors } from "./theme";
+import { colors } from "../theme";
 
 type Option = { label: string; value: string };
 

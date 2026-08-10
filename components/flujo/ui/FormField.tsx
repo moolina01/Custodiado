@@ -1,4 +1,4 @@
-import { colors } from "./theme";
+import { colors } from "../theme";
 
 type FormFieldProps = {
   label: string;

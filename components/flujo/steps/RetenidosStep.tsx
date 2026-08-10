@@ -1,7 +1,7 @@
-import Card from "../Card";
-import FundsHeldBadge from "../FundsHeldBadge";
-import StepHeading from "../StepHeading";
-import SummaryRow from "../SummaryRow";
+import Card from "../ui/Card";
+import FundsHeldBadge from "../ui/FundsHeldBadge";
+import StepHeading from "../ui/StepHeading";
+import SummaryRow from "../ui/SummaryRow";
 import { colors } from "../theme";
 import { WHATSAPP_SUPPORT_URL } from "../data";
 import type { Role } from "../types";

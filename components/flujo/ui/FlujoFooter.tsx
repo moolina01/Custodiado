@@ -1,5 +1,5 @@
-import { colors } from "./theme";
-import { WHATSAPP_SUPPORT_URL } from "./data";
+import { colors } from "../theme";
+import { WHATSAPP_SUPPORT_URL } from "../data";
 
 /** Trust line + support link shown at the bottom of every wizard step. */
 export default function FlujoFooter() {

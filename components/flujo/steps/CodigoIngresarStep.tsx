@@ -1,4 +1,4 @@
-import StepHeading from "../StepHeading";
+import StepHeading from "../ui/StepHeading";
 import { colors } from "../theme";
 import type { Role } from "../types";
 

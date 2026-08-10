@@ -1,45 +1,33 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Callout from "./Callout";
-import FlujoHeader from "./FlujoHeader";
-import FlujoNavButtons from "./FlujoNavButtons";
-import FlujoFooter from "./FlujoFooter";
+import FlujoStepRouter from "./FlujoStepRouter";
 import HelpChat from "./HelpChat";
-import ProgressBar from "./ProgressBar";
+import Callout from "./ui/Callout";
+import FlujoHeader from "./ui/FlujoHeader";
+import FlujoNavButtons from "./ui/FlujoNavButtons";
+import FlujoFooter from "./ui/FlujoFooter";
+import ProgressBar from "./ui/ProgressBar";
 import { getPlatformAccountRequest } from "./api";
-import { COUNTERPART_LABEL, DEFAULT_ITEM_LABEL } from "./data";
+import { DEFAULT_ITEM_LABEL } from "./data";
 import { calculateFee, money, toAmountNumber } from "./format";
 import { nextButtonLabel, phaseFor, phaseName, showsNextButton, showsProgress } from "./flow";
 import { roleColor } from "./theme";
+import { useAdvanceOnTratoStatus } from "./useAdvanceOnTratoStatus";
 import { useHelpChat } from "./useHelpChat";
 import { useQrCountdown } from "./useQrCountdown";
 import { useTrato } from "./useTrato";
-import { useTratoPolling } from "./useTratoPolling";
 import { useWizardState } from "./useWizardState";
 import { formatTratoCodeForDisplay } from "@/lib/codeFormat";
 import type { Role } from "./types";
-
-import InicioStep from "./steps/InicioStep";
-import CrearDatosStep from "./steps/CrearDatosStep";
-import CrearCodigoStep from "./steps/CrearCodigoStep";
-import CodigoIngresarStep from "./steps/CodigoIngresarStep";
-import DetalleStep from "./steps/DetalleStep";
-import EsperandoPagoStep from "./steps/EsperandoPagoStep";
-import PagarStep from "./steps/PagarStep";
-import BancoStep from "./steps/BancoStep";
-import RetenidosStep from "./steps/RetenidosStep";
-import CancelarStep from "./steps/CancelarStep";
-import CanceladoStep from "./steps/CanceladoStep";
-import QrStep from "./steps/QrStep";
-import ListoStep from "./steps/ListoStep";
 
 type FlujoAppProps = { initialRole: Role };
 
 /**
  * Orchestrates the whole `/flujo` wizard: owns the step machine, derives
  * every display value (amounts, fees, copy) from it once per render, and
- * hands each step component only the narrow slice of props it needs.
+ * delegates rendering of the current screen to `FlujoStepRouter`, which in
+ * turn hands each step component only the narrow slice of props it needs.
  *
  * Two sources of truth are composed here: `useWizardState` (which local
  * step is showing — unchanged, purely client-side navigation) and
@@ -51,15 +39,15 @@ type FlujoAppProps = { initialRole: Role };
  * `crear-datos`, `codigo-ingresar`, `detalle` and `banco` call the backend
  * directly from their "next" action (see the `handle*` functions below).
  * `pagar`/`esperando-pago` and `qr` are driven the other way around:
- * nothing the user clicks moves them forward by itself — `useTratoPolling`
- * refetches the trato every few seconds, and an effect auto-advances the
- * local step once a real Fintoc webhook flips the trato to `funds_held`
- * (inbound payment) or `released` (outbound release). The buyer's
- * "Escanear el QR" click on `qr` *does* call the backend (`release`), but
- * only to *start* the release — the screen still waits for the webhook
- * before advancing, same as everything else here. `cancelar` (the buyer's
- * refund) works the same way: "Confirmar cancelación" calls `cancel`, then
- * the screen waits for the refund webhook before moving to `cancelado`.
+ * nothing the user clicks moves them forward by itself — `useAdvanceOnTratoStatus`
+ * refetches the trato every few seconds and auto-advances the local step
+ * once a real Fintoc webhook flips it to `funds_held` (inbound payment) or
+ * `released` (outbound release). The buyer's "Escanear el QR" click on `qr`
+ * *does* call the backend (`release`), but only to *start* the release —
+ * the screen still waits for the webhook before advancing, same as
+ * everything else here. `cancelar` (the buyer's refund) works the same
+ * way: "Confirmar cancelación" calls `cancel`, then the screen waits for
+ * the refund webhook (via the same hook) before moving to `cancelado`.
  */
 export default function FlujoApp({ initialRole }: FlujoAppProps) {
   const role = initialRole;
@@ -74,17 +62,10 @@ export default function FlujoApp({ initialRole }: FlujoAppProps) {
 
   // "pagar" (buyer) and "esperando-pago" (seller) both just wait for the
   // same thing — the inbound webhook confirming the buyer's transfer — so
-  // they share one poll + one auto-advance below instead of each screen
+  // they share one poll + one auto-advance instead of each screen
   // reimplementing "check every few seconds".
   const isWaitingForPayment = screen === "pagar" || screen === "esperando-pago";
-  useTratoPolling(isWaitingForPayment, tratoState.refresh);
-  useEffect(() => {
-    if (isWaitingForPayment && trato?.status === "funds_held") wizard.goNext();
-    // `wizard` is a fresh object every render (useWizardState returns a new
-    // literal each call), so this effect re-checks on every render rather
-    // than only when its "real" inputs change — harmless here since the
-    // guard is idempotent and stops being true the instant goNext() fires.
-  }, [isWaitingForPayment, trato?.status, wizard]);
+  useAdvanceOnTratoStatus(isWaitingForPayment, tratoState.refresh, trato?.status, "funds_held", wizard.goNext);
 
   const [platformAccountNumber, setPlatformAccountNumber] = useState("");
   useEffect(() => {
@@ -95,25 +76,18 @@ export default function FlujoApp({ initialRole }: FlujoAppProps) {
   }, [screen, platformAccountNumber]);
 
   // "qr" polls for both roles: the seller is always just waiting, and the
-  // buyer starts out w aiting too (before they've clicked "Escanear") — the
+  // buyer starts out waiting too (before they've clicked "Escanear") — the
   // poll itself is a harmless no-op either way, so there's no need to gate
   // it on `trato?.status` as well.
   const isOnQrScreen = screen === "qr";
-  useTratoPolling(isOnQrScreen, tratoState.refresh);
-  useEffect(() => {
-    if (isOnQrScreen && trato?.status === "released") wizard.goNext();
-    // See the "pagar"/"esperando-pago" effect above for why `wizard` itself is a dependency here.
-  }, [isOnQrScreen, trato?.status, wizard]);
+  useAdvanceOnTratoStatus(isOnQrScreen, tratoState.refresh, trato?.status, "released", wizard.goNext);
 
   // "cancelar" (buyer confirms cancellation): same wait-for-webhook shape,
   // but the final step is `wizard.confirmCancel()` — the cancel side-branch
   // (see useWizardState) rather than a plain `goNext()` — to land on
   // `cancelado`.
   const isOnCancelScreen = screen === "cancelar";
-  useTratoPolling(isOnCancelScreen, tratoState.refresh);
-  useEffect(() => {
-    if (isOnCancelScreen && trato?.status === "refunded") wizard.confirmCancel();
-  }, [isOnCancelScreen, trato?.status, wizard]);
+  useAdvanceOnTratoStatus(isOnCancelScreen, tratoState.refresh, trato?.status, "refunded", wizard.confirmCancel);
 
   const amountNumber = trato?.amountClp ?? toAmountNumber(fields.amount);
   const fee = trato?.feeClp ?? calculateFee(amountNumber);
@@ -204,99 +178,35 @@ export default function FlujoApp({ initialRole }: FlujoAppProps) {
       <div style={{ maxWidth: "560px", margin: "0 auto", padding: "26px 20px 64px" }}>
         {showsProgress(screen) && <ProgressBar activeColor={accent} filledBars={phase !== undefined ? phase + 1 : 0} stepLabel={phaseName(phase)} />}
 
-        {screen === "inicio" && <InicioStep role={role} onCrear={() => wizard.start("crear")} onCodigo={() => wizard.start("codigo")} />}
-
-        {screen === "crear-datos" && (
-          <CrearDatosStep
-            role={role}
-            fields={fields}
-            onFieldChange={(field, value) => wizard.setField(field, value)}
-            feeLineValue={feeLineValue}
-          />
-        )}
-
-        {screen === "crear-codigo" && (
-          <CrearCodigoStep
-            role={role}
-            dealCode={trato ? formatTratoCodeForDisplay(trato.code) : ""}
-            summaryLabel={`${summaryItem} · ${summaryAmount}`}
-            whatsappHref={whatsappHref}
-          />
-        )}
-
-        {screen === "codigo-ingresar" && (
-          <CodigoIngresarStep role={role} code={fields.code} onCodeChange={(value) => wizard.setField("code", value)} />
-        )}
-
-        {screen === "detalle" && (
-          <DetalleStep
-            role={role}
-            summaryItem={summaryItem}
-            counterpartLabel={COUNTERPART_LABEL[role]}
-            counterpartName={counterpartName}
-            summaryAmount={summaryAmount}
-            feeDisplay={feeDisplay}
-            totalAmount={totalAmount}
-            name={fields.name}
-            onNameChange={(value) => wizard.setField("name", value)}
-          />
-        )}
-
-        {screen === "esperando-pago" && <EsperandoPagoStep summaryAmount={summaryAmount} summaryItem={summaryItem} />}
-
-        {screen === "pagar" && (
-          <PagarStep
-            totalAmount={totalAmount}
-            summaryAmount={summaryAmount}
-            feeDisplay={feeDisplay}
-            accountNumber={platformAccountNumber}
-            onSimulatePayment={() => tratoState.simulatePayment()}
-            isSimulating={tratoState.isSubmitting}
-          />
-        )}
-
-        {screen === "banco" && (
-          <BancoStep summaryAmount={summaryAmount} fields={fields} onFieldChange={(field, value) => wizard.setField(field, value)} />
-        )}
-
-        {screen === "retenidos" && (
-          <RetenidosStep
-            role={role}
-            summaryItem={summaryItem}
-            counterpartLabel={COUNTERPART_LABEL[role]}
-            counterpartName={counterpartName}
-            summaryAmount={summaryAmount}
-            onCancel={wizard.openCancel}
-          />
-        )}
-
-        {screen === "cancelar" && (
-          <CancelarStep
-            summaryItem={summaryItem}
-            totalAmount={totalAmount}
-            fields={fields}
-            onFieldChange={(field, value) => wizard.setField(field, value)}
-            isRefundPending={trato?.status === "refund_pending"}
-            isSubmitting={tratoState.isSubmitting}
-            onConfirm={handleCancelarConfirm}
-          />
-        )}
-
-        {screen === "cancelado" && <CanceladoStep summaryItem={summaryItem} totalAmount={totalAmount} />}
-
-        {screen === "qr" && (
-          <QrStep
-            role={role}
-            summaryAmount={summaryAmount}
-            qrCountdownLabel={qr.countdownLabel}
-            qrProgressPercent={qr.progressPercent}
-            isReleasePending={isBuyer && trato?.status === "release_pending"}
-            isSubmitting={tratoState.isSubmitting}
-            onScan={handleQrScan}
-          />
-        )}
-
-        {screen === "listo" && <ListoStep role={role} summaryItem={summaryItem} listoAmount={listoAmount} />}
+        <FlujoStepRouter
+          screen={screen}
+          role={role}
+          fields={fields}
+          onFieldChange={wizard.setField}
+          onCodeChange={(value) => wizard.setField("code", value)}
+          onNameChange={(value) => wizard.setField("name", value)}
+          onStartCrear={() => wizard.start("crear")}
+          onStartCodigo={() => wizard.start("codigo")}
+          onOpenCancel={wizard.openCancel}
+          dealCode={trato ? formatTratoCodeForDisplay(trato.code) : ""}
+          summaryItem={summaryItem}
+          summaryAmount={summaryAmount}
+          feeDisplay={feeDisplay}
+          totalAmount={totalAmount}
+          feeLineValue={feeLineValue}
+          listoAmount={listoAmount}
+          counterpartName={counterpartName}
+          whatsappHref={whatsappHref}
+          platformAccountNumber={platformAccountNumber}
+          onSimulatePayment={() => tratoState.simulatePayment()}
+          isSubmitting={tratoState.isSubmitting}
+          isRefundPending={trato?.status === "refund_pending"}
+          isReleasePending={isBuyer && trato?.status === "release_pending"}
+          onQrScan={handleQrScan}
+          onCancelarConfirm={handleCancelarConfirm}
+          qrCountdownLabel={qr.countdownLabel}
+          qrProgressPercent={qr.progressPercent}
+        />
 
         {tratoState.error && (
           <div style={{ marginTop: "16px" }}>

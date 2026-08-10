@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { colors } from "./theme";
+import { colors } from "../theme";
 
 /** The circular icon badge above a terminal screen's heading ("Trato cerrado", "Trato cancelado"). */
 export default function OutcomeCircle({ children }: { children: ReactNode }) {

@@ -1,5 +1,5 @@
-import Card from "../Card";
-import StepHeading from "../StepHeading";
+import Card from "../ui/Card";
+import StepHeading from "../ui/StepHeading";
 import { colors } from "../theme";
 
 type PagarStepProps = {

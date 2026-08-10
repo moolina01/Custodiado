@@ -1,6 +1,6 @@
-import Callout from "../Callout";
-import Card from "../Card";
-import StepHeading from "../StepHeading";
+import Callout from "../ui/Callout";
+import Card from "../ui/Card";
+import StepHeading from "../ui/StepHeading";
 import { colors } from "../theme";
 
 type EsperandoPagoStepProps = {
