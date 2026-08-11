@@ -178,6 +178,36 @@ export async function matchInboundPayment(transferId: string, amountClp: number)
   return { outcome: "matched", trato: updated as TratoRow };
 }
 
+/**
+ * Dev/test-only escape hatch: flips `awaiting_payment -> funds_held`
+ * directly, without a matching Fintoc transfer at all. Exists for local
+ * development when the webhook endpoint isn't actually reachable from
+ * Fintoc (no tunnel running, dashboard still pointing at a stale URL,
+ * etc.) — `simulate-payment` asks Fintoc's sandbox to fire the real
+ * `transfer.inbound.succeeded` webhook, but if that webhook never lands,
+ * the trato is stuck. Marked with a `dev_forced_` transfer id so it's
+ * obviously not a real Fintoc transfer if inspected later; harmless if a
+ * delayed real webhook shows up afterwards — `matchInboundPayment` only
+ * looks at tratos still `awaiting_payment`, so it just finds no match.
+ */
+export async function forceMarkFundsHeld(rawCode: string): Promise<TratoRow | null> {
+  const db = getSupabaseAdmin();
+  const code = normalizeTratoCode(rawCode);
+  const { data, error } = await db
+    .from(TABLE)
+    .update({
+      status: "funds_held",
+      fintoc_inbound_transfer_id: `dev_forced_${randomUUID()}`,
+      paid_at: new Date().toISOString(),
+    })
+    .eq("code", code)
+    .eq("status", "awaiting_payment") // atomic guard, same shape as the other transitions
+    .select()
+    .maybeSingle();
+  if (error) throw new Error(`No se pudo forzar el avance del pago: ${error.message}`);
+  return (data as TratoRow | null) ?? null;
+}
+
 // "returned" = the destination bank rejected the transfer (Fintoc's actual
 // Chile event name — plan-escrow.md called this "rejected", which isn't a
 // real Fintoc event; verified against docs.fintoc.com's live event list).

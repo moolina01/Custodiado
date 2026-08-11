@@ -41,6 +41,7 @@ export type FlujoStepContext = {
   whatsappHref: string;
   platformAccountNumber: string;
   onSimulatePayment: () => void;
+  onForceAdvancePayment: () => void;
   isSubmitting: boolean;
   isRefundPending: boolean;
   isReleasePending: boolean;
@@ -94,6 +95,7 @@ const STEP_RENDERERS: Record<Screen, StepRenderer> = {
       feeDisplay={ctx.feeDisplay}
       accountNumber={ctx.platformAccountNumber}
       onSimulatePayment={ctx.onSimulatePayment}
+      onForceAdvancePayment={ctx.onForceAdvancePayment}
       isSimulating={ctx.isSubmitting}
     />
   ),

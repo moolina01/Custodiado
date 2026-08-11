@@ -65,6 +65,11 @@ export function simulatePaymentRequest(code: string): Promise<{ simulated: true;
   return request(`/api/tratos/${encodeURIComponent(code)}/simulate-payment`, { method: "POST" });
 }
 
+/** Dev/test-only escape hatch: skips waiting for the real webhook and flips the trato to `funds_held` directly — for when the local server has no reachable webhook endpoint. See the route handler. */
+export function forceAdvancePaymentRequest(code: string): Promise<Trato> {
+  return request<Trato>(`/api/tratos/${encodeURIComponent(code)}/force-advance-payment`, { method: "POST" });
+}
+
 /** The "Escanear el QR" action — triggers the real (test-mode) escrow release. Safe to call more than once. */
 export function releaseTratoRequest(code: string): Promise<Trato> {
   return request<Trato>(`/api/tratos/${encodeURIComponent(code)}/release`, { method: "POST" });

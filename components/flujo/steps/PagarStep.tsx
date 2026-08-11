@@ -8,13 +8,22 @@ type PagarStepProps = {
   feeDisplay: string;
   accountNumber: string; // platform's escrow account — empty while still loading
   onSimulatePayment: () => void;
+  onForceAdvancePayment: () => void;
   isSimulating: boolean;
 };
 
 const IS_DEV = process.env.NODE_ENV !== "production";
 
 /** Buyer-only: real transfer instructions to Custodio's escrow account. A real `transfer.inbound.succeeded` webhook — not a click here — is what actually moves the trato forward. */
-export default function PagarStep({ totalAmount, summaryAmount, feeDisplay, accountNumber, onSimulatePayment, isSimulating }: PagarStepProps) {
+export default function PagarStep({
+  totalAmount,
+  summaryAmount,
+  feeDisplay,
+  accountNumber,
+  onSimulatePayment,
+  onForceAdvancePayment,
+  isSimulating,
+}: PagarStepProps) {
   return (
     <div>
       <StepHeading title="Transfiere a la cuenta de custodia" subtitle="El dinero queda retenido. El vendedor no recibe nada hasta la entrega." />
@@ -65,6 +74,29 @@ export default function PagarStep({ totalAmount, summaryAmount, feeDisplay, acco
             }}
           >
             {isSimulating ? "Simulando…" : "Simular transferencia (Fintoc test)"}
+          </button>
+
+          <div style={{ fontSize: "12.5px", color: colors.textFaint, marginTop: "12px", marginBottom: "6px" }}>
+            ¿Simulaste y no avanzó? El webhook de Fintoc no está llegando a este servidor (falta el túnel local). Forzá el avance sin esperarlo:
+          </div>
+          <button
+            onClick={onForceAdvancePayment}
+            disabled={isSimulating}
+            style={{
+              width: "100%",
+              background: "transparent",
+              border: `1px dashed ${colors.warnBorder}`,
+              color: colors.accent,
+              fontFamily: "inherit",
+              fontWeight: "600",
+              fontSize: "14px",
+              padding: "11px 18px",
+              borderRadius: "12px",
+              cursor: isSimulating ? "default" : "pointer",
+              opacity: isSimulating ? 0.65 : 1,
+            }}
+          >
+            Forzar avance (sin esperar webhook)
           </button>
         </div>
       )}

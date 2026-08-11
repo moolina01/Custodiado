@@ -115,6 +115,13 @@ export const simulatePaymentRequest = vi.fn(async (_code: string) => {
   return { simulated: true as const, transferId: "tr_test", amountClp: current.amountClp };
 });
 
+export const forceAdvancePaymentRequest = vi.fn(async (_code: string): Promise<Trato> => {
+  const current = requireTrato();
+  pendingStatus = null; // this resolves synchronously, unlike simulatePayment — no pending webhook left to deliver
+  trato = { ...current, status: "funds_held", paidAt: new Date().toISOString() };
+  return trato;
+});
+
 export const releaseTratoRequest = vi.fn(async (_code: string): Promise<Trato> => {
   const current = requireTrato();
   trato = { ...current, status: "release_pending" };

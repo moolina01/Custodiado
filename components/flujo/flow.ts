@@ -62,10 +62,11 @@ export function showsProgress(screen: Screen): boolean {
 
 // "pagar", "cancelar" and "qr" render their own primary button inline (or,
 // for "qr", none at all for the seller — see QrStep). "inicio" and
-// "cancelado" have no forward action. "esperando-pago" and "qr" used to
-// have manual "Ya pagó"/"Ya escaneó" claim buttons here — now that real
-// webhooks confirm both (M5, M6), they advance themselves via polling.
-const NO_NEXT_BUTTON_SCREENS: Screen[] = ["inicio", "pagar", "esperando-pago", "qr", "cancelar", "cancelado"];
+// "cancelado" have no forward action. "crear-codigo", "esperando-pago" and
+// "qr" used to have manual "Ya aceptó"/"Ya pagó"/"Ya escaneó" claim buttons
+// here — now that real webhooks confirm all three, they advance themselves
+// via polling instead of trusting a "yes, the other side did it" click.
+const NO_NEXT_BUTTON_SCREENS: Screen[] = ["inicio", "crear-codigo", "pagar", "esperando-pago", "qr", "cancelar", "cancelado"];
 
 export function showsNextButton(screen: Screen): boolean {
   return !NO_NEXT_BUTTON_SCREENS.includes(screen);
@@ -76,8 +77,6 @@ export function nextButtonLabel(screen: Screen, role: Role): string {
   switch (screen) {
     case "crear-datos":
       return "Generar el código";
-    case "crear-codigo":
-      return isBuyer ? "El vendedor ya aceptó" : "El comprador ya pagó";
     case "codigo-ingresar":
       return "Buscar el trato";
     case "detalle":

@@ -77,7 +77,7 @@ describe("showsProgress", () => {
 });
 
 describe("showsNextButton", () => {
-  const noButtonScreens: Screen[] = ["inicio", "pagar", "esperando-pago", "qr", "cancelar", "cancelado"];
+  const noButtonScreens: Screen[] = ["inicio", "crear-codigo", "pagar", "esperando-pago", "qr", "cancelar", "cancelado"];
 
   it.each(noButtonScreens)("hides the next button on '%s'", (screen) => {
     expect(showsNextButton(screen)).toBe(false);
@@ -94,8 +94,6 @@ describe("showsNextButton", () => {
 
 describe("nextButtonLabel", () => {
   it("differs by role on shared screens", () => {
-    expect(nextButtonLabel("crear-codigo", "comprador")).toBe("El vendedor ya aceptó");
-    expect(nextButtonLabel("crear-codigo", "vendedor")).toBe("El comprador ya pagó");
     expect(nextButtonLabel("detalle", "comprador")).toBe("Aceptar y pagar");
     expect(nextButtonLabel("detalle", "vendedor")).toBe("Aceptar el trato");
     expect(nextButtonLabel("qr", "comprador")).toBe("Escanear el QR");

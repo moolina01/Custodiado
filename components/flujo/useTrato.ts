@@ -6,6 +6,7 @@ import {
   acceptTratoRequest,
   cancelTratoRequest,
   createTratoRequest,
+  forceAdvancePaymentRequest,
   getTratoRequest,
   releaseTratoRequest,
   simulatePaymentRequest,
@@ -117,6 +118,27 @@ export function useTrato() {
   // arrives once the outbound webhook resolves it (poll-driven, like
   // `simulatePayment`/`refresh`). Safe to call again if it's already in
   // flight — the backend treats a retry as a no-op or a safe resubmit.
+  // Dev/test-only escape hatch: for when the webhook the real payment
+  // (`simulatePayment`) is waiting on never lands locally — no tunnel
+  // running, dashboard pointing at a stale URL, etc. Unlike
+  // `simulatePayment`, this resolves synchronously to the already-updated
+  // trato, so it doesn't need `refresh`/polling to pick up the change.
+  const forceAdvancePayment = useCallback(async () => {
+    if (!trato) return null;
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const updated = await forceAdvancePaymentRequest(trato.code);
+      setTrato(updated);
+      return updated;
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "No se pudo forzar el avance del pago.");
+      return null;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [trato]);
+
   const release = useCallback(async () => {
     if (!trato) return null;
     setIsSubmitting(true);
@@ -175,6 +197,7 @@ export function useTrato() {
     accept,
     saveBankDetails,
     simulatePayment,
+    forceAdvancePayment,
     release,
     cancel,
     refresh,

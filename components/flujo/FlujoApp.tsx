@@ -38,16 +38,18 @@ type FlujoAppProps = { initialRole: Role };
  *
  * `crear-datos`, `codigo-ingresar`, `detalle` and `banco` call the backend
  * directly from their "next" action (see the `handle*` functions below).
- * `pagar`/`esperando-pago` and `qr` are driven the other way around:
- * nothing the user clicks moves them forward by itself — `useAdvanceOnTratoStatus`
- * refetches the trato every few seconds and auto-advances the local step
- * once a real Fintoc webhook flips it to `funds_held` (inbound payment) or
- * `released` (outbound release). The buyer's "Escanear el QR" click on `qr`
- * *does* call the backend (`release`), but only to *start* the release —
- * the screen still waits for the webhook before advancing, same as
- * everything else here. `cancelar` (the buyer's refund) works the same
- * way: "Confirmar cancelación" calls `cancel`, then the screen waits for
- * the refund webhook (via the same hook) before moving to `cancelado`.
+ * `crear-codigo`, `pagar`/`esperando-pago` and `qr` are driven the other way
+ * around: nothing the user clicks moves them forward by itself —
+ * `useAdvanceOnTratoStatus` refetches the trato every few seconds and
+ * auto-advances the local step once the *other* side's real action — the
+ * counterpart accepting, a Fintoc webhook — actually changes its status
+ * (`awaiting_payment`/`funds_held` for inbound payment, `released` for
+ * outbound release). The buyer's "Escanear el QR" click on `qr` *does* call
+ * the backend (`release`), but only to *start* the release — the screen
+ * still waits for the webhook before advancing, same as everything else
+ * here. `cancelar` (the buyer's refund) works the same way: "Confirmar
+ * cancelación" calls `cancel`, then the screen waits for the refund webhook
+ * (via the same hook) before moving to `cancelado`.
  */
 export default function FlujoApp({ initialRole }: FlujoAppProps) {
   const role = initialRole;
@@ -59,6 +61,19 @@ export default function FlujoApp({ initialRole }: FlujoAppProps) {
   const { screen, fields, canGoBack } = wizard;
   const { trato } = tratoState;
   const qr = useQrCountdown(screen === "qr" && role === "vendedor");
+
+  // "crear-codigo" (whoever created the trato, waiting on the other side):
+  // same wait-for-webhook shape as the rest, but the target status differs
+  // by role because the two "crear" flows diverge from here. The buyer's
+  // next screen is "pagar", so the buyer only needs the seller to *accept*
+  // (`awaiting_payment`). The seller's next screen is "banco" — there's no
+  // separate payment-waiting screen in that flow — so the seller needs the
+  // buyer to accept *and* pay (`funds_held`) before moving on.
+  const isBuyerAwaitingAcceptance = screen === "crear-codigo" && isBuyer;
+  useAdvanceOnTratoStatus(isBuyerAwaitingAcceptance, tratoState.refresh, trato?.status, "awaiting_payment", wizard.goNext);
+
+  const isSellerAwaitingPayment = screen === "crear-codigo" && !isBuyer;
+  useAdvanceOnTratoStatus(isSellerAwaitingPayment, tratoState.refresh, trato?.status, "funds_held", wizard.goNext);
 
   // "pagar" (buyer) and "esperando-pago" (seller) both just wait for the
   // same thing — the inbound webhook confirming the buyer's transfer — so
@@ -199,6 +214,7 @@ export default function FlujoApp({ initialRole }: FlujoAppProps) {
           whatsappHref={whatsappHref}
           platformAccountNumber={platformAccountNumber}
           onSimulatePayment={() => tratoState.simulatePayment()}
+          onForceAdvancePayment={() => tratoState.forceAdvancePayment()}
           isSubmitting={tratoState.isSubmitting}
           isRefundPending={trato?.status === "refund_pending"}
           isReleasePending={isBuyer && trato?.status === "release_pending"}

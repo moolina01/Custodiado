@@ -8,7 +8,7 @@ import FlujoApp from "./FlujoApp";
 // factory rather than relying on the `__mocks__` auto-pickup convention.
 vi.mock("./api", async () => import("./__mocks__/api"));
 
-const { __resetMockApi, releaseTratoRequest } = await import("./__mocks__/api");
+const { __resetMockApi, acceptTratoRequest, releaseTratoRequest, simulatePaymentRequest } = await import("./__mocks__/api");
 
 const VALID_RUT = "12345678-5";
 const POLL_INTERVAL_MS = 3000; // must match components/flujo/useTratoPolling.ts
@@ -55,7 +55,13 @@ describe("FlujoApp", () => {
     expect(screen.getByText("Pásale este código")).toBeInTheDocument();
     expect(screen.getByText("ABC-123")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText("El vendedor ya aceptó")); // local navigation only
+    // No button to click here — the seller accepting on their own screen is
+    // what actually moves this forward. Simulate that directly against the
+    // fake backend, then let the buyer's own poll pick it up.
+    await act(async () => {
+      await acceptTratoRequest("ABC123", "vendedor", "Beto");
+    });
+    await advancePoll();
     expect(screen.getByText("Transfiere a la cuenta de custodia")).toBeInTheDocument();
 
     await act(async () => {
@@ -88,7 +94,15 @@ describe("FlujoApp", () => {
     });
     expect(screen.getByText("ABC-123")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText("El comprador ya pagó")); // local navigation only
+    // No button to click here either — the seller's "crear" flow has no
+    // separate payment-waiting screen, so it waits for the buyer to both
+    // accept and pay before advancing. Simulate both directly, then let the
+    // seller's own poll pick it up.
+    await act(async () => {
+      await acceptTratoRequest("ABC123", "comprador", "Ana");
+      await simulatePaymentRequest("ABC123");
+    });
+    await advancePoll();
     expect(screen.getByText("¿Dónde te depositamos?")).toBeInTheDocument();
 
     fillBankFields(VALID_RUT, "cl_banco_estado", "checking_account", "000123456789");
@@ -117,7 +131,10 @@ describe("FlujoApp", () => {
     await act(async () => {
       fireEvent.click(screen.getByText("Generar el código"));
     });
-    fireEvent.click(screen.getByText("El vendedor ya aceptó"));
+    await act(async () => {
+      await acceptTratoRequest("ABC123", "vendedor", "Beto");
+    });
+    await advancePoll();
     await act(async () => {
       fireEvent.click(screen.getByText("Simular transferencia (Fintoc test)"));
     });
