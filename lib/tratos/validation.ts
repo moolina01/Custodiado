@@ -50,3 +50,8 @@ export const cancelTratoSchema = z.object({
   reason: z.string().trim().max(300).optional(),
 });
 export type CancelTratoPayload = z.infer<typeof cancelTratoSchema>;
+
+export const verifyQrSchema = z.object({
+  token: z.string().trim().min(1, "Falta el token del QR"),
+});
+export type VerifyQrPayload = z.infer<typeof verifyQrSchema>;

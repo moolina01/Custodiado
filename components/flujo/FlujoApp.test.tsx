@@ -8,7 +8,7 @@ import FlujoApp from "./FlujoApp";
 // factory rather than relying on the `__mocks__` auto-pickup convention.
 vi.mock("./api", async () => import("./__mocks__/api"));
 
-const { __resetMockApi, acceptTratoRequest, releaseTratoRequest, simulatePaymentRequest } = await import("./__mocks__/api");
+const { __resetMockApi, acceptTratoRequest, verifyQrRequest, simulatePaymentRequest } = await import("./__mocks__/api");
 
 const VALID_RUT = "12345678-5";
 const POLL_INTERVAL_MS = 3000; // must match components/flujo/useTratoPolling.ts
@@ -73,8 +73,12 @@ describe("FlujoApp", () => {
     fireEvent.click(screen.getByText("Ya nos juntamos"));
     expect(screen.getByText("Escanea al recibir")).toBeInTheDocument();
 
+    // The real path is the buyer's camera decoding the seller's QR
+    // (useQrScanner) — untestable in jsdom (see SPEC 02's Decisions: no
+    // camera in jsdom, validated by manual QA instead). The dev-only
+    // "Simular escaneo (dev)" button drives the exact same verifyQr path.
     await act(async () => {
-      fireEvent.click(screen.getByText("Escanear el QR"));
+      fireEvent.click(screen.getByText("Simular escaneo (dev)"));
     });
     expect(screen.getByText("Liberando el pago…")).toBeInTheDocument();
     await advancePoll(); // outbound webhook, delivered on the next poll
@@ -115,7 +119,7 @@ describe("FlujoApp", () => {
     // buyer's "Escanear el QR" elsewhere. Simulate that directly against the
     // fake backend, then let the seller's own poll pick it up.
     await act(async () => {
-      await releaseTratoRequest("ABC123");
+      await verifyQrRequest("ABC123", "dev-fake-token");
     });
     await advancePoll();
     expect(screen.getByText("Trato cerrado")).toBeInTheDocument();

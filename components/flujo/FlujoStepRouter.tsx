@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
 import { COUNTERPART_LABEL } from "./data";
 import type { Role, Screen, WizardFields } from "./types";
 
@@ -45,10 +45,20 @@ export type FlujoStepContext = {
   isSubmitting: boolean;
   isRefundPending: boolean;
   isReleasePending: boolean;
-  onQrScan: () => void;
   onCancelarConfirm: () => void;
+  // Seller side of "qr" — from `useSellerQrToken`, gated behind an explicit
+  // "Ya llegó el comprador" confirmation (see FlujoApp).
+  qrImageDataUrl: string | null;
   qrCountdownLabel: string;
   qrProgressPercent: number;
+  sellerQrError: string | null;
+  sellerConfirmedMeetup: boolean;
+  onSellerConfirmMeetup: () => void;
+  // Buyer side of "qr" — from `useQrScanner`.
+  qrVideoRef: RefObject<HTMLVideoElement | null>;
+  qrScannerError: string | null;
+  isQrScanning: boolean;
+  onDevQrScan: () => void;
 };
 
 type StepRenderer = (ctx: FlujoStepContext) => ReactNode;
@@ -131,11 +141,18 @@ const STEP_RENDERERS: Record<Screen, StepRenderer> = {
     <QrStep
       role={ctx.role}
       summaryAmount={ctx.summaryAmount}
-      qrCountdownLabel={ctx.qrCountdownLabel}
-      qrProgressPercent={ctx.qrProgressPercent}
       isReleasePending={ctx.isReleasePending}
       isSubmitting={ctx.isSubmitting}
-      onScan={ctx.onQrScan}
+      qrImageDataUrl={ctx.qrImageDataUrl}
+      qrCountdownLabel={ctx.qrCountdownLabel}
+      qrProgressPercent={ctx.qrProgressPercent}
+      sellerQrError={ctx.sellerQrError}
+      sellerConfirmedMeetup={ctx.sellerConfirmedMeetup}
+      onSellerConfirmMeetup={ctx.onSellerConfirmMeetup}
+      videoRef={ctx.qrVideoRef}
+      scannerError={ctx.qrScannerError}
+      isScanning={ctx.isQrScanning}
+      onDevScan={ctx.onDevQrScan}
     />
   ),
 

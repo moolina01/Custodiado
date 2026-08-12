@@ -8,9 +8,9 @@ import {
   createTratoRequest,
   forceAdvancePaymentRequest,
   getTratoRequest,
-  releaseTratoRequest,
   simulatePaymentRequest,
   submitBankDetailsRequest,
+  verifyQrRequest,
   type BankDetailsInput,
   type CancelInput,
   type Trato,
@@ -26,6 +26,9 @@ import type { Role } from "./types";
  */
 export function useTrato() {
   const [trato, setTrato] = useState<Trato | null>(null);
+  // The seller's once-issued QR secret (see SPEC 02) — kept separate from
+  // `trato` itself, since the backend never sends it back on a later fetch.
+  const [sellerQrSecret, setSellerQrSecret] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,8 +37,9 @@ export function useTrato() {
     setError(null);
     try {
       const created = await createTratoRequest({ role, item, amountClp, name });
-      setTrato(created);
-      return created;
+      setTrato(created.trato);
+      if (created.sellerQrSecret) setSellerQrSecret(created.sellerQrSecret);
+      return created.trato;
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "No se pudo crear el trato.");
       return null;
@@ -65,8 +69,9 @@ export function useTrato() {
     setError(null);
     try {
       const accepted = await acceptTratoRequest(trato.code, role, name);
-      setTrato(accepted);
-      return accepted;
+      setTrato(accepted.trato);
+      if (accepted.sellerQrSecret) setSellerQrSecret(accepted.sellerQrSecret);
+      return accepted.trato;
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "No se pudo aceptar el trato.");
       return null;
@@ -139,21 +144,27 @@ export function useTrato() {
     }
   }, [trato]);
 
-  const release = useCallback(async () => {
-    if (!trato) return null;
-    setIsSubmitting(true);
-    setError(null);
-    try {
-      const updated = await releaseTratoRequest(trato.code);
-      setTrato(updated);
-      return updated;
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "No se pudo liberar el pago.");
-      return null;
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [trato]);
+  // The buyer's camera decoding a QR off the seller's screen — sends the
+  // token to the backend, which verifies it before running the same release
+  // logic the old (removed) `release()` used to trigger unconditionally.
+  const verifyQr = useCallback(
+    async (token: string) => {
+      if (!trato) return null;
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        const updated = await verifyQrRequest(trato.code, token);
+        setTrato(updated);
+        return updated;
+      } catch (err) {
+        setError(err instanceof ApiError ? err.message : "No se pudo liberar el pago.");
+        return null;
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [trato]
+  );
 
   // The buyer's "Confirmar cancelación". Same shape as `release`: doesn't
   // resolve synchronously — puts the trato into `refund_pending`, and
@@ -190,6 +201,7 @@ export function useTrato() {
 
   return {
     trato,
+    sellerQrSecret,
     isSubmitting,
     error,
     create,
@@ -198,7 +210,7 @@ export function useTrato() {
     saveBankDetails,
     simulatePayment,
     forceAdvancePayment,
-    release,
+    verifyQr,
     cancel,
     refresh,
     clearError: () => setError(null),

@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { jsonError, jsonOk } from "@/lib/http";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
-import { toPublicDto } from "@/lib/tratos/dto";
+import { toCreateOrAcceptResponse } from "@/lib/tratos/dto";
 import { acceptTrato } from "@/lib/tratos/repository";
 import { acceptTratoSchema } from "@/lib/tratos/validation";
 
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         );
       case "accepted":
       case "already_accepted":
-        return jsonOk(toPublicDto(result.trato));
+        return jsonOk(toCreateOrAcceptResponse(result.trato, parsed.data.role));
     }
   } catch (error) {
     return jsonError(500, error instanceof Error ? error.message : "Error inesperado al aceptar el trato.");

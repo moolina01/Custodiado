@@ -27,16 +27,19 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
-export function createTratoRequest(input: { role: Role; item: string; amountClp: number; name: string }): Promise<Trato> {
-  return request<Trato>("/api/tratos", { method: "POST", body: JSON.stringify(input) });
+/** Response of create/accept — carries `sellerQrSecret` once, only when this call's role is `vendedor`. Never part of `Trato` itself. */
+export type TratoWithSellerQrSecret = { trato: Trato; sellerQrSecret?: string };
+
+export function createTratoRequest(input: { role: Role; item: string; amountClp: number; name: string }): Promise<TratoWithSellerQrSecret> {
+  return request<TratoWithSellerQrSecret>("/api/tratos", { method: "POST", body: JSON.stringify(input) });
 }
 
 export function getTratoRequest(code: string): Promise<Trato> {
   return request<Trato>(`/api/tratos/${encodeURIComponent(code)}`);
 }
 
-export function acceptTratoRequest(code: string, role: Role, name: string): Promise<Trato> {
-  return request<Trato>(`/api/tratos/${encodeURIComponent(code)}/accept`, {
+export function acceptTratoRequest(code: string, role: Role, name: string): Promise<TratoWithSellerQrSecret> {
+  return request<TratoWithSellerQrSecret>(`/api/tratos/${encodeURIComponent(code)}/accept`, {
     method: "POST",
     body: JSON.stringify({ role, name }),
   });
@@ -70,9 +73,19 @@ export function forceAdvancePaymentRequest(code: string): Promise<Trato> {
   return request<Trato>(`/api/tratos/${encodeURIComponent(code)}/force-advance-payment`, { method: "POST" });
 }
 
-/** The "Escanear el QR" action — triggers the real (test-mode) escrow release. Safe to call more than once. */
-export function releaseTratoRequest(code: string): Promise<Trato> {
-  return request<Trato>(`/api/tratos/${encodeURIComponent(code)}/release`, { method: "POST" });
+/** The buyer's camera decoding a valid QR — verifies the token and, if it checks out, triggers the real (test-mode) escrow release. Safe to call more than once. */
+export function verifyQrRequest(code: string, token: string): Promise<Trato> {
+  return request<Trato>(`/api/tratos/${encodeURIComponent(code)}/verify-qr`, {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  });
+}
+
+export type QrTokenResponse = { token: string; expiresAt: number };
+
+/** Dev/test-only escape hatch: the seller's current QR token, without the `x-seller-qr-secret` header. See the route handler. */
+export function devQrTokenRequest(code: string): Promise<QrTokenResponse> {
+  return request<QrTokenResponse>(`/api/tratos/${encodeURIComponent(code)}/dev-qr-token`);
 }
 
 export type CancelInput = BankDetailsInput & { reason?: string };

@@ -1,4 +1,6 @@
+import type { RefObject } from "react";
 import Card from "../ui/Card";
+import Callout from "../ui/Callout";
 import StepHeading from "../ui/StepHeading";
 import { colors } from "../theme";
 import type { Role } from "../types";
@@ -6,12 +8,32 @@ import type { Role } from "../types";
 type QrStepProps = {
   role: Role;
   summaryAmount: string;
+  isReleasePending: boolean; // buyer already scanned; waiting on the outbound webhook
+  isSubmitting: boolean; // the verify-qr request itself is in flight
+
+  // Seller side — driven by `useSellerQrToken` in FlujoApp. The QR itself
+  // (and its 30s renewal) only starts once `sellerConfirmedMeetup` is true —
+  // see FlujoApp for why.
+  qrImageDataUrl: string | null;
   qrCountdownLabel: string;
   qrProgressPercent: number;
-  isReleasePending: boolean; // buyer already scanned; waiting on the outbound webhook
-  isSubmitting: boolean; // the release request itself is in flight
-  onScan: () => void;
+  sellerQrError: string | null;
+  sellerConfirmedMeetup: boolean;
+  onSellerConfirmMeetup: () => void;
+
+  // Buyer side — driven by `useQrScanner` in FlujoApp. Decoding a QR calls
+  // `onDecode` (wired to `verifyQr`) on its own, no button to click.
+  videoRef: RefObject<HTMLVideoElement | null>;
+  scannerError: string | null;
+  isScanning: boolean;
+
+  // Dev/test-only escape hatch: pulls the seller's current token from
+  // `/dev-qr-token` and feeds it through the same `verifyQr` path a real
+  // scan would, for testing without a second device with a camera.
+  onDevScan: () => void;
 };
+
+const IS_DEV = process.env.NODE_ENV !== "production";
 
 const BUYER_TIPS = [
   <>
@@ -38,16 +60,40 @@ const SELLER_TIPS = [
 ];
 
 /** The delivery-time handshake: buyer scans the seller's live QR to release the held payment. */
-export default function QrStep({ role, summaryAmount, qrCountdownLabel, qrProgressPercent, isReleasePending, isSubmitting, onScan }: QrStepProps) {
+export default function QrStep({
+  role,
+  summaryAmount,
+  isReleasePending,
+  isSubmitting,
+  qrImageDataUrl,
+  qrCountdownLabel,
+  qrProgressPercent,
+  sellerQrError,
+  sellerConfirmedMeetup,
+  onSellerConfirmMeetup,
+  videoRef,
+  scannerError,
+  isScanning,
+  onDevScan,
+}: QrStepProps) {
   const isBuyer = role === "comprador";
   const tips = isBuyer ? BUYER_TIPS : SELLER_TIPS;
+  // The seller reaches "qr" right after saving bank details — there's no
+  // "retenidos" wait-for-meetup gate on that side like the buyer has — so
+  // without this, the QR would start renewing every 30s long before there's
+  // anyone to scan it. See FlujoApp for where the confirmation lives.
+  const isSellerWaiting = !isBuyer && !sellerConfirmedMeetup;
 
   return (
     <div>
       <StepHeading
         title={isBuyer ? "Escanea al recibir" : "Muestra el QR al entregar"}
         subtitle={
-          isBuyer ? "Revisa el producto. Si está todo bien, escanea el QR del vendedor." : "El comprador escanea este código y el pago se libera al instante."
+          isBuyer
+            ? "Revisa el producto. Si está todo bien, escanea el QR del vendedor."
+            : isSellerWaiting
+              ? "Confirmá cuando el comprador esté ahí para mostrarle el código."
+              : "El comprador escanea este código y el pago se libera al instante."
         }
       />
 
@@ -64,23 +110,59 @@ export default function QrStep({ role, summaryAmount, qrCountdownLabel, qrProgre
             height: "190px",
             borderRadius: "18px",
             overflow: "hidden",
-            background: "repeating-conic-gradient(#0F241F 0% 25%, #ffffff 0% 50%) 0 0/38px 38px",
+            background: colors.background,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
-          <div
-            style={{
-              position: "absolute",
-              inset: "0",
-              background: "linear-gradient(180deg, transparent, rgba(242,140,56,0.4), transparent)",
-              animation: "qrSweep2 1.4s linear infinite",
-            }}
-          />
+          {isBuyer ? (
+            <>
+              <video ref={videoRef} autoPlay playsInline muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              <div style={{ position: "absolute", inset: "14px", border: `2px solid ${colors.accent}`, borderRadius: "12px", pointerEvents: "none" }} />
+            </>
+          ) : isSellerWaiting ? (
+            <div style={{ fontSize: "13px", color: colors.textFaint, textAlign: "center", padding: "0 16px" }}>
+              El código aparece acá cuando confirmes el encuentro
+            </div>
+          ) : qrImageDataUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- a base64 data: URL generated client-side, not an optimizable remote asset
+            <img src={qrImageDataUrl} alt="Código QR para liberar el pago" style={{ width: "100%", height: "100%", objectFit: "contain", background: "#ffffff" }} />
+          ) : (
+            <div style={{ fontSize: "13px", color: colors.textFaint, textAlign: "center", padding: "0 16px" }}>Generando QR…</div>
+          )}
         </div>
 
         {isBuyer ? (
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: "15px", fontWeight: "700" }}>Escanea el QR del vendedor</div>
-            <div style={{ fontSize: "13.5px", color: colors.textFaint, marginTop: "4px" }}>Con la cámara de tu celular</div>
+            <div style={{ fontSize: "15px", fontWeight: "700" }}>{isScanning ? "Buscando el QR del vendedor…" : "Activando la cámara…"}</div>
+            <div style={{ fontSize: "13.5px", color: colors.textFaint, marginTop: "4px" }}>Apuntá con la cámara de tu celular, esto avanza solo</div>
+          </div>
+        ) : isSellerWaiting ? (
+          <div style={{ textAlign: "center", width: "100%" }}>
+            <div style={{ fontSize: "15px", fontWeight: "700" }}>Esperando que llegue el comprador</div>
+            <div style={{ fontSize: "13.5px", color: colors.textFaint, marginTop: "4px" }}>
+              El QR recién empieza a generarse cuando confirmás — así no se recarga solo mientras esperan.
+            </div>
+            <button
+              onClick={onSellerConfirmMeetup}
+              style={{
+                width: "100%",
+                marginTop: "16px",
+                background: colors.brand,
+                border: "none",
+                color: "#ffffff",
+                fontFamily: "inherit",
+                fontWeight: "700",
+                fontSize: "16px",
+                padding: "15px 20px",
+                borderRadius: "14px",
+                cursor: "pointer",
+                boxShadow: "0 8px 24px rgba(14,58,52,0.24)",
+              }}
+            >
+              Ya llegó el comprador
+            </button>
           </div>
         ) : (
           <div style={{ textAlign: "center", width: "100%" }}>
@@ -95,6 +177,12 @@ export default function QrStep({ role, summaryAmount, qrCountdownLabel, qrProgre
           </div>
         )}
       </Card>
+
+      {(isBuyer ? scannerError : sellerQrError) && (
+        <div style={{ marginTop: "16px" }}>
+          <Callout tone="warning">{isBuyer ? scannerError : sellerQrError}</Callout>
+        </div>
+      )}
 
       <div style={{ background: colors.warnBg, border: `1px solid ${colors.warnBorder}`, borderRadius: "14px", padding: "18px", marginTop: "16px" }}>
         <div style={{ fontSize: "12px", fontWeight: "700", letterSpacing: "0.08em", textTransform: "uppercase", color: colors.accent, marginBottom: "12px" }}>
@@ -131,26 +219,36 @@ export default function QrStep({ role, summaryAmount, qrCountdownLabel, qrProgre
               Liberando el pago…
             </div>
           ) : (
-            <button
-              onClick={onScan}
-              disabled={isSubmitting}
-              style={{
-                width: "100%",
-                background: colors.brand,
-                border: "none",
-                color: "#ffffff",
-                fontFamily: "inherit",
-                fontWeight: "700",
-                fontSize: "17px",
-                padding: "17px 22px",
-                borderRadius: "14px",
-                cursor: isSubmitting ? "default" : "pointer",
-                opacity: isSubmitting ? 0.65 : 1,
-                boxShadow: "0 8px 24px rgba(14,58,52,0.24)",
-              }}
-            >
-              {isSubmitting ? "Un momento…" : "Escanear el QR"}
-            </button>
+            isSubmitting && (
+              <div style={{ textAlign: "center", fontSize: "13.5px", color: colors.textFaint }}>Verificando el QR…</div>
+            )
+          )}
+
+          {IS_DEV && !isReleasePending && (
+            <div style={{ background: colors.accentSoft, border: `1px solid ${colors.warnBorder}`, borderRadius: "14px", padding: "16px", marginTop: "16px" }}>
+              <div style={{ fontSize: "12px", fontWeight: "700", letterSpacing: "0.06em", textTransform: "uppercase", color: colors.accent, marginBottom: "10px" }}>
+                Modo prueba
+              </div>
+              <button
+                onClick={onDevScan}
+                disabled={isSubmitting}
+                style={{
+                  width: "100%",
+                  background: colors.accent,
+                  border: "none",
+                  color: "#ffffff",
+                  fontFamily: "inherit",
+                  fontWeight: "700",
+                  fontSize: "15px",
+                  padding: "13px 18px",
+                  borderRadius: "12px",
+                  cursor: isSubmitting ? "default" : "pointer",
+                  opacity: isSubmitting ? 0.65 : 1,
+                }}
+              >
+                Simular escaneo (dev)
+              </button>
+            </div>
           )}
         </div>
       )}

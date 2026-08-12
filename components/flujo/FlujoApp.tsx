@@ -8,14 +8,15 @@ import FlujoHeader from "./ui/FlujoHeader";
 import FlujoNavButtons from "./ui/FlujoNavButtons";
 import FlujoFooter from "./ui/FlujoFooter";
 import ProgressBar from "./ui/ProgressBar";
-import { getPlatformAccountRequest } from "./api";
+import { devQrTokenRequest, getPlatformAccountRequest } from "./api";
 import { DEFAULT_ITEM_LABEL } from "./data";
 import { calculateFee, money, toAmountNumber } from "./format";
 import { nextButtonLabel, phaseFor, phaseName, showsNextButton, showsProgress } from "./flow";
 import { roleColor } from "./theme";
 import { useAdvanceOnTratoStatus } from "./useAdvanceOnTratoStatus";
 import { useHelpChat } from "./useHelpChat";
-import { useQrCountdown } from "./useQrCountdown";
+import { useQrScanner } from "./useQrScanner";
+import { useSellerQrToken } from "./useSellerQrToken";
 import { useTrato } from "./useTrato";
 import { useWizardState } from "./useWizardState";
 import { formatTratoCodeForDisplay } from "@/lib/codeFormat";
@@ -44,12 +45,13 @@ type FlujoAppProps = { initialRole: Role };
  * auto-advances the local step once the *other* side's real action — the
  * counterpart accepting, a Fintoc webhook — actually changes its status
  * (`awaiting_payment`/`funds_held` for inbound payment, `released` for
- * outbound release). The buyer's "Escanear el QR" click on `qr` *does* call
- * the backend (`release`), but only to *start* the release — the screen
- * still waits for the webhook before advancing, same as everything else
- * here. `cancelar` (the buyer's refund) works the same way: "Confirmar
- * cancelación" calls `cancel`, then the screen waits for the refund webhook
- * (via the same hook) before moving to `cancelado`.
+ * outbound release). On `qr`, the buyer's camera (`useQrScanner`) decoding
+ * the seller's live QR (`useSellerQrToken`) *does* call the backend
+ * (`verifyQr`, SPEC 02) on its own, no button involved — but only to *start*
+ * the release — the screen still waits for the webhook before advancing,
+ * same as everything else here. `cancelar` (the buyer's refund) works the
+ * same way: "Confirmar cancelación" calls `cancel`, then the screen waits
+ * for the refund webhook (via the same hook) before moving to `cancelado`.
  */
 export default function FlujoApp({ initialRole }: FlujoAppProps) {
   const role = initialRole;
@@ -60,7 +62,33 @@ export default function FlujoApp({ initialRole }: FlujoAppProps) {
 
   const { screen, fields, canGoBack } = wizard;
   const { trato } = tratoState;
-  const qr = useQrCountdown(screen === "qr" && role === "vendedor");
+
+  // "qr" — SPEC 02: the seller's screen mints/renews a signed token every
+  // 30s and renders it as an image; the buyer's camera decodes it and hands
+  // the token straight to `verifyQr`. Each hook only runs for its own role,
+  // gated on both the screen and the role so the *other* side's tab never
+  // requests a camera or a token it has no use for.
+  //
+  // The seller also needs an explicit "Ya llegó el comprador" confirmation
+  // before `useSellerQrToken` starts polling — the seller reaches "qr" right
+  // after saving bank details (no "retenidos" wait-for-meetup gate on that
+  // side, unlike the buyer's), so without this, the seller's tab would hit
+  // `/qr-token` every 30s for however long it takes the two sides to
+  // actually meet up. Local UI state only, reset whenever "qr" stops being
+  // the active screen (e.g. going "Atrás" and back) — adjusted inline during
+  // render (React's recommended pattern for this) rather than in an effect,
+  // so it takes effect the same render `screen` changes instead of one render late.
+  const [sellerConfirmedMeetup, setSellerConfirmedMeetup] = useState(false);
+  const [lastQrScreen, setLastQrScreen] = useState(screen);
+  if (screen !== lastQrScreen) {
+    setLastQrScreen(screen);
+    if (screen !== "qr") setSellerConfirmedMeetup(false);
+  }
+
+  const sellerQr = useSellerQrToken(screen === "qr" && !isBuyer && sellerConfirmedMeetup, trato?.code, tratoState.sellerQrSecret);
+  const scanner = useQrScanner(screen === "qr" && isBuyer, (token) => {
+    tratoState.verifyQr(token);
+  });
 
   // "crear-codigo" (whoever created the trato, waiting on the other side):
   // same wait-for-webhook shape as the rest, but the target status differs
@@ -154,10 +182,15 @@ export default function FlujoApp({ initialRole }: FlujoAppProps) {
     if (saved) wizard.goNext();
   };
 
-  // Buyer's "Escanear el QR" — see QrStep and lib/tratos/release.ts for why
-  // this is safe to fire more than once (double-tap, slow network + retry).
-  const handleQrScan = () => {
-    tratoState.release();
+  // Dev/test-only "Simular escaneo (dev)" button — pulls the seller's
+  // current token from `/dev-qr-token` (no `x-seller-qr-secret` required)
+  // and feeds it through the same `verifyQr` path a real camera scan would,
+  // for testing the whole flow from one device/tab. See
+  // `lib/tratos/release.ts` for why calling this more than once is safe.
+  const handleDevQrScan = async () => {
+    if (!trato) return;
+    const { token } = await devQrTokenRequest(trato.code);
+    tratoState.verifyQr(token);
   };
 
   // Buyer's "Confirmar cancelación" — same idempotency story as the release, in lib/tratos/cancel.ts.
@@ -218,10 +251,17 @@ export default function FlujoApp({ initialRole }: FlujoAppProps) {
           isSubmitting={tratoState.isSubmitting}
           isRefundPending={trato?.status === "refund_pending"}
           isReleasePending={isBuyer && trato?.status === "release_pending"}
-          onQrScan={handleQrScan}
           onCancelarConfirm={handleCancelarConfirm}
-          qrCountdownLabel={qr.countdownLabel}
-          qrProgressPercent={qr.progressPercent}
+          qrImageDataUrl={sellerQr.qrImageDataUrl}
+          qrCountdownLabel={sellerQr.countdownLabel}
+          qrProgressPercent={sellerQr.progressPercent}
+          sellerQrError={sellerQr.error}
+          sellerConfirmedMeetup={sellerConfirmedMeetup}
+          onSellerConfirmMeetup={() => setSellerConfirmedMeetup(true)}
+          qrVideoRef={scanner.videoRef}
+          qrScannerError={scanner.error}
+          isQrScanning={scanner.isScanning}
+          onDevQrScan={handleDevQrScan}
         />
 
         {tratoState.error && (

@@ -41,6 +41,10 @@ export interface TratoRow {
   seller_account_number: string | null;
   seller_account_type: FintocAccountType | null;
 
+  // Opaque, once-issued secret held by whoever is `vendedor` — required to
+  // request a QR token (GET /qr-token). Never sent in PublicTratoDto.
+  seller_qr_secret: string | null;
+
   fintoc_inbound_transfer_id: string | null;
   paid_at: string | null;
 

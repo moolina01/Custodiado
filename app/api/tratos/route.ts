@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { jsonError, jsonOk } from "@/lib/http";
-import { toPublicDto } from "@/lib/tratos/dto";
+import { toCreateOrAcceptResponse } from "@/lib/tratos/dto";
 import { createTrato } from "@/lib/tratos/repository";
 import { createTratoSchema } from "@/lib/tratos/validation";
 
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const trato = await createTrato(parsed.data);
-    return jsonOk(toPublicDto(trato), 201);
+    return jsonOk(toCreateOrAcceptResponse(trato, parsed.data.role), 201);
   } catch (error) {
     return jsonError(500, error instanceof Error ? error.message : "Error inesperado al crear el trato.");
   }

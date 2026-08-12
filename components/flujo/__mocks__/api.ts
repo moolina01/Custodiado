@@ -35,6 +35,12 @@ export type BankDetailsInput = {
 
 export type CancelInput = BankDetailsInput & { reason?: string };
 
+export type TratoWithSellerQrSecret = { trato: Trato; sellerQrSecret?: string };
+
+// Fake seller QR secret handed out whenever a "vendedor" creates/accepts,
+// mirroring the real backend generating one via lib/tratos/repository.ts.
+const FAKE_SELLER_QR_SECRET = "test-seller-qr-secret";
+
 let trato: Trato | null = null;
 let pendingStatus: Trato["status"] | null = null;
 let sequence = 0;
@@ -52,7 +58,7 @@ function requireTrato(): Trato {
 }
 
 export const createTratoRequest = vi.fn(
-  async ({ role, item, amountClp, name }: { role: Role; item: string; amountClp: number; name: string }): Promise<Trato> => {
+  async ({ role, item, amountClp, name }: { role: Role; item: string; amountClp: number; name: string }): Promise<TratoWithSellerQrSecret> => {
     sequence += 1;
     const now = new Date().toISOString();
     trato = {
@@ -74,7 +80,7 @@ export const createTratoRequest = vi.fn(
       createdAt: now,
       updatedAt: now,
     };
-    return trato;
+    return role === "vendedor" ? { trato, sellerQrSecret: FAKE_SELLER_QR_SECRET } : { trato };
   }
 );
 
@@ -89,7 +95,7 @@ export const getTratoRequest = vi.fn(async (_code: string): Promise<Trato> => {
   return trato as Trato;
 });
 
-export const acceptTratoRequest = vi.fn(async (_code: string, role: Role, name: string): Promise<Trato> => {
+export const acceptTratoRequest = vi.fn(async (_code: string, role: Role, name: string): Promise<TratoWithSellerQrSecret> => {
   const current = requireTrato();
   trato = {
     ...current,
@@ -98,7 +104,7 @@ export const acceptTratoRequest = vi.fn(async (_code: string, role: Role, name: 
     buyerName: role === "comprador" ? name : current.buyerName,
     sellerName: role === "vendedor" ? name : current.sellerName,
   };
-  return trato;
+  return role === "vendedor" ? { trato, sellerQrSecret: FAKE_SELLER_QR_SECRET } : { trato };
 });
 
 export const submitBankDetailsRequest = vi.fn(async (_code: string, _input: BankDetailsInput): Promise<Trato> => {
@@ -122,12 +128,18 @@ export const forceAdvancePaymentRequest = vi.fn(async (_code: string): Promise<T
   return trato;
 });
 
-export const releaseTratoRequest = vi.fn(async (_code: string): Promise<Trato> => {
+export const verifyQrRequest = vi.fn(async (_code: string, _token: string): Promise<Trato> => {
   const current = requireTrato();
   trato = { ...current, status: "release_pending" };
   pendingStatus = "released";
   return trato;
 });
+
+export type QrTokenResponse = { token: string; expiresAt: number };
+
+// Fake token for the dev-only escape hatch — the mock never actually
+// verifies it (verifyQrRequest above always "succeeds"), so any string works.
+export const devQrTokenRequest = vi.fn(async (_code: string): Promise<QrTokenResponse> => ({ token: "dev-fake-token", expiresAt: Date.now() + 30_000 }));
 
 export const cancelTratoRequest = vi.fn(async (_code: string, _input: CancelInput): Promise<Trato> => {
   const current = requireTrato();

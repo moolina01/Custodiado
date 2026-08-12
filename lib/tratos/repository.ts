@@ -1,5 +1,5 @@
 import "server-only";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { calculateFee } from "@/lib/pricing";
 import { generateTratoCode, normalizeTratoCode } from "@/lib/codes";
@@ -13,6 +13,11 @@ const BANK_DETAILS_ALLOWED_STATUSES: TratoRow["status"][] = ["awaiting_payment",
 const TABLE = "tratos";
 const MAX_CODE_ATTEMPTS = 5;
 const POSTGRES_UNIQUE_VIOLATION = "23505";
+
+/** Opaque once-issued secret for whoever holds the `vendedor` role — see `seller_qr_secret` on `TratoRow`. */
+function generateSellerQrSecret(): string {
+  return randomBytes(24).toString("base64url");
+}
 
 /** Creates a trato with a freshly generated code, retrying on the rare code collision. */
 export async function createTrato(input: CreateTratoInput): Promise<TratoRow> {
@@ -31,6 +36,7 @@ export async function createTrato(input: CreateTratoInput): Promise<TratoRow> {
         fee_clp: feeClp,
         buyer_name: isBuyer ? input.name : null,
         seller_name: isBuyer ? null : input.name,
+        seller_qr_secret: isBuyer ? null : generateSellerQrSecret(),
       })
       .select()
       .single();
@@ -49,6 +55,19 @@ export async function getTratoByCode(rawCode: string): Promise<TratoRow | null> 
   const { data, error } = await db.from(TABLE).select().eq("code", code).maybeSingle();
   if (error) throw new Error(`No se pudo buscar el trato: ${error.message}`);
   return (data as TratoRow | null) ?? null;
+}
+
+/**
+ * Reads the once-issued seller QR secret for `code`. Internal use only —
+ * checked against the `x-seller-qr-secret` header in `GET /qr-token`, never
+ * exposed in `PublicTratoDto` or any other client-facing response.
+ */
+export async function getSellerQrSecret(rawCode: string): Promise<string | null> {
+  const db = getSupabaseAdmin();
+  const code = normalizeTratoCode(rawCode);
+  const { data, error } = await db.from(TABLE).select("seller_qr_secret").eq("code", code).maybeSingle();
+  if (error) throw new Error(`No se pudo leer el secreto del QR: ${error.message}`);
+  return (data as { seller_qr_secret: string | null } | null)?.seller_qr_secret ?? null;
 }
 
 export type AcceptResult =
@@ -76,7 +95,7 @@ export async function acceptTrato(rawCode: string, role: CreatedByRole, name: st
     .update({
       status: "awaiting_payment",
       accepted_at: new Date().toISOString(),
-      ...(isBuyer ? { buyer_name: name } : { seller_name: name }),
+      ...(isBuyer ? { buyer_name: name } : { seller_name: name, seller_qr_secret: generateSellerQrSecret() }),
     })
     .eq("code", code)
     .eq("status", "awaiting_acceptance") // atomic guard against a concurrent double-accept

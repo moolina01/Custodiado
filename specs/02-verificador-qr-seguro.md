@@ -1,6 +1,6 @@
 # SPEC 02 — Verificador de QR real y seguro para la liberación del pago
 
-> **Status:** aprobado
+> **Status:** implementado
 > **Depends on:** SPEC 01
 > **Date:** 2026-08-10
 > **Objective:** Reemplazar el paso `qr` simulado (imagen cosmética + botón que llama a `/release` sin verificar nada) por un QR real, firmado y con vencimiento de 30s, que el comprador escanea con la cámara de su celular, y que el backend verifica antes de liberar el pago.
@@ -89,16 +89,16 @@ Nueva variable de entorno en `.env.example`: `QR_SIGNING_SECRET` (server-only, m
 
 ## Acceptance criteria
 
-- [ ] `npm run test` pasa, incluyendo los tests nuevos de `qrToken.ts` (emitido válido, vencido inválido, firma alterada inválida, `code` distinto inválido).
-- [ ] `npm run build` y `npm run lint` terminan sin errores.
-- [ ] El paso `qr` del vendedor muestra una imagen de QR real (no el gradiente animado) que cambia cada 30 segundos.
-- [ ] `GET /api/tratos/[code]/qr-token` sin el header `x-seller-qr-secret` correcto responde 401 y no emite un token utilizable.
-- [ ] El paso `qr` del comprador pide permiso de cámara; al enfocar el QR vigente del vendedor, el trato pasa a `listo` sin tocar ningún botón manual (fuera del escape hatch dev).
-- [ ] `POST /api/tratos/[code]/verify-qr` con un token vencido o con la firma alterada responde 400 y no libera el pago (el trato se mantiene en `funds_held`).
-- [ ] `app/api/tratos/[code]/release/route.ts` ya no existe como archivo; el único camino que ejecuta `releaseTrato` es `verify-qr`.
-- [ ] `GET /api/tratos/[code]/dev-qr-token` responde 404 cuando `NODE_ENV=production`.
-- [ ] `sellerQrSecret` nunca aparece en la respuesta de `GET /api/tratos/[code]` (solo en la respuesta puntual de create/accept del vendedor).
-- [ ] Recorrido manual en dos pestañas (una vendedor, una comprador) con cámara real: el comprador escanea el QR de la pantalla del vendedor y el trato llega a `listo`.
+- [x] `npm run test` pasa, incluyendo los tests nuevos de `qrToken.ts` (emitido válido, vencido inválido, firma alterada inválida, `code` distinto inválido).
+- [x] `npm run build` y `npm run lint` terminan sin errores.
+- [x] El paso `qr` del vendedor muestra una imagen de QR real (no el gradiente animado) que cambia cada 30 segundos. Verificado en vivo (Playwright): imagen PNG real en base64, la imagen cambia entre ciclos, countdown visible.
+- [x] `GET /api/tratos/[code]/qr-token` sin el header `x-seller-qr-secret` correcto responde 401 y no emite un token utilizable. Verificado con `curl` contra Supabase real: sin header → 401, header incorrecto → 401, header correcto → 200.
+- [ ] El paso `qr` del comprador pide permiso de cámara; al enfocar el QR vigente del vendedor, el trato pasa a `listo` sin tocar ningún botón manual (fuera del escape hatch dev). **No probado con cámara física** — el camino de código es el mismo que usa el escape hatch dev (`onDecode(token)` → `verifyQr`), pero el decision explícito del equipo fue cerrar el spec sin esta prueba puntual.
+- [x] `POST /api/tratos/[code]/verify-qr` con un token vencido o con la firma alterada responde 400 y no libera el pago (el trato se mantiene en `funds_held`). Verificado con `curl` contra Supabase real: token inválido → 400, estado del trato sin cambios.
+- [x] `app/api/tratos/[code]/release/route.ts` ya no existe como archivo; el único camino que ejecuta `releaseTrato` es `verify-qr`. Verificado: archivo eliminado, `POST /release` da el 404 nativo de Next (ruta inexistente) contra un build de producción real.
+- [x] `GET /api/tratos/[code]/dev-qr-token` responde 404 cuando `NODE_ENV=production`. Verificado con `next start` real (`NODE_ENV=production`).
+- [x] `sellerQrSecret` nunca aparece en la respuesta de `GET /api/tratos/[code]` (solo en la respuesta puntual de create/accept del vendedor). Verificado con `curl` contra Supabase real.
+- [ ] Recorrido manual en dos pestañas (una vendedor, una comprador) con cámara real: el comprador escanea el QR de la pantalla del vendedor y el trato llega a `listo`. **No probado con dispositivo físico** — el recorrido completo con el botón dev-only "Simular escaneo (dev)" (mismo camino `verify-qr`) sí se validó en vivo. Cerrado igual por decisión del equipo; queda como riesgo conocido si el escaneo con cámara real en la práctica difiere del camino dev.
 
 ---
 
