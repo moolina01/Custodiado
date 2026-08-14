@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { jsonError, jsonOk } from "@/lib/http";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
+import { requireSessionUser, UnauthorizedError } from "@/lib/auth/session";
 import { toPublicDto } from "@/lib/tratos/dto";
 import { getTratoByCode } from "@/lib/tratos/repository";
 
@@ -19,10 +20,17 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   if (!allowed) return jsonError(429, "Demasiadas solicitudes. Intenta de nuevo en un momento.");
 
   try {
+    // SPEC 04: "toda la app requiere login" — cualquier cuenta logueada
+    // puede seguir viendo un trato con solo el código (no restringido a las
+    // partes, a diferencia de bank-details/cancel), pero ya no alcanza con
+    // el código solo: hace falta sesión.
+    await requireSessionUser();
+
     const trato = await getTratoByCode(code);
     if (!trato) return jsonError(404, "Trato no encontrado. Revisa el código.");
     return jsonOk(toPublicDto(trato));
   } catch (error) {
+    if (error instanceof UnauthorizedError) return jsonError(401, error.message);
     return jsonError(500, error instanceof Error ? error.message : "Error inesperado al buscar el trato.");
   }
 }

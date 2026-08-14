@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { calculateFee } from "@/lib/pricing";
 import { generateTratoCode, normalizeTratoCode } from "@/lib/codes";
 import { sameRut } from "@/lib/rut";
+import { getProfileByUserId } from "@/lib/profiles/repository";
 import type { InboundCounterparty } from "@/lib/fintoc/webhookParsing";
 import type { BankDetailsPayload } from "./validation";
 import type { CreateTratoInput, CreatedByRole, FintocAccountType, TratoRow } from "./types";
@@ -21,11 +22,21 @@ function generateSellerQrSecret(): string {
   return randomBytes(24).toString("base64url");
 }
 
-/** Creates a trato with a freshly generated code, retrying on the rare code collision. */
-export async function createTrato(input: CreateTratoInput): Promise<TratoRow> {
+/**
+ * Creates a trato with a freshly generated code, retrying on the rare code
+ * collision.
+ *
+ * SPEC 04: `name`/`rut` ya no vienen en `input` — se leen del perfil de
+ * `userId` (la cuenta logueada que hace la llamada), la misma identidad
+ * para cualquier trato que esa cuenta cree.
+ */
+export async function createTrato(input: CreateTratoInput, userId: string): Promise<TratoRow> {
   const db = getSupabaseAdmin();
   const feeClp = calculateFee(input.amountClp);
   const isBuyer = input.role === "comprador";
+
+  const profile = await getProfileByUserId(userId);
+  if (!profile) throw new Error("No se encontró el perfil de esta cuenta.");
 
   for (let attempt = 0; attempt < MAX_CODE_ATTEMPTS; attempt++) {
     const { data, error } = await db
@@ -36,14 +47,19 @@ export async function createTrato(input: CreateTratoInput): Promise<TratoRow> {
         item: input.item,
         amount_clp: input.amountClp,
         fee_clp: feeClp,
-        buyer_name: isBuyer ? input.name : null,
-        seller_name: isBuyer ? null : input.name,
-        // SPEC 03: RUT de identidad, declarado junto al nombre — guardado de
-        // inmediato en la misma columna que el RUT de la cuenta bancaria
-        // usa más tarde (seller_rut en bank-details, buyer_rut en cancel),
-        // así ambos puntos tienen contra qué comparar con `sameRut`.
-        buyer_rut: isBuyer ? input.rut : null,
-        seller_rut: isBuyer ? null : input.rut,
+        buyer_name: isBuyer ? profile.name : null,
+        seller_name: isBuyer ? null : profile.name,
+        // SPEC 04: cuenta dueña de este lado — habilita el chequeo de
+        // ownership en bank-details/cancel (ver submitSellerBankDetails más
+        // abajo y lib/tratos/cancel.ts).
+        buyer_user_id: isBuyer ? userId : null,
+        seller_user_id: isBuyer ? null : userId,
+        // SPEC 03: RUT de identidad, guardado de inmediato en la misma
+        // columna que el RUT de la cuenta bancaria usa más tarde (seller_rut
+        // en bank-details, buyer_rut en cancel) — ahora viene del perfil, no
+        // de lo que el cliente haya tipeado.
+        buyer_rut: isBuyer ? profile.rut : null,
+        seller_rut: isBuyer ? null : profile.rut,
         seller_qr_secret: isBuyer ? null : generateSellerQrSecret(),
       })
       .select()
@@ -81,14 +97,20 @@ export async function getSellerQrSecret(rawCode: string): Promise<string | null>
 export type AcceptResult =
   | { outcome: "not_found" }
   | { outcome: "wrong_role"; trato: TratoRow }
+  | { outcome: "cannot_accept_own_trato"; trato: TratoRow }
   | { outcome: "accepted" | "already_accepted"; trato: TratoRow };
 
 /**
  * The counterpart accepts a trato with its code. Idempotent: calling this
  * again after it already succeeded just returns the current row instead of
  * erroring, so a double-submit (slow network, double-tap) is harmless.
+ *
+ * SPEC 04: `name`/`rut` ya no vienen como parámetros — se leen del perfil
+ * de `userId`. También bloquea que la misma cuenta acepte un trato que ella
+ * misma creó con el otro rol (`wrong_role` solo cubre el caso de repetir el
+ * *mismo* rol, no el de la *misma cuenta* con el rol contrario).
  */
-export async function acceptTrato(rawCode: string, role: CreatedByRole, name: string, rut: string): Promise<AcceptResult> {
+export async function acceptTrato(rawCode: string, role: CreatedByRole, userId: string): Promise<AcceptResult> {
   const db = getSupabaseAdmin();
   const code = normalizeTratoCode(rawCode);
 
@@ -97,6 +119,14 @@ export async function acceptTrato(rawCode: string, role: CreatedByRole, name: st
   if (existing.created_by_role === role) return { outcome: "wrong_role", trato: existing };
   if (existing.status !== "awaiting_acceptance") return { outcome: "already_accepted", trato: existing };
 
+  const creatorUserId = existing.buyer_user_id ?? existing.seller_user_id;
+  if (creatorUserId && creatorUserId === userId) {
+    return { outcome: "cannot_accept_own_trato", trato: existing };
+  }
+
+  const profile = await getProfileByUserId(userId);
+  if (!profile) throw new Error("No se encontró el perfil de esta cuenta.");
+
   const isBuyer = role === "comprador";
   const { data, error } = await db
     .from(TABLE)
@@ -104,10 +134,12 @@ export async function acceptTrato(rawCode: string, role: CreatedByRole, name: st
       status: "awaiting_payment",
       accepted_at: new Date().toISOString(),
       // SPEC 03: mismo RUT de identidad que `createTrato` guarda para quien
-      // crea el trato — acá lo guarda quien lo acepta.
+      // crea el trato — acá lo guarda quien lo acepta. SPEC 04: ahora sale
+      // del perfil, no de lo que el cliente haya tipeado, y queda también
+      // el vínculo a la cuenta (`*_user_id`).
       ...(isBuyer
-        ? { buyer_name: name, buyer_rut: rut }
-        : { seller_name: name, seller_rut: rut, seller_qr_secret: generateSellerQrSecret() }),
+        ? { buyer_name: profile.name, buyer_rut: profile.rut, buyer_user_id: userId }
+        : { seller_name: profile.name, seller_rut: profile.rut, seller_user_id: userId, seller_qr_secret: generateSellerQrSecret() }),
     })
     .eq("code", code)
     .eq("status", "awaiting_acceptance") // atomic guard against a concurrent double-accept
@@ -126,7 +158,7 @@ export async function acceptTrato(rawCode: string, role: CreatedByRole, name: st
 export type BankDetailsResult =
   | { outcome: "not_found" }
   | { outcome: "wrong_status"; trato: TratoRow }
-  | { outcome: "rut_mismatch"; trato: TratoRow }
+  | { outcome: "not_owner"; trato: TratoRow }
   | { outcome: "saved"; trato: TratoRow };
 
 /**
@@ -135,23 +167,24 @@ export type BankDetailsResult =
  * Fintoc, so a typo can still be fixed. No status change: this fills in
  * fields the release step (M6) will read from later.
  *
- * SPEC 03: the account's RUT must be the same identity RUT the seller
- * declared at create/accept (`existing.seller_rut`) — the payout can't go
- * to a different RUT than whoever committed to being the seller.
+ * SPEC 04: replaces SPEC 03's RUT-comparison check with an ownership
+ * check — the session calling this must be the same account whose
+ * `seller_user_id` this trato recorded at create/accept. Comparing RUTs
+ * directly would be redundant now: the identity RUT always comes from that
+ * same account's profile, never something the client types per trato.
  */
-export async function submitSellerBankDetails(rawCode: string, input: BankDetailsPayload): Promise<BankDetailsResult> {
+export async function submitSellerBankDetails(rawCode: string, input: BankDetailsPayload, userId: string): Promise<BankDetailsResult> {
   const db = getSupabaseAdmin();
   const code = normalizeTratoCode(rawCode);
 
   const existing = await getTratoByCode(code);
   if (!existing) return { outcome: "not_found" };
   if (!BANK_DETAILS_ALLOWED_STATUSES.includes(existing.status)) return { outcome: "wrong_status", trato: existing };
-  if (!sameRut(input.rut, existing.seller_rut ?? "")) return { outcome: "rut_mismatch", trato: existing };
+  if (existing.seller_user_id !== userId) return { outcome: "not_owner", trato: existing };
 
   const { data, error } = await db
     .from(TABLE)
     .update({
-      seller_rut: input.rut,
       seller_bank_institution_id: input.bankInstitutionId,
       seller_account_number: input.accountNumber,
       seller_account_type: input.accountType,
@@ -422,8 +455,10 @@ export async function attachOutboundTransfer(tratoId: string, transferId: string
   return data as TratoRow;
 }
 
+// SPEC 04: ya no lleva `rut` — el RUT de destino del reembolso es
+// `existing.buyer_rut`, ya guardado al crear/aceptar desde el perfil de la
+// cuenta, y este update no lo toca (queda como estaba).
 export type RefundDestination = {
-  rut: string;
   bankInstitutionId: string;
   accountNumber: string;
   accountType: TratoRow["seller_account_type"];
@@ -445,7 +480,6 @@ export async function beginRefund(rawCode: string, destination: RefundDestinatio
     .update({
       status: "refund_pending",
       refund_idempotency_key: randomUUID(),
-      buyer_rut: destination.rut,
       buyer_bank_institution_id: destination.bankInstitutionId,
       buyer_account_number: destination.accountNumber,
       buyer_account_type: destination.accountType,

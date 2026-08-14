@@ -1,13 +1,12 @@
 import "server-only";
 import { createOutboundTransfer } from "@/lib/fintoc/transfers";
-import { sameRut } from "@/lib/rut";
 import { attachRefundTransfer, beginRefund, getTratoByCode, type RefundDestination } from "./repository";
 import type { TratoRow } from "./types";
 
 export type CancelResult =
   | { outcome: "not_found" }
   | { outcome: "wrong_status"; trato: TratoRow }
-  | { outcome: "rut_mismatch"; trato: TratoRow }
+  | { outcome: "not_owner"; trato: TratoRow }
   | { outcome: "already_refunded"; trato: TratoRow }
   | { outcome: "submitted"; trato: TratoRow };
 
@@ -18,18 +17,18 @@ export type CancelResult =
  * Same retry-safety shape as `lib/tratos/release.ts`: safe to call more
  * than once at any point in the process.
  *
- * SPEC 03: the refund destination's RUT must be the same identity RUT the
- * buyer declared at create/accept (`existing.buyer_rut`) — by consistency
- * with the seller's payout, this refund can't go to a different RUT either.
+ * SPEC 04: replaces SPEC 03's RUT-comparison check with an ownership
+ * check — the session calling this must be the same account whose
+ * `buyer_user_id` this trato recorded at create/accept.
  */
-export async function cancelTrato(rawCode: string, destination: RefundDestination): Promise<CancelResult> {
+export async function cancelTrato(rawCode: string, destination: RefundDestination, userId: string): Promise<CancelResult> {
   const existing = await getTratoByCode(rawCode);
   if (!existing) return { outcome: "not_found" };
 
   if (existing.status === "refunded") return { outcome: "already_refunded", trato: existing };
 
   if (existing.status === "funds_held") {
-    if (!sameRut(destination.rut, existing.buyer_rut ?? "")) return { outcome: "rut_mismatch", trato: existing };
+    if (existing.buyer_user_id !== userId) return { outcome: "not_owner", trato: existing };
 
     const begun = await beginRefund(existing.code, destination);
     if (!begun) {

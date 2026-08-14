@@ -1,10 +1,9 @@
 import Callout from "../ui/Callout";
 import Card from "../ui/Card";
-import FormField from "../ui/FormField";
+import IdentitySummary from "../ui/IdentitySummary";
 import StepHeading from "../ui/StepHeading";
 import SummaryRow from "../ui/SummaryRow";
 import { colors } from "../theme";
-import { isValidRut } from "@/lib/rut";
 import type { Role } from "../types";
 
 type DetalleStepProps = {
@@ -15,13 +14,16 @@ type DetalleStepProps = {
   summaryAmount: string;
   feeDisplay: string;
   totalAmount: string;
-  name: string;
-  onNameChange: (value: string) => void;
-  rut: string;
-  onRutChange: (value: string) => void;
+  profileName: string;
+  profileRut: string;
 };
 
-/** "Revisa el trato": full breakdown before accepting — the last chance to bail before money moves. Nombre + RUT (SPEC 03) is the identity this side commits to for the rest of the trato. */
+/**
+ * "Revisa el trato": full breakdown before accepting — the last chance to
+ * bail before money moves. Nombre + RUT (SPEC 03) ya no se piden acá — SPEC
+ * 04 los pide una sola vez al registrarse; `IdentitySummary` solo recuerda,
+ * de solo lectura, la identidad con la que esta cuenta va a figurar.
+ */
 export default function DetalleStep({
   role,
   summaryItem,
@@ -30,13 +32,10 @@ export default function DetalleStep({
   summaryAmount,
   feeDisplay,
   totalAmount,
-  name,
-  onNameChange,
-  rut,
-  onRutChange,
+  profileName,
+  profileRut,
 }: DetalleStepProps) {
   const isBuyer = role === "comprador";
-  const rutHint = rut && !isValidRut(rut) ? "Ese RUT no parece válido." : undefined;
 
   return (
     <div>
@@ -45,18 +44,8 @@ export default function DetalleStep({
         subtitle={isBuyer ? "Si está todo bien, aceptas y pagas en un paso." : "Aceptar es gratis y no te compromete a nada todavía."}
       />
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "18px", marginBottom: "18px" }}>
-        <FormField label="Tu nombre" value={name} onChange={onNameChange} placeholder="Cómo te va a ver la otra persona" />
-        <div>
-          <FormField
-            label="Tu RUT"
-            value={rut}
-            onChange={onRutChange}
-            placeholder="12.345.678-9"
-            hint="Tiene que ser el mismo RUT de la cuenta bancaria que uses en este trato."
-          />
-          {rutHint && <div style={{ fontSize: "13px", color: colors.dangerText, marginTop: "7px" }}>{rutHint}</div>}
-        </div>
+      <div style={{ marginBottom: "18px" }}>
+        <IdentitySummary name={profileName} rut={profileRut} />
       </div>
 
       <Card shadow>

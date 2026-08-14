@@ -19,7 +19,7 @@ const initialState: WizardState = {
   mode: null,
   stepIndex: 0,
   cancelStage: "none",
-  fields: { item: "", amount: "", name: "", code: "", rut: "", bankInstitutionId: "", account: "", accountType: "" },
+  fields: { item: "", amount: "", code: "", bankInstitutionId: "", account: "", accountType: "" },
 };
 
 function createReducer(role: Role) {

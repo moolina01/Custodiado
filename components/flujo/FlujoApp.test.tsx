@@ -8,9 +8,24 @@ import FlujoApp from "./FlujoApp";
 // factory rather than relying on the `__mocks__` auto-pickup convention.
 vi.mock("./api", async () => import("./__mocks__/api"));
 
+// SPEC 04: `useSession` reads this — stands in for `GET /api/auth/me`, same
+// fixed identity regardless of role (an account's name/RUT don't depend on
+// which side of a given trato it's playing).
+vi.mock("@/components/auth/api", () => ({
+  meRequest: vi.fn(async () => ({ id: "user-test", email: "test@example.com", name: "Ana Compradora", rut: "12345678-5" })),
+  logoutRequest: vi.fn(async () => ({ ok: true as const })),
+}));
+
+// FlujoApp calls useRouter() for the logout button (SPEC 04) — there's no
+// real App Router mounted in this test environment, so it needs a stand-in.
+// None of the tests below click "Cerrar sesión", so push/refresh never
+// actually run; they just need to exist so the hook call itself doesn't throw.
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+}));
+
 const { __resetMockApi, acceptTratoRequest, verifyQrRequest, simulatePaymentRequest } = await import("./__mocks__/api");
 
-const VALID_RUT = "12345678-5";
 const POLL_INTERVAL_MS = 3000; // must match components/flujo/useTratoPolling.ts
 
 /** Advances past one polling tick and flushes the refresh() promise it triggers. */
@@ -20,8 +35,7 @@ async function advancePoll() {
   });
 }
 
-function fillBankFields(rut: string, bankInstitutionId: string, accountType: string, accountNumber: string) {
-  fireEvent.change(screen.getByPlaceholderText("12.345.678-9"), { target: { value: rut } });
+function fillBankFields(bankInstitutionId: string, accountType: string, accountNumber: string) {
   const [bankSelect, accountTypeSelect] = screen.getAllByRole("combobox");
   fireEvent.change(bankSelect, { target: { value: bankInstitutionId } });
   fireEvent.change(accountTypeSelect, { target: { value: accountType } });
@@ -47,8 +61,6 @@ describe("FlujoApp", () => {
 
     fireEvent.change(screen.getByPlaceholderText("Bicicleta aro 29, poco uso"), { target: { value: "Bicicleta" } });
     fireEvent.change(screen.getByPlaceholderText("180.000"), { target: { value: "100000" } });
-    fireEvent.change(screen.getByPlaceholderText("Cómo te va a ver la otra persona"), { target: { value: "Ana" } });
-    fireEvent.change(screen.getByPlaceholderText("12.345.678-9"), { target: { value: VALID_RUT } });
 
     await act(async () => {
       fireEvent.click(screen.getByText("Generar el código")); // calls createTratoRequest
@@ -60,7 +72,7 @@ describe("FlujoApp", () => {
     // what actually moves this forward. Simulate that directly against the
     // fake backend, then let the buyer's own poll pick it up.
     await act(async () => {
-      await acceptTratoRequest("ABC123", "vendedor", "Beto", VALID_RUT);
+      await acceptTratoRequest("ABC123", "vendedor");
     });
     await advancePoll();
     expect(screen.getByText("Transfiere a la cuenta de custodia")).toBeInTheDocument();
@@ -92,8 +104,6 @@ describe("FlujoApp", () => {
     fireEvent.click(screen.getByText("Crear el trato"));
     fireEvent.change(screen.getByPlaceholderText("Bicicleta aro 29, poco uso"), { target: { value: "Bicicleta" } });
     fireEvent.change(screen.getByPlaceholderText("180.000"), { target: { value: "100000" } });
-    fireEvent.change(screen.getByPlaceholderText("Cómo te va a ver la otra persona"), { target: { value: "Beto" } });
-    fireEvent.change(screen.getByPlaceholderText("12.345.678-9"), { target: { value: VALID_RUT } });
 
     await act(async () => {
       fireEvent.click(screen.getByText("Generar el código"));
@@ -105,13 +115,13 @@ describe("FlujoApp", () => {
     // accept and pay before advancing. Simulate both directly, then let the
     // seller's own poll pick it up.
     await act(async () => {
-      await acceptTratoRequest("ABC123", "comprador", "Ana", VALID_RUT);
+      await acceptTratoRequest("ABC123", "comprador");
       await simulatePaymentRequest("ABC123");
     });
     await advancePoll();
     expect(screen.getByText("¿Dónde te depositamos?")).toBeInTheDocument();
 
-    fillBankFields(VALID_RUT, "cl_banco_estado", "checking_account", "000123456789");
+    fillBankFields("cl_banco_estado", "checking_account", "000123456789");
     await act(async () => {
       fireEvent.click(screen.getByText("Guardar y continuar")); // calls submitBankDetailsRequest
     });
@@ -133,13 +143,11 @@ describe("FlujoApp", () => {
     fireEvent.click(screen.getByText("Crear el trato"));
     fireEvent.change(screen.getByPlaceholderText("Bicicleta aro 29, poco uso"), { target: { value: "Bicicleta" } });
     fireEvent.change(screen.getByPlaceholderText("180.000"), { target: { value: "100000" } });
-    fireEvent.change(screen.getByPlaceholderText("Cómo te va a ver la otra persona"), { target: { value: "Ana" } });
-    fireEvent.change(screen.getByPlaceholderText("12.345.678-9"), { target: { value: VALID_RUT } });
     await act(async () => {
       fireEvent.click(screen.getByText("Generar el código"));
     });
     await act(async () => {
-      await acceptTratoRequest("ABC123", "vendedor", "Beto", VALID_RUT);
+      await acceptTratoRequest("ABC123", "vendedor");
     });
     await advancePoll();
     await act(async () => {
@@ -154,7 +162,7 @@ describe("FlujoApp", () => {
     const confirmButton = screen.getByText("Confirmar cancelación");
     expect(confirmButton).toBeDisabled();
 
-    fillBankFields(VALID_RUT, "cl_banco_estado", "checking_account", "000123456789");
+    fillBankFields("cl_banco_estado", "checking_account", "000123456789");
     expect(confirmButton).toBeEnabled();
 
     await act(async () => {
@@ -172,13 +180,11 @@ describe("FlujoApp", () => {
     fireEvent.click(screen.getByText("Crear el trato"));
     fireEvent.change(screen.getByPlaceholderText("Bicicleta aro 29, poco uso"), { target: { value: "Bicicleta" } });
     fireEvent.change(screen.getByPlaceholderText("180.000"), { target: { value: "100000" } });
-    fireEvent.change(screen.getByPlaceholderText("Cómo te va a ver la otra persona"), { target: { value: "Ana" } });
-    fireEvent.change(screen.getByPlaceholderText("12.345.678-9"), { target: { value: VALID_RUT } });
     await act(async () => {
       fireEvent.click(screen.getByText("Generar el código"));
     });
     await act(async () => {
-      await acceptTratoRequest("ABC123", "vendedor", "Beto", VALID_RUT);
+      await acceptTratoRequest("ABC123", "vendedor");
     });
     await advancePoll();
     expect(screen.getByText("Transfiere a la cuenta de custodia")).toBeInTheDocument();

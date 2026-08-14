@@ -30,7 +30,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 /** Response of create/accept — carries `sellerQrSecret` once, only when this call's role is `vendedor`. Never part of `Trato` itself. */
 export type TratoWithSellerQrSecret = { trato: Trato; sellerQrSecret?: string };
 
-export function createTratoRequest(input: { role: Role; item: string; amountClp: number; name: string; rut: string }): Promise<TratoWithSellerQrSecret> {
+// SPEC 04: no lleva `name`/`rut` — el servidor los resuelve desde el perfil
+// de la cuenta logueada (la llamada ya va con sesión, exigida por proxy.ts).
+export function createTratoRequest(input: { role: Role; item: string; amountClp: number }): Promise<TratoWithSellerQrSecret> {
   return request<TratoWithSellerQrSecret>("/api/tratos", { method: "POST", body: JSON.stringify(input) });
 }
 
@@ -38,15 +40,17 @@ export function getTratoRequest(code: string): Promise<Trato> {
   return request<Trato>(`/api/tratos/${encodeURIComponent(code)}`);
 }
 
-export function acceptTratoRequest(code: string, role: Role, name: string, rut: string): Promise<TratoWithSellerQrSecret> {
+export function acceptTratoRequest(code: string, role: Role): Promise<TratoWithSellerQrSecret> {
   return request<TratoWithSellerQrSecret>(`/api/tratos/${encodeURIComponent(code)}/accept`, {
     method: "POST",
-    body: JSON.stringify({ role, name, rut }),
+    body: JSON.stringify({ role }),
   });
 }
 
+// SPEC 04: no lleva `rut` — el RUT de identidad ya quedó guardado desde el
+// perfil al crear/aceptar; el servidor lo usa directo, no hace falta
+// reenviarlo acá.
 export type BankDetailsInput = {
-  rut: string;
   bankInstitutionId: string;
   accountNumber: string;
   accountType: string;

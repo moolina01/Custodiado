@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { jsonError, jsonOk } from "@/lib/http";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
+import { requireSessionUser, UnauthorizedError } from "@/lib/auth/session";
 import { toCreateOrAcceptResponse } from "@/lib/tratos/dto";
 import { acceptTrato } from "@/lib/tratos/repository";
 import { acceptTratoSchema } from "@/lib/tratos/validation";
@@ -31,7 +32,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   try {
-    const result = await acceptTrato(code, parsed.data.role, parsed.data.name, parsed.data.rut);
+    const user = await requireSessionUser();
+    const result = await acceptTrato(code, parsed.data.role, user.id);
 
     switch (result.outcome) {
       case "not_found":
@@ -43,11 +45,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             ? "Este trato ya lo creaste vos como comprador. Compartí el código con el vendedor."
             : "Este trato ya lo creaste vos como vendedor. Compartí el código con el comprador."
         );
+      case "cannot_accept_own_trato":
+        return jsonError(400, "No podés aceptar un trato que vos mismo creaste. Compartí el código con la otra persona.");
       case "accepted":
       case "already_accepted":
         return jsonOk(toCreateOrAcceptResponse(result.trato, parsed.data.role));
     }
   } catch (error) {
+    if (error instanceof UnauthorizedError) return jsonError(401, error.message);
     return jsonError(500, error instanceof Error ? error.message : "Error inesperado al aceptar el trato.");
   }
 }

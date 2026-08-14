@@ -8,10 +8,11 @@ type FormFieldProps = {
   prefix?: string; // e.g. "$" for the amount field
   inputMode?: "text" | "numeric";
   hint?: string;
+  type?: "text" | "email" | "password"; // SPEC 04: "email"/"password" for the auth forms — everything else keeps the "text" default
 };
 
-/** Labeled text input shared by every form step ("Datos del trato", "¿Dónde te depositamos?"). */
-export default function FormField({ label, value, onChange, placeholder, prefix, inputMode = "text", hint }: FormFieldProps) {
+/** Labeled text input shared by every form step ("Datos del trato", "¿Dónde te depositamos?") and, since SPEC 04, the auth forms (login/signup/reset). */
+export default function FormField({ label, value, onChange, placeholder, prefix, inputMode = "text", hint, type = "text" }: FormFieldProps) {
   return (
     <div>
       <label style={{ display: "block", fontSize: "14px", fontWeight: "600", marginBottom: "7px" }}>{label}</label>
@@ -32,6 +33,7 @@ export default function FormField({ label, value, onChange, placeholder, prefix,
           </span>
         )}
         <input
+          type={type}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}

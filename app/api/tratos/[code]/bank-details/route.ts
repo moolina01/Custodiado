@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { jsonError, jsonOk } from "@/lib/http";
+import { requireSessionUser, UnauthorizedError } from "@/lib/auth/session";
 import { toPublicDto } from "@/lib/tratos/dto";
 import { submitSellerBankDetails } from "@/lib/tratos/repository";
 import { bankDetailsSchema } from "@/lib/tratos/validation";
@@ -22,19 +23,23 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   try {
-    const result = await submitSellerBankDetails(code, parsed.data);
+    // SPEC 04: reemplaza el chequeo de RUT (SPEC 03) — la sesión activa
+    // debe ser la cuenta dueña del lado "vendedor" de este trato.
+    const user = await requireSessionUser();
+    const result = await submitSellerBankDetails(code, parsed.data, user.id);
 
     switch (result.outcome) {
       case "not_found":
         return jsonError(404, "Trato no encontrado. Revisa el código.");
       case "wrong_status":
         return jsonError(409, "Ya no se pueden editar los datos bancarios de este trato.");
-      case "rut_mismatch":
-        return jsonError(400, "El RUT de la cuenta debe ser el mismo que declaraste al aceptar el trato.");
+      case "not_owner":
+        return jsonError(403, "Esta cuenta no es la que aceptó este trato como vendedor.");
       case "saved":
         return jsonOk(toPublicDto(result.trato));
     }
   } catch (error) {
+    if (error instanceof UnauthorizedError) return jsonError(401, error.message);
     return jsonError(500, error instanceof Error ? error.message : "Error inesperado al guardar los datos bancarios.");
   }
 }

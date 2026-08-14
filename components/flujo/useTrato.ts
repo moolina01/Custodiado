@@ -33,11 +33,11 @@ export function useTrato() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const create = useCallback(async (role: Role, item: string, amountClp: number, name: string, rut: string) => {
+  const create = useCallback(async (role: Role, item: string, amountClp: number) => {
     setIsSubmitting(true);
     setError(null);
     try {
-      const created = await createTratoRequest({ role, item, amountClp, name, rut });
+      const created = await createTratoRequest({ role, item, amountClp });
       setTrato(created.trato);
       if (created.sellerQrSecret) setSellerQrSecret(created.sellerQrSecret);
       return created.trato;
@@ -64,12 +64,12 @@ export function useTrato() {
     }
   }, []);
 
-  const accept = useCallback(async (role: Role, name: string, rut: string) => {
+  const accept = useCallback(async (role: Role) => {
     if (!trato) return null;
     setIsSubmitting(true);
     setError(null);
     try {
-      const accepted = await acceptTratoRequest(trato.code, role, name, rut);
+      const accepted = await acceptTratoRequest(trato.code, role);
       setTrato(accepted.trato);
       if (accepted.sellerQrSecret) setSellerQrSecret(accepted.sellerQrSecret);
       return accepted.trato;

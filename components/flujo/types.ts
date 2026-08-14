@@ -28,12 +28,13 @@ export type Screen =
 // rather than a step in it — see `useWizardState`.
 export type CancelStage = "none" | "form" | "done";
 
+// SPEC 04: no lleva `name`/`rut` — la identidad de quien completa el wizard
+// sale del perfil de la cuenta logueada (ver `useSession`), no de campos
+// tipeados por trato (ese era el modelo de SPEC 03).
 export type WizardFields = {
   item: string;
   amount: string; // thousands-formatted as the user types it, e.g. "180.000"
-  name: string;
   code: string;
-  rut: string;
   bankInstitutionId: string; // Fintoc institution id, e.g. "cl_banco_estado" — see lib/fintoc/banks.ts
   account: string;
   accountType: string; // "checking_account" | "sight_account" | "" (not chosen yet)

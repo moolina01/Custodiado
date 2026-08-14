@@ -1,20 +1,26 @@
 import FormField from "../ui/FormField";
+import IdentitySummary from "../ui/IdentitySummary";
 import StepHeading from "../ui/StepHeading";
 import { colors } from "../theme";
-import { isValidRut } from "@/lib/rut";
 import type { Role, WizardFields } from "../types";
 
 type CrearDatosStepProps = {
   role: Role;
-  fields: Pick<WizardFields, "item" | "amount" | "name" | "rut">;
-  onFieldChange: (field: "item" | "amount" | "name" | "rut", value: string) => void;
+  fields: Pick<WizardFields, "item" | "amount">;
+  onFieldChange: (field: "item" | "amount", value: string) => void;
   feeLineValue: string;
+  profileName: string;
+  profileRut: string;
 };
 
-/** "Datos del trato": what's being sold, the agreed price, and the seller/buyer's identity (nombre + RUT — SPEC 03). */
-export default function CrearDatosStep({ role, fields, onFieldChange, feeLineValue }: CrearDatosStepProps) {
+/**
+ * "Datos del trato": what's being sold and the agreed price. Nombre + RUT
+ * (SPEC 03) ya no se piden acá — SPEC 04 los pide una sola vez al
+ * registrarse, y `IdentitySummary` solo recuerda, de solo lectura, con qué
+ * identidad va a figurar la cuenta logueada.
+ */
+export default function CrearDatosStep({ role, fields, onFieldChange, feeLineValue, profileName, profileRut }: CrearDatosStepProps) {
   const isBuyer = role === "comprador";
-  const rutHint = fields.rut && !isValidRut(fields.rut) ? "Ese RUT no parece válido." : undefined;
 
   return (
     <div>
@@ -38,22 +44,7 @@ export default function CrearDatosStep({ role, fields, onFieldChange, feeLineVal
           prefix="$"
           inputMode="numeric"
         />
-        <FormField
-          label="Tu nombre"
-          value={fields.name}
-          onChange={(v) => onFieldChange("name", v)}
-          placeholder="Cómo te va a ver la otra persona"
-        />
-        <div>
-          <FormField
-            label="Tu RUT"
-            value={fields.rut}
-            onChange={(v) => onFieldChange("rut", v)}
-            placeholder="12.345.678-9"
-            hint="Tiene que ser el mismo RUT de la cuenta bancaria que uses en este trato."
-          />
-          {rutHint && <div style={{ fontSize: "13px", color: colors.dangerText, marginTop: "7px" }}>{rutHint}</div>}
-        </div>
+        <IdentitySummary name={profileName} rut={profileRut} />
       </div>
 
       <div

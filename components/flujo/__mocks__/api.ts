@@ -27,7 +27,6 @@ export class ApiError extends Error {
 }
 
 export type BankDetailsInput = {
-  rut: string;
   bankInstitutionId: string;
   accountNumber: string;
   accountType: string;
@@ -40,6 +39,13 @@ export type TratoWithSellerQrSecret = { trato: Trato; sellerQrSecret?: string };
 // Fake seller QR secret handed out whenever a "vendedor" creates/accepts,
 // mirroring the real backend generating one via lib/tratos/repository.ts.
 const FAKE_SELLER_QR_SECRET = "test-seller-qr-secret";
+
+// SPEC 04: name/rut ya no vienen como parámetro de create/accept — el
+// backend real los resuelve del perfil de la cuenta logueada. Acá, sin un
+// backend real, se usan nombres fijos por rol (ninguna aserción del test
+// depende de estos valores puntuales).
+const FAKE_BUYER_NAME = "Ana Compradora";
+const FAKE_SELLER_NAME = "Beto Vendedor";
 
 let trato: Trato | null = null;
 let pendingStatus: Trato["status"] | null = null;
@@ -58,20 +64,10 @@ function requireTrato(): Trato {
 }
 
 export const createTratoRequest = vi.fn(
-  async ({
-    role,
-    item,
-    amountClp,
-    name,
-  }: {
-    role: Role;
-    item: string;
-    amountClp: number;
-    name: string;
-    rut: string;
-  }): Promise<TratoWithSellerQrSecret> => {
+  async ({ role, item, amountClp }: { role: Role; item: string; amountClp: number }): Promise<TratoWithSellerQrSecret> => {
     sequence += 1;
     const now = new Date().toISOString();
+    const name = role === "comprador" ? FAKE_BUYER_NAME : FAKE_SELLER_NAME;
     trato = {
       id: `trato-${sequence}`,
       code: "ABC123",
@@ -107,8 +103,9 @@ export const getTratoRequest = vi.fn(async (_code: string): Promise<Trato> => {
   return trato as Trato;
 });
 
-export const acceptTratoRequest = vi.fn(async (_code: string, role: Role, name: string, _rut: string): Promise<TratoWithSellerQrSecret> => {
+export const acceptTratoRequest = vi.fn(async (_code: string, role: Role): Promise<TratoWithSellerQrSecret> => {
   const current = requireTrato();
+  const name = role === "comprador" ? FAKE_BUYER_NAME : FAKE_SELLER_NAME;
   trato = {
     ...current,
     status: "awaiting_payment",
