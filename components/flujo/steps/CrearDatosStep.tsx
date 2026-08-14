@@ -1,18 +1,20 @@
 import FormField from "../ui/FormField";
 import StepHeading from "../ui/StepHeading";
 import { colors } from "../theme";
+import { isValidRut } from "@/lib/rut";
 import type { Role, WizardFields } from "../types";
 
 type CrearDatosStepProps = {
   role: Role;
-  fields: Pick<WizardFields, "item" | "amount" | "name">;
-  onFieldChange: (field: "item" | "amount" | "name", value: string) => void;
+  fields: Pick<WizardFields, "item" | "amount" | "name" | "rut">;
+  onFieldChange: (field: "item" | "amount" | "name" | "rut", value: string) => void;
   feeLineValue: string;
 };
 
-/** "Datos del trato": what's being sold, the agreed price, and the seller/buyer's display name. */
+/** "Datos del trato": what's being sold, the agreed price, and the seller/buyer's identity (nombre + RUT — SPEC 03). */
 export default function CrearDatosStep({ role, fields, onFieldChange, feeLineValue }: CrearDatosStepProps) {
   const isBuyer = role === "comprador";
+  const rutHint = fields.rut && !isValidRut(fields.rut) ? "Ese RUT no parece válido." : undefined;
 
   return (
     <div>
@@ -42,6 +44,16 @@ export default function CrearDatosStep({ role, fields, onFieldChange, feeLineVal
           onChange={(v) => onFieldChange("name", v)}
           placeholder="Cómo te va a ver la otra persona"
         />
+        <div>
+          <FormField
+            label="Tu RUT"
+            value={fields.rut}
+            onChange={(v) => onFieldChange("rut", v)}
+            placeholder="12.345.678-9"
+            hint="Tiene que ser el mismo RUT de la cuenta bancaria que uses en este trato."
+          />
+          {rutHint && <div style={{ fontSize: "13px", color: colors.dangerText, marginTop: "7px" }}>{rutHint}</div>}
+        </div>
       </div>
 
       <div

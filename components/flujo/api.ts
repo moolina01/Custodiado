@@ -30,7 +30,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 /** Response of create/accept — carries `sellerQrSecret` once, only when this call's role is `vendedor`. Never part of `Trato` itself. */
 export type TratoWithSellerQrSecret = { trato: Trato; sellerQrSecret?: string };
 
-export function createTratoRequest(input: { role: Role; item: string; amountClp: number; name: string }): Promise<TratoWithSellerQrSecret> {
+export function createTratoRequest(input: { role: Role; item: string; amountClp: number; name: string; rut: string }): Promise<TratoWithSellerQrSecret> {
   return request<TratoWithSellerQrSecret>("/api/tratos", { method: "POST", body: JSON.stringify(input) });
 }
 
@@ -38,10 +38,10 @@ export function getTratoRequest(code: string): Promise<Trato> {
   return request<Trato>(`/api/tratos/${encodeURIComponent(code)}`);
 }
 
-export function acceptTratoRequest(code: string, role: Role, name: string): Promise<TratoWithSellerQrSecret> {
+export function acceptTratoRequest(code: string, role: Role, name: string, rut: string): Promise<TratoWithSellerQrSecret> {
   return request<TratoWithSellerQrSecret>(`/api/tratos/${encodeURIComponent(code)}/accept`, {
     method: "POST",
-    body: JSON.stringify({ role, name }),
+    body: JSON.stringify({ role, name, rut }),
   });
 }
 
@@ -71,6 +71,11 @@ export function simulatePaymentRequest(code: string): Promise<{ simulated: true;
 /** Dev/test-only escape hatch: skips waiting for the real webhook and flips the trato to `funds_held` directly — for when the local server has no reachable webhook endpoint. See the route handler. */
 export function forceAdvancePaymentRequest(code: string): Promise<Trato> {
   return request<Trato>(`/api/tratos/${encodeURIComponent(code)}/force-advance-payment`, { method: "POST" });
+}
+
+/** Dev/test-only escape hatch (SPEC 03): simulates an inbound transfer whose sender RUT doesn't match the buyer's declared identity — the trato goes straight to `refund_pending`/`refunded` instead of `funds_held`. See the route handler. */
+export function simulateRutMismatchRequest(code: string): Promise<Trato> {
+  return request<Trato>(`/api/tratos/${encodeURIComponent(code)}/simulate-rut-mismatch`, { method: "POST" });
 }
 
 /** The buyer's camera decoding a valid QR — verifies the token and, if it checks out, triggers the real (test-mode) escrow release. Safe to call more than once. */

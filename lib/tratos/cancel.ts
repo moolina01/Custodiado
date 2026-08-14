@@ -1,11 +1,13 @@
 import "server-only";
 import { createOutboundTransfer } from "@/lib/fintoc/transfers";
+import { sameRut } from "@/lib/rut";
 import { attachRefundTransfer, beginRefund, getTratoByCode, type RefundDestination } from "./repository";
 import type { TratoRow } from "./types";
 
 export type CancelResult =
   | { outcome: "not_found" }
   | { outcome: "wrong_status"; trato: TratoRow }
+  | { outcome: "rut_mismatch"; trato: TratoRow }
   | { outcome: "already_refunded"; trato: TratoRow }
   | { outcome: "submitted"; trato: TratoRow };
 
@@ -15,6 +17,10 @@ export type CancelResult =
  * before that there's nothing to refund, and after release it's too late).
  * Same retry-safety shape as `lib/tratos/release.ts`: safe to call more
  * than once at any point in the process.
+ *
+ * SPEC 03: the refund destination's RUT must be the same identity RUT the
+ * buyer declared at create/accept (`existing.buyer_rut`) — by consistency
+ * with the seller's payout, this refund can't go to a different RUT either.
  */
 export async function cancelTrato(rawCode: string, destination: RefundDestination): Promise<CancelResult> {
   const existing = await getTratoByCode(rawCode);
@@ -23,6 +29,8 @@ export async function cancelTrato(rawCode: string, destination: RefundDestinatio
   if (existing.status === "refunded") return { outcome: "already_refunded", trato: existing };
 
   if (existing.status === "funds_held") {
+    if (!sameRut(destination.rut, existing.buyer_rut ?? "")) return { outcome: "rut_mismatch", trato: existing };
+
     const begun = await beginRefund(existing.code, destination);
     if (!begun) {
       const refetched = await getTratoByCode(existing.code);
@@ -36,6 +44,19 @@ export async function cancelTrato(rawCode: string, destination: RefundDestinatio
   }
 
   return { outcome: "wrong_status", trato: existing };
+}
+
+/**
+ * SPEC 03: resumes a refund that's already `refund_pending` with its
+ * destination and idempotency key saved — exactly the shape
+ * `matchInboundPayment` (lib/tratos/repository.ts) leaves a trato in right
+ * after detecting a RUT mismatch on the inbound transfer. Reused instead of
+ * duplicated: submitting to Fintoc is identical either way, only how the
+ * trato *got* to `refund_pending` differs (the buyer's own click vs. the
+ * webhook's automatic check).
+ */
+export function resumeRefund(trato: TratoRow): Promise<CancelResult> | CancelResult {
+  return continueRefund(trato);
 }
 
 function continueRefund(trato: TratoRow): Promise<CancelResult> | CancelResult {

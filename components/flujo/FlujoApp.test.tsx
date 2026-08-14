@@ -48,6 +48,7 @@ describe("FlujoApp", () => {
     fireEvent.change(screen.getByPlaceholderText("Bicicleta aro 29, poco uso"), { target: { value: "Bicicleta" } });
     fireEvent.change(screen.getByPlaceholderText("180.000"), { target: { value: "100000" } });
     fireEvent.change(screen.getByPlaceholderText("Cómo te va a ver la otra persona"), { target: { value: "Ana" } });
+    fireEvent.change(screen.getByPlaceholderText("12.345.678-9"), { target: { value: VALID_RUT } });
 
     await act(async () => {
       fireEvent.click(screen.getByText("Generar el código")); // calls createTratoRequest
@@ -59,7 +60,7 @@ describe("FlujoApp", () => {
     // what actually moves this forward. Simulate that directly against the
     // fake backend, then let the buyer's own poll pick it up.
     await act(async () => {
-      await acceptTratoRequest("ABC123", "vendedor", "Beto");
+      await acceptTratoRequest("ABC123", "vendedor", "Beto", VALID_RUT);
     });
     await advancePoll();
     expect(screen.getByText("Transfiere a la cuenta de custodia")).toBeInTheDocument();
@@ -92,6 +93,7 @@ describe("FlujoApp", () => {
     fireEvent.change(screen.getByPlaceholderText("Bicicleta aro 29, poco uso"), { target: { value: "Bicicleta" } });
     fireEvent.change(screen.getByPlaceholderText("180.000"), { target: { value: "100000" } });
     fireEvent.change(screen.getByPlaceholderText("Cómo te va a ver la otra persona"), { target: { value: "Beto" } });
+    fireEvent.change(screen.getByPlaceholderText("12.345.678-9"), { target: { value: VALID_RUT } });
 
     await act(async () => {
       fireEvent.click(screen.getByText("Generar el código"));
@@ -103,7 +105,7 @@ describe("FlujoApp", () => {
     // accept and pay before advancing. Simulate both directly, then let the
     // seller's own poll pick it up.
     await act(async () => {
-      await acceptTratoRequest("ABC123", "comprador", "Ana");
+      await acceptTratoRequest("ABC123", "comprador", "Ana", VALID_RUT);
       await simulatePaymentRequest("ABC123");
     });
     await advancePoll();
@@ -132,11 +134,12 @@ describe("FlujoApp", () => {
     fireEvent.change(screen.getByPlaceholderText("Bicicleta aro 29, poco uso"), { target: { value: "Bicicleta" } });
     fireEvent.change(screen.getByPlaceholderText("180.000"), { target: { value: "100000" } });
     fireEvent.change(screen.getByPlaceholderText("Cómo te va a ver la otra persona"), { target: { value: "Ana" } });
+    fireEvent.change(screen.getByPlaceholderText("12.345.678-9"), { target: { value: VALID_RUT } });
     await act(async () => {
       fireEvent.click(screen.getByText("Generar el código"));
     });
     await act(async () => {
-      await acceptTratoRequest("ABC123", "vendedor", "Beto");
+      await acceptTratoRequest("ABC123", "vendedor", "Beto", VALID_RUT);
     });
     await advancePoll();
     await act(async () => {
@@ -161,5 +164,35 @@ describe("FlujoApp", () => {
 
     await advancePoll(); // refund webhook, delivered on the next poll
     expect(screen.getByText("Trato cancelado")).toBeInTheDocument();
+  });
+
+  it("SPEC 03: auto-refunds the buyer when the sender RUT doesn't match, from 'pagar' straight to 'cancelado'", async () => {
+    render(<FlujoApp initialRole="comprador" />);
+
+    fireEvent.click(screen.getByText("Crear el trato"));
+    fireEvent.change(screen.getByPlaceholderText("Bicicleta aro 29, poco uso"), { target: { value: "Bicicleta" } });
+    fireEvent.change(screen.getByPlaceholderText("180.000"), { target: { value: "100000" } });
+    fireEvent.change(screen.getByPlaceholderText("Cómo te va a ver la otra persona"), { target: { value: "Ana" } });
+    fireEvent.change(screen.getByPlaceholderText("12.345.678-9"), { target: { value: VALID_RUT } });
+    await act(async () => {
+      fireEvent.click(screen.getByText("Generar el código"));
+    });
+    await act(async () => {
+      await acceptTratoRequest("ABC123", "vendedor", "Beto", VALID_RUT);
+    });
+    await advancePoll();
+    expect(screen.getByText("Transfiere a la cuenta de custodia")).toBeInTheDocument();
+
+    // Real path is Fintoc's webhook reporting a `counterparty.holder_id`
+    // that doesn't match the buyer's declared RUT (see
+    // lib/tratos/repository.ts's matchInboundPayment) — untestable here
+    // without a real webhook, so the dev-only "Simular RUT no coincidente"
+    // button drives the exact same repository path (SPEC 02's precedent for
+    // untestable-in-jsdom real integrations).
+    await act(async () => {
+      fireEvent.click(screen.getByText("Simular RUT no coincidente (dev)"));
+    });
+    await advancePoll(); // refund webhook, delivered on the next poll
+    expect(screen.getByText("No pudimos confirmar tu pago")).toBeInTheDocument();
   });
 });

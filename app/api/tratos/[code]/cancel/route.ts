@@ -31,6 +31,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         return jsonError(404, "Trato no encontrado. Revisa el código.");
       case "wrong_status":
         return jsonError(409, "Este trato ya no se puede cancelar.");
+      case "rut_mismatch":
+        return jsonError(400, "El RUT de la cuenta de devolución debe ser el mismo que declaraste al aceptar el trato.");
       case "already_refunded":
       case "submitted":
         return jsonOk(toPublicDto(result.trato));

@@ -9,6 +9,7 @@ import {
   forceAdvancePaymentRequest,
   getTratoRequest,
   simulatePaymentRequest,
+  simulateRutMismatchRequest,
   submitBankDetailsRequest,
   verifyQrRequest,
   type BankDetailsInput,
@@ -32,11 +33,11 @@ export function useTrato() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const create = useCallback(async (role: Role, item: string, amountClp: number, name: string) => {
+  const create = useCallback(async (role: Role, item: string, amountClp: number, name: string, rut: string) => {
     setIsSubmitting(true);
     setError(null);
     try {
-      const created = await createTratoRequest({ role, item, amountClp, name });
+      const created = await createTratoRequest({ role, item, amountClp, name, rut });
       setTrato(created.trato);
       if (created.sellerQrSecret) setSellerQrSecret(created.sellerQrSecret);
       return created.trato;
@@ -63,12 +64,12 @@ export function useTrato() {
     }
   }, []);
 
-  const accept = useCallback(async (role: Role, name: string) => {
+  const accept = useCallback(async (role: Role, name: string, rut: string) => {
     if (!trato) return null;
     setIsSubmitting(true);
     setError(null);
     try {
-      const accepted = await acceptTratoRequest(trato.code, role, name);
+      const accepted = await acceptTratoRequest(trato.code, role, name, rut);
       setTrato(accepted.trato);
       if (accepted.sellerQrSecret) setSellerQrSecret(accepted.sellerQrSecret);
       return accepted.trato;
@@ -144,6 +145,29 @@ export function useTrato() {
     }
   }, [trato]);
 
+  // Dev/test-only (SPEC 03): stands in for an inbound transfer whose sender
+  // RUT doesn't match the buyer's declared identity — same "doesn't resolve
+  // synchronously to the final state" shape as `simulatePayment`, since the
+  // route only submits the refund; `refunded` arrives on the next poll once
+  // the outbound webhook confirms it. Unlike `simulatePayment`, this one
+  // *does* update `trato` synchronously to `refund_pending`, matching what
+  // the route actually returns.
+  const simulateRutMismatch = useCallback(async () => {
+    if (!trato) return null;
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const updated = await simulateRutMismatchRequest(trato.code);
+      setTrato(updated);
+      return updated;
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "No se pudo simular el RUT no coincidente.");
+      return null;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [trato]);
+
   // The buyer's camera decoding a QR off the seller's screen — sends the
   // token to the backend, which verifies it before running the same release
   // logic the old (removed) `release()` used to trigger unconditionally.
@@ -210,6 +234,7 @@ export function useTrato() {
     saveBankDetails,
     simulatePayment,
     forceAdvancePayment,
+    simulateRutMismatch,
     verifyQr,
     cancel,
     refresh,

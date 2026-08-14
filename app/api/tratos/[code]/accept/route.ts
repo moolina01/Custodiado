@@ -31,7 +31,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   try {
-    const result = await acceptTrato(code, parsed.data.role, parsed.data.name);
+    const result = await acceptTrato(code, parsed.data.role, parsed.data.name, parsed.data.rut);
 
     switch (result.outcome) {
       case "not_found":

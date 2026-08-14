@@ -1,5 +1,6 @@
 import type { ReactNode, RefObject } from "react";
 import { COUNTERPART_LABEL } from "./data";
+import type { RefundReason } from "@/lib/tratos/types";
 import type { Role, Screen, WizardFields } from "./types";
 
 import InicioStep from "./steps/InicioStep";
@@ -42,9 +43,11 @@ export type FlujoStepContext = {
   platformAccountNumber: string;
   onSimulatePayment: () => void;
   onForceAdvancePayment: () => void;
+  onSimulateRutMismatch: () => void;
   isSubmitting: boolean;
   isRefundPending: boolean;
   isReleasePending: boolean;
+  refundReason: RefundReason | null;
   onCancelarConfirm: () => void;
   // Seller side of "qr" — from `useSellerQrToken`, gated behind an explicit
   // "Ya llegó el comprador" confirmation (see FlujoApp).
@@ -93,6 +96,8 @@ const STEP_RENDERERS: Record<Screen, StepRenderer> = {
       totalAmount={ctx.totalAmount}
       name={ctx.fields.name}
       onNameChange={ctx.onNameChange}
+      rut={ctx.fields.rut}
+      onRutChange={(value) => ctx.onFieldChange("rut", value)}
     />
   ),
 
@@ -106,6 +111,7 @@ const STEP_RENDERERS: Record<Screen, StepRenderer> = {
       accountNumber={ctx.platformAccountNumber}
       onSimulatePayment={ctx.onSimulatePayment}
       onForceAdvancePayment={ctx.onForceAdvancePayment}
+      onSimulateRutMismatch={ctx.onSimulateRutMismatch}
       isSimulating={ctx.isSubmitting}
     />
   ),
@@ -135,7 +141,15 @@ const STEP_RENDERERS: Record<Screen, StepRenderer> = {
     />
   ),
 
-  cancelado: (ctx) => <CanceladoStep summaryItem={ctx.summaryItem} totalAmount={ctx.totalAmount} />,
+  cancelado: (ctx) => (
+    <CanceladoStep
+      role={ctx.role}
+      refundReason={ctx.refundReason}
+      summaryItem={ctx.summaryItem}
+      summaryAmount={ctx.summaryAmount}
+      totalAmount={ctx.totalAmount}
+    />
+  ),
 
   qr: (ctx) => (
     <QrStep

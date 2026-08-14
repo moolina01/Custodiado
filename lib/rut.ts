@@ -41,3 +41,13 @@ export function formatRut(input: string): string {
   const withDots = body.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   return `${withDots}-${verifier}`;
 }
+
+/**
+ * Compares two RUTs regardless of formatting (dots, dashes, case). Used by
+ * SPEC 03 to check that a declared identity RUT matches a bank account's
+ * holder RUT (seller payout, buyer refund destination, buyer's inbound
+ * transfer sender) without caring how either side typed/reported it.
+ */
+export function sameRut(a: string, b: string): boolean {
+  return cleanRut(a) === cleanRut(b);
+}

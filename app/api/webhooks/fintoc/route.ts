@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { extractTransferData, parseFintocWebhookEvent, verifyFintocWebhookSignature, type FintocWebhookEvent } from "@/lib/fintoc/webhooks";
+import { resumeRefund } from "@/lib/tratos/cancel";
 import { matchInboundPayment, resolveOutboundTransfer } from "@/lib/tratos/repository";
 import { hasProcessedWebhookEvent, recordWebhookEvent } from "@/lib/tratos/webhookEvents";
 
@@ -57,7 +58,19 @@ async function handleEvent(event: FintocWebhookEvent): Promise<string | null> {
     case "transfer.inbound.succeeded": {
       const transfer = extractTransferData(event.data);
       if (!transfer || typeof transfer.amount !== "number") return null;
-      const result = await matchInboundPayment(transfer.id, transfer.amount);
+      const result = await matchInboundPayment(transfer.id, transfer.amount, transfer.counterparty);
+      // SPEC 03: the sender's RUT didn't match the buyer's declared
+      // identity — `matchInboundPayment` already parked the trato in
+      // `refund_pending` with the sender's own account as the destination
+      // and an idempotency key reserved; this actually sends it to Fintoc.
+      // Checked by *status*, not just the fresh `rut_mismatch` outcome: a
+      // retried delivery of this same event lands on `already_processed`
+      // instead, and `resumeRefund` needs to run then too if the previous
+      // attempt reserved the idempotency key but never reached Fintoc —
+      // it's a safe no-op otherwise (see `resumeRefund`/`continueRefund`).
+      if (result.outcome !== "no_match" && result.trato.status === "refund_pending") {
+        await resumeRefund(result.trato);
+      }
       return result.outcome === "no_match" ? null : result.trato.id;
     }
 

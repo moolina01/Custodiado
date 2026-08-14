@@ -1,4 +1,4 @@
-import type { CreatedByRole, TratoRow } from "./types";
+import type { CreatedByRole, RefundReason, TratoRow } from "./types";
 
 /**
  * What `GET /api/tratos/[code]` (and every other trato route) sends back to
@@ -22,6 +22,7 @@ export interface PublicTratoDto {
   releasedAt: string | null;
   cancelledAt: string | null;
   cancelReason: string | null;
+  refundReason: RefundReason | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -43,6 +44,7 @@ export function toPublicDto(row: TratoRow): PublicTratoDto {
     releasedAt: row.released_at,
     cancelledAt: row.cancelled_at,
     cancelReason: row.cancel_reason,
+    refundReason: row.refund_reason,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

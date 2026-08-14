@@ -102,6 +102,12 @@ export default function FlujoApp({ initialRole }: FlujoAppProps) {
 
   const isSellerAwaitingPayment = screen === "crear-codigo" && !isBuyer;
   useAdvanceOnTratoStatus(isSellerAwaitingPayment, tratoState.refresh, trato?.status, "funds_held", wizard.goNext);
+  // SPEC 03: the same wait can also end in an automatic refund instead of a
+  // payment — the buyer's transfer landed, but its sender RUT didn't match
+  // their declared identity. Same side-branch `wizard.confirmCancel()`
+  // lands on as a manual cancellation (see "cancelar" below), just reached
+  // without ever visiting the cancel form.
+  useAdvanceOnTratoStatus(isSellerAwaitingPayment, tratoState.refresh, trato?.status, "refunded", wizard.confirmCancel);
 
   // "pagar" (buyer) and "esperando-pago" (seller) both just wait for the
   // same thing — the inbound webhook confirming the buyer's transfer — so
@@ -109,6 +115,9 @@ export default function FlujoApp({ initialRole }: FlujoAppProps) {
   // reimplementing "check every few seconds".
   const isWaitingForPayment = screen === "pagar" || screen === "esperando-pago";
   useAdvanceOnTratoStatus(isWaitingForPayment, tratoState.refresh, trato?.status, "funds_held", wizard.goNext);
+  // SPEC 03: same automatic-refund case as above, for the "crear" flow's
+  // buyer ("pagar") and the "codigo" flow's seller ("esperando-pago").
+  useAdvanceOnTratoStatus(isWaitingForPayment, tratoState.refresh, trato?.status, "refunded", wizard.confirmCancel);
 
   const [platformAccountNumber, setPlatformAccountNumber] = useState("");
   useEffect(() => {
@@ -158,7 +167,7 @@ export default function FlujoApp({ initialRole }: FlujoAppProps) {
     // Note: going "Atrás" from crear-codigo and submitting again would
     // create a second trato rather than editing the first — acceptable for
     // this milestone (test-mode, low stakes) but worth revisiting later.
-    const created = await tratoState.create(role, fields.item, toAmountNumber(fields.amount), fields.name);
+    const created = await tratoState.create(role, fields.item, toAmountNumber(fields.amount), fields.name, fields.rut);
     if (created) wizard.goNext();
   };
 
@@ -168,7 +177,7 @@ export default function FlujoApp({ initialRole }: FlujoAppProps) {
   };
 
   const handleDetalleAccept = async () => {
-    const accepted = await tratoState.accept(role, fields.name);
+    const accepted = await tratoState.accept(role, fields.name, fields.rut);
     if (accepted) wizard.goNext();
   };
 
@@ -248,9 +257,11 @@ export default function FlujoApp({ initialRole }: FlujoAppProps) {
           platformAccountNumber={platformAccountNumber}
           onSimulatePayment={() => tratoState.simulatePayment()}
           onForceAdvancePayment={() => tratoState.forceAdvancePayment()}
+          onSimulateRutMismatch={() => tratoState.simulateRutMismatch()}
           isSubmitting={tratoState.isSubmitting}
           isRefundPending={trato?.status === "refund_pending"}
           isReleasePending={isBuyer && trato?.status === "release_pending"}
+          refundReason={trato?.refundReason ?? null}
           onCancelarConfirm={handleCancelarConfirm}
           qrImageDataUrl={sellerQr.qrImageDataUrl}
           qrCountdownLabel={sellerQr.countdownLabel}

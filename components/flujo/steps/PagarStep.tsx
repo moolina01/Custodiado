@@ -1,3 +1,4 @@
+import Callout from "../ui/Callout";
 import Card from "../ui/Card";
 import StepHeading from "../ui/StepHeading";
 import { colors } from "../theme";
@@ -9,6 +10,7 @@ type PagarStepProps = {
   accountNumber: string; // platform's escrow account — empty while still loading
   onSimulatePayment: () => void;
   onForceAdvancePayment: () => void;
+  onSimulateRutMismatch: () => void;
   isSimulating: boolean;
 };
 
@@ -22,11 +24,19 @@ export default function PagarStep({
   accountNumber,
   onSimulatePayment,
   onForceAdvancePayment,
+  onSimulateRutMismatch,
   isSimulating,
 }: PagarStepProps) {
   return (
     <div>
       <StepHeading title="Transfiere a la cuenta de custodia" subtitle="El dinero queda retenido. El vendedor no recibe nada hasta la entrega." />
+
+      <div style={{ marginBottom: "16px" }}>
+        <Callout tone="warning">
+          Transfiere desde una cuenta a tu propio nombre. Si la plata llega desde una cuenta que no es tuya, te la devolvemos
+          automáticamente y el trato queda sin efecto.
+        </Callout>
+      </div>
 
       <Card padding="24px 22px" shadow style={{ textAlign: "center" }}>
         <div style={{ fontSize: "12px", fontWeight: "700", letterSpacing: "0.08em", textTransform: "uppercase", color: colors.textFaint, marginBottom: "8px" }}>
@@ -97,6 +107,29 @@ export default function PagarStep({
             }}
           >
             Forzar avance (sin esperar webhook)
+          </button>
+
+          <div style={{ fontSize: "12.5px", color: colors.textFaint, marginTop: "12px", marginBottom: "6px" }}>
+            ¿Querés probar el caso de RUT no coincidente (SPEC 03)? El sandbox de Fintoc no permite simular quién manda la plata, así que esto lo fuerza directamente:
+          </div>
+          <button
+            onClick={onSimulateRutMismatch}
+            disabled={isSimulating}
+            style={{
+              width: "100%",
+              background: "transparent",
+              border: `1px dashed ${colors.dangerText}`,
+              color: colors.dangerText,
+              fontFamily: "inherit",
+              fontWeight: "600",
+              fontSize: "14px",
+              padding: "11px 18px",
+              borderRadius: "12px",
+              cursor: isSimulating ? "default" : "pointer",
+              opacity: isSimulating ? 0.65 : 1,
+            }}
+          >
+            Simular RUT no coincidente (dev)
           </button>
         </div>
       )}

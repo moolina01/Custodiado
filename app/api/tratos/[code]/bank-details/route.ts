@@ -29,6 +29,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         return jsonError(404, "Trato no encontrado. Revisa el código.");
       case "wrong_status":
         return jsonError(409, "Ya no se pueden editar los datos bancarios de este trato.");
+      case "rut_mismatch":
+        return jsonError(400, "El RUT de la cuenta debe ser el mismo que declaraste al aceptar el trato.");
       case "saved":
         return jsonOk(toPublicDto(result.trato));
     }

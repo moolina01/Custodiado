@@ -60,6 +60,7 @@ export interface TratoRow {
   fintoc_refund_transfer_id: string | null;
   cancel_reason: string | null;
   cancelled_at: string | null;
+  refund_reason: RefundReason | null; // SPEC 03: null unless the trato ever entered a refund flow
 
   created_at: string;
   updated_at: string;
@@ -71,4 +72,10 @@ export interface CreateTratoInput {
   item: string;
   amountClp: number;
   name: string;
+  rut: string; // SPEC 03: RUT de identidad, obligatorio — ver lib/tratos/validation.ts
 }
+
+// SPEC 03: por qué un trato terminó en refund_pending/refunded — distingue
+// la cancelación manual del comprador (CancelarStep) de la devolución
+// automática por RUT del remitente no coincidente.
+export type RefundReason = "buyer_requested" | "rut_mismatch";

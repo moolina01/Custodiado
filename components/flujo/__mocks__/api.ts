@@ -58,7 +58,18 @@ function requireTrato(): Trato {
 }
 
 export const createTratoRequest = vi.fn(
-  async ({ role, item, amountClp, name }: { role: Role; item: string; amountClp: number; name: string }): Promise<TratoWithSellerQrSecret> => {
+  async ({
+    role,
+    item,
+    amountClp,
+    name,
+  }: {
+    role: Role;
+    item: string;
+    amountClp: number;
+    name: string;
+    rut: string;
+  }): Promise<TratoWithSellerQrSecret> => {
     sequence += 1;
     const now = new Date().toISOString();
     trato = {
@@ -77,6 +88,7 @@ export const createTratoRequest = vi.fn(
       releasedAt: null,
       cancelledAt: null,
       cancelReason: null,
+      refundReason: null,
       createdAt: now,
       updatedAt: now,
     };
@@ -95,7 +107,7 @@ export const getTratoRequest = vi.fn(async (_code: string): Promise<Trato> => {
   return trato as Trato;
 });
 
-export const acceptTratoRequest = vi.fn(async (_code: string, role: Role, name: string): Promise<TratoWithSellerQrSecret> => {
+export const acceptTratoRequest = vi.fn(async (_code: string, role: Role, name: string, _rut: string): Promise<TratoWithSellerQrSecret> => {
   const current = requireTrato();
   trato = {
     ...current,
@@ -128,6 +140,14 @@ export const forceAdvancePaymentRequest = vi.fn(async (_code: string): Promise<T
   return trato;
 });
 
+// SPEC 03 dev-only escape hatch — mirrors forceAdvancePaymentRequest's shape (resolves synchronously) but for the opposite outcome.
+export const simulateRutMismatchRequest = vi.fn(async (_code: string): Promise<Trato> => {
+  const current = requireTrato();
+  trato = { ...current, status: "refund_pending", refundReason: "rut_mismatch" };
+  pendingStatus = "refunded";
+  return trato;
+});
+
 export const verifyQrRequest = vi.fn(async (_code: string, _token: string): Promise<Trato> => {
   const current = requireTrato();
   trato = { ...current, status: "release_pending" };
@@ -143,7 +163,7 @@ export const devQrTokenRequest = vi.fn(async (_code: string): Promise<QrTokenRes
 
 export const cancelTratoRequest = vi.fn(async (_code: string, _input: CancelInput): Promise<Trato> => {
   const current = requireTrato();
-  trato = { ...current, status: "refund_pending" };
+  trato = { ...current, status: "refund_pending", refundReason: "buyer_requested" };
   pendingStatus = "refunded";
   return trato;
 });

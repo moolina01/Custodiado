@@ -3,8 +3,10 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { calculateFee } from "@/lib/pricing";
 import { generateTratoCode, normalizeTratoCode } from "@/lib/codes";
+import { sameRut } from "@/lib/rut";
+import type { InboundCounterparty } from "@/lib/fintoc/webhookParsing";
 import type { BankDetailsPayload } from "./validation";
-import type { CreateTratoInput, CreatedByRole, TratoRow } from "./types";
+import type { CreateTratoInput, CreatedByRole, FintocAccountType, TratoRow } from "./types";
 
 // The trato's status when bank details may still be submitted/updated —
 // any time before the money has actually moved.
@@ -36,6 +38,12 @@ export async function createTrato(input: CreateTratoInput): Promise<TratoRow> {
         fee_clp: feeClp,
         buyer_name: isBuyer ? input.name : null,
         seller_name: isBuyer ? null : input.name,
+        // SPEC 03: RUT de identidad, declarado junto al nombre — guardado de
+        // inmediato en la misma columna que el RUT de la cuenta bancaria
+        // usa más tarde (seller_rut en bank-details, buyer_rut en cancel),
+        // así ambos puntos tienen contra qué comparar con `sameRut`.
+        buyer_rut: isBuyer ? input.rut : null,
+        seller_rut: isBuyer ? null : input.rut,
         seller_qr_secret: isBuyer ? null : generateSellerQrSecret(),
       })
       .select()
@@ -80,7 +88,7 @@ export type AcceptResult =
  * again after it already succeeded just returns the current row instead of
  * erroring, so a double-submit (slow network, double-tap) is harmless.
  */
-export async function acceptTrato(rawCode: string, role: CreatedByRole, name: string): Promise<AcceptResult> {
+export async function acceptTrato(rawCode: string, role: CreatedByRole, name: string, rut: string): Promise<AcceptResult> {
   const db = getSupabaseAdmin();
   const code = normalizeTratoCode(rawCode);
 
@@ -95,7 +103,11 @@ export async function acceptTrato(rawCode: string, role: CreatedByRole, name: st
     .update({
       status: "awaiting_payment",
       accepted_at: new Date().toISOString(),
-      ...(isBuyer ? { buyer_name: name } : { seller_name: name, seller_qr_secret: generateSellerQrSecret() }),
+      // SPEC 03: mismo RUT de identidad que `createTrato` guarda para quien
+      // crea el trato — acá lo guarda quien lo acepta.
+      ...(isBuyer
+        ? { buyer_name: name, buyer_rut: rut }
+        : { seller_name: name, seller_rut: rut, seller_qr_secret: generateSellerQrSecret() }),
     })
     .eq("code", code)
     .eq("status", "awaiting_acceptance") // atomic guard against a concurrent double-accept
@@ -114,6 +126,7 @@ export async function acceptTrato(rawCode: string, role: CreatedByRole, name: st
 export type BankDetailsResult =
   | { outcome: "not_found" }
   | { outcome: "wrong_status"; trato: TratoRow }
+  | { outcome: "rut_mismatch"; trato: TratoRow }
   | { outcome: "saved"; trato: TratoRow };
 
 /**
@@ -121,6 +134,10 @@ export type BankDetailsResult =
  * before the release/refund transfer has actually been submitted to
  * Fintoc, so a typo can still be fixed. No status change: this fills in
  * fields the release step (M6) will read from later.
+ *
+ * SPEC 03: the account's RUT must be the same identity RUT the seller
+ * declared at create/accept (`existing.seller_rut`) — the payout can't go
+ * to a different RUT than whoever committed to being the seller.
  */
 export async function submitSellerBankDetails(rawCode: string, input: BankDetailsPayload): Promise<BankDetailsResult> {
   const db = getSupabaseAdmin();
@@ -129,6 +146,7 @@ export async function submitSellerBankDetails(rawCode: string, input: BankDetail
   const existing = await getTratoByCode(code);
   if (!existing) return { outcome: "not_found" };
   if (!BANK_DETAILS_ALLOWED_STATUSES.includes(existing.status)) return { outcome: "wrong_status", trato: existing };
+  if (!sameRut(input.rut, existing.seller_rut ?? "")) return { outcome: "rut_mismatch", trato: existing };
 
   const { data, error } = await db
     .from(TABLE)
@@ -152,8 +170,23 @@ const INBOUND_MATCH_WINDOW_MINUTES = 30;
 
 export type InboundMatchResult =
   | { outcome: "matched"; trato: TratoRow }
+  | { outcome: "rut_mismatch"; trato: TratoRow }
   | { outcome: "already_processed"; trato: TratoRow }
   | { outcome: "no_match" };
+
+// SPEC 03: the sender's counterparty data is only usable to auto-refund if
+// it's complete enough for `createOutboundTransfer` — a `holder_id` alone
+// isn't a bank account. If Fintoc reports a RUT but not the rest, there's
+// nowhere to safely send the money back to, so this is treated the same as
+// "no counterparty reported" (proceed to `funds_held`, same as before this
+// spec) rather than stranding the trato in `refund_pending` forever.
+function hasRefundableCounterparty(
+  counterparty: InboundCounterparty | undefined
+): counterparty is InboundCounterparty & { accountNumber: string; accountType: FintocAccountType; institutionId: string } {
+  return Boolean(counterparty?.accountNumber && counterparty.accountType && counterparty.institutionId);
+}
+
+const RUT_MISMATCH_CANCEL_REASON = "La transferencia no vino de una cuenta a tu nombre. El dinero se devolvió automáticamente.";
 
 /**
  * MVP matching for `transfer.inbound.succeeded`: Fintoc's webhook payload
@@ -163,11 +196,23 @@ export type InboundMatchResult =
  * `awaiting_payment` within a short window. Ambiguous or zero matches are
  * left in `fintoc_webhook_events` (`matched_trato_id` null) for manual
  * reconciliation — there's no admin UI for that yet.
+ *
+ * SPEC 03: `senderCounterparty` is whatever Fintoc reported about who sent
+ * the transfer (may be absent — see `hasRefundableCounterparty` above). If
+ * it's present, complete, and its RUT doesn't match the candidate's
+ * `buyer_rut`, the trato never becomes `funds_held` — it goes straight to
+ * `refund_pending`, with the sender's own reported account as the refund
+ * destination (nothing the buyer has to fill in).
  */
-export async function matchInboundPayment(transferId: string, amountClp: number): Promise<InboundMatchResult> {
+export async function matchInboundPayment(
+  transferId: string,
+  amountClp: number,
+  senderCounterparty?: InboundCounterparty
+): Promise<InboundMatchResult> {
   const db = getSupabaseAdmin();
 
-  // A retried webhook for a transfer we already matched — idempotent no-op.
+  // A retried webhook for a transfer we already matched (or already
+  // auto-refunded — see below) — idempotent no-op.
   const { data: already } = await db.from(TABLE).select().eq("fintoc_inbound_transfer_id", transferId).maybeSingle();
   if (already) return { outcome: "already_processed", trato: already as TratoRow };
 
@@ -183,6 +228,42 @@ export async function matchInboundPayment(transferId: string, amountClp: number)
 
   const match = (candidates as TratoRow[] | null)?.find((t) => t.amount_clp + t.fee_clp === amountClp);
   if (!match) return { outcome: "no_match" };
+
+  if (hasRefundableCounterparty(senderCounterparty) && !sameRut(senderCounterparty.holderId, match.buyer_rut ?? "")) {
+    const { data: refunded, error: refundError } = await db
+      .from(TABLE)
+      .update({
+        status: "refund_pending",
+        refund_idempotency_key: randomUUID(),
+        // Dedupe key for a retried delivery of this same webhook event —
+        // same column `funds_held` would have used, just a different
+        // outcome this time.
+        fintoc_inbound_transfer_id: transferId,
+        // Overwrites the buyer's declared identity name/RUT/account with the
+        // sender's actual ones — fine, this trato is headed to a terminal
+        // state and these fields aren't read for anything else afterward.
+        // `buyer_name` matters here: `submitRefundToFintoc` (lib/tratos/
+        // cancel.ts) sends it to Fintoc as the outbound transfer's
+        // `holder_name`, which must match the account it's actually going
+        // to — the sender's, not the buyer's declared one.
+        buyer_name: senderCounterparty.holderName ?? match.buyer_name,
+        buyer_rut: senderCounterparty.holderId,
+        buyer_bank_institution_id: senderCounterparty.institutionId,
+        buyer_account_number: senderCounterparty.accountNumber,
+        buyer_account_type: senderCounterparty.accountType,
+        refund_reason: "rut_mismatch",
+        cancel_reason: RUT_MISMATCH_CANCEL_REASON,
+        cancelled_at: new Date().toISOString(),
+      })
+      .eq("id", match.id)
+      .eq("status", "awaiting_payment") // atomic guard against a concurrent match
+      .select()
+      .maybeSingle();
+
+    if (refundError) throw new Error(`No se pudo iniciar la devolución automática: ${refundError.message}`);
+    if (!refunded) return { outcome: "no_match" }; // lost a race — another delivery matched it first
+    return { outcome: "rut_mismatch", trato: refunded as TratoRow };
+  }
 
   const { data: updated, error: updateError } = await db
     .from(TABLE)
@@ -224,6 +305,45 @@ export async function forceMarkFundsHeld(rawCode: string): Promise<TratoRow | nu
     .select()
     .maybeSingle();
   if (error) throw new Error(`No se pudo forzar el avance del pago: ${error.message}`);
+  return (data as TratoRow | null) ?? null;
+}
+
+/**
+ * SPEC 03, dev/test-only escape hatch, mirrors `forceMarkFundsHeld` above
+ * but for the opposite outcome: flips `awaiting_payment -> refund_pending`
+ * directly, as `matchInboundPayment`'s mismatch branch would, using a fixed
+ * dummy sender instead of a real one — Fintoc's sandbox
+ * (`simulate.receiveTransfer`) doesn't let a simulated transfer report its
+ * own `counterparty`, so there's no way to make a real mismatch happen in
+ * dev. The caller is expected to call `resumeRefund` (lib/tratos/cancel.ts)
+ * right after, same as the webhook route does for a real mismatch.
+ */
+export async function forceRutMismatchRefund(
+  rawCode: string,
+  senderCounterparty: { holderId: string; holderName: string; accountNumber: string; accountType: FintocAccountType; institutionId: string }
+): Promise<TratoRow | null> {
+  const db = getSupabaseAdmin();
+  const code = normalizeTratoCode(rawCode);
+  const { data, error } = await db
+    .from(TABLE)
+    .update({
+      status: "refund_pending",
+      refund_idempotency_key: randomUUID(),
+      fintoc_inbound_transfer_id: `dev_forced_${randomUUID()}`,
+      buyer_name: senderCounterparty.holderName,
+      buyer_rut: senderCounterparty.holderId,
+      buyer_bank_institution_id: senderCounterparty.institutionId,
+      buyer_account_number: senderCounterparty.accountNumber,
+      buyer_account_type: senderCounterparty.accountType,
+      refund_reason: "rut_mismatch",
+      cancel_reason: RUT_MISMATCH_CANCEL_REASON,
+      cancelled_at: new Date().toISOString(),
+    })
+    .eq("code", code)
+    .eq("status", "awaiting_payment") // atomic guard, same shape as the other transitions
+    .select()
+    .maybeSingle();
+  if (error) throw new Error(`No se pudo simular el RUT no coincidente: ${error.message}`);
   return (data as TratoRow | null) ?? null;
 }
 

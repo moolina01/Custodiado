@@ -11,18 +11,25 @@ const amountSchema = z
   .int()
   .min(MIN_TRATO_AMOUNT, `El monto mínimo es $${MIN_TRATO_AMOUNT}`)
   .max(MAX_TRATO_AMOUNT, `El monto máximo es $${MAX_TRATO_AMOUNT}`);
+// SPEC 03: RUT de identidad, obligatorio para ambos roles — se compara luego
+// (vía `sameRut`) contra el RUT de la cuenta bancaria real (payout del
+// vendedor, destino de reembolso del comprador, remitente de la transferencia
+// entrante del comprador).
+const rutSchema = z.string().trim().refine(isValidRut, "RUT inválido");
 
 export const createTratoSchema = z.object({
   role: roleSchema,
   item: itemSchema,
   amountClp: amountSchema,
   name: nameSchema,
+  rut: rutSchema,
 });
 export type CreateTratoPayload = z.infer<typeof createTratoSchema>;
 
 export const acceptTratoSchema = z.object({
   role: roleSchema,
   name: nameSchema,
+  rut: rutSchema,
 });
 export type AcceptTratoPayload = z.infer<typeof acceptTratoSchema>;
 
@@ -31,7 +38,7 @@ export type AcceptTratoPayload = z.infer<typeof acceptTratoSchema>;
 // `counterparty` object needs for a Chilean transfer, just for whichever
 // side money is about to move to.
 const payoutAccountSchema = {
-  rut: z.string().trim().refine(isValidRut, "RUT inválido"),
+  rut: rutSchema,
   bankInstitutionId: z.string().refine(isValidInstitutionId, "Banco no reconocido"),
   accountNumber: z
     .string()
