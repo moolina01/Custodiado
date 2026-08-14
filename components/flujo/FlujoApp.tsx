@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import FlujoStepRouter from "./FlujoStepRouter";
 import HelpChat from "./HelpChat";
+import AuthModal from "@/components/auth/AuthModal";
 import Callout from "./ui/Callout";
 import FlujoHeader from "./ui/FlujoHeader";
 import FlujoNavButtons from "./ui/FlujoNavButtons";
 import FlujoFooter from "./ui/FlujoFooter";
 import ProgressBar from "./ui/ProgressBar";
 import { devQrTokenRequest, getPlatformAccountRequest } from "./api";
+import { logoutRequest } from "@/components/auth/api";
 import { DEFAULT_ITEM_LABEL } from "./data";
 import { calculateFee, money, toAmountNumber } from "./format";
 import { nextButtonLabel, phaseFor, phaseName, showsNextButton, showsProgress } from "./flow";
@@ -17,6 +20,7 @@ import { useAdvanceOnTratoStatus } from "./useAdvanceOnTratoStatus";
 import { useHelpChat } from "./useHelpChat";
 import { useQrScanner } from "./useQrScanner";
 import { useSellerQrToken } from "./useSellerQrToken";
+import { useSession } from "./useSession";
 import { useTrato } from "./useTrato";
 import { useWizardState } from "./useWizardState";
 import { formatTratoCodeForDisplay } from "@/lib/codeFormat";
@@ -56,9 +60,38 @@ type FlujoAppProps = { initialRole: Role };
 export default function FlujoApp({ initialRole }: FlujoAppProps) {
   const role = initialRole;
   const isBuyer = role === "comprador";
+  const router = useRouter();
   const wizard = useWizardState(role);
   const tratoState = useTrato();
   const help = useHelpChat();
+  // SPEC 04: identidad de la cuenta logueada — de solo lectura en
+  // CrearDatosStep/DetalleStep vía IdentitySummary.
+  const session = useSession();
+
+  // SPEC 04 (corrección): /flujo ya no está bloqueado a nivel de página —
+  // se ve la pantalla "inicio" sin sesión. El gate real vive acá: aparece
+  // solo, a los pocos segundos, o de inmediato si el usuario intenta elegir
+  // "Crear el trato"/"Tengo un código" (ver requireAuthOrGate) mientras
+  // sigue anónimo.
+  const [showAuthGate, setShowAuthGate] = useState(false);
+  useEffect(() => {
+    if (session.status !== "anonymous") return;
+    const timer = setTimeout(() => setShowAuthGate(true), 4000);
+    return () => clearTimeout(timer);
+  }, [session.status]);
+
+  const requireAuthOrGate = (action: () => void) => {
+    if (session.status === "anonymous") {
+      setShowAuthGate(true);
+      return;
+    }
+    action();
+  };
+
+  const handleAuthenticated = () => {
+    setShowAuthGate(false);
+    session.refresh();
+  };
 
   const { screen, fields, canGoBack } = wizard;
   const { trato } = tratoState;
@@ -167,7 +200,7 @@ export default function FlujoApp({ initialRole }: FlujoAppProps) {
     // Note: going "Atrás" from crear-codigo and submitting again would
     // create a second trato rather than editing the first — acceptable for
     // this milestone (test-mode, low stakes) but worth revisiting later.
-    const created = await tratoState.create(role, fields.item, toAmountNumber(fields.amount), fields.name, fields.rut);
+    const created = await tratoState.create(role, fields.item, toAmountNumber(fields.amount));
     if (created) wizard.goNext();
   };
 
@@ -177,13 +210,12 @@ export default function FlujoApp({ initialRole }: FlujoAppProps) {
   };
 
   const handleDetalleAccept = async () => {
-    const accepted = await tratoState.accept(role, fields.name, fields.rut);
+    const accepted = await tratoState.accept(role);
     if (accepted) wizard.goNext();
   };
 
   const handleBancoSubmit = async () => {
     const saved = await tratoState.saveBankDetails({
-      rut: fields.rut,
       bankInstitutionId: fields.bankInstitutionId,
       accountNumber: fields.account,
       accountType: fields.accountType,
@@ -205,7 +237,6 @@ export default function FlujoApp({ initialRole }: FlujoAppProps) {
   // Buyer's "Confirmar cancelación" — same idempotency story as the release, in lib/tratos/cancel.ts.
   const handleCancelarConfirm = () => {
     tratoState.cancel({
-      rut: fields.rut,
       bankInstitutionId: fields.bankInstitutionId,
       accountNumber: fields.account,
       accountType: fields.accountType,
@@ -228,9 +259,19 @@ export default function FlujoApp({ initialRole }: FlujoAppProps) {
     wizard.goBack();
   };
 
+  // Best-effort: even if the request itself fails, still navigate away —
+  // the missing/expired cookie means the app won't trust the old session
+  // either way. `router.refresh()` forces the next server render to see the
+  // now-cleared cookie instead of anything cached from before logout.
+  const handleLogout = async () => {
+    await logoutRequest().catch(() => {});
+    router.push("/");
+    router.refresh();
+  };
+
   return (
     <div className="flujo-page">
-      <FlujoHeader role={role} />
+      <FlujoHeader role={role} onLogout={handleLogout} />
 
       <div style={{ maxWidth: "560px", margin: "0 auto", padding: "26px 20px 64px" }}>
         {showsProgress(screen) && <ProgressBar activeColor={accent} filledBars={phase !== undefined ? phase + 1 : 0} stepLabel={phaseName(phase)} />}
@@ -238,12 +279,13 @@ export default function FlujoApp({ initialRole }: FlujoAppProps) {
         <FlujoStepRouter
           screen={screen}
           role={role}
+          profileName={session.name}
+          profileRut={session.rut}
           fields={fields}
           onFieldChange={wizard.setField}
           onCodeChange={(value) => wizard.setField("code", value)}
-          onNameChange={(value) => wizard.setField("name", value)}
-          onStartCrear={() => wizard.start("crear")}
-          onStartCodigo={() => wizard.start("codigo")}
+          onStartCrear={() => requireAuthOrGate(() => wizard.start("crear"))}
+          onStartCodigo={() => requireAuthOrGate(() => wizard.start("codigo"))}
           onOpenCancel={wizard.openCancel}
           dealCode={trato ? formatTratoCodeForDisplay(trato.code) : ""}
           summaryItem={summaryItem}
@@ -303,6 +345,8 @@ export default function FlujoApp({ initialRole }: FlujoAppProps) {
         isTyping={help.isTyping}
         onAsk={help.ask}
       />
+
+      {showAuthGate && <AuthModal role={role} onClose={() => setShowAuthGate(false)} onAuthenticated={handleAuthenticated} />}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 # SPEC 04 — Login obligatorio con Supabase Auth (identidad = nombre + RUT)
 
-> **Status:** Aprovado
+> **Status:** implementado
 > **Depends on:** SPEC 01, SPEC 03
 > **Date:** 2026-08-13
 > **Objective:** Agregar login obligatorio con Supabase Auth (email + contraseña) que pide nombre y RUT una sola vez al registrarse, y desde ahí alimenta automáticamente los campos de identidad que hoy se tipean en cada trato.
@@ -24,7 +24,7 @@ Este spec agrega cuentas reales (email + contraseña, vía Supabase Auth) con un
 - Registro con email + contraseña vía Supabase Auth. El formulario de registro pide, en un solo paso: email, contraseña, nombre y RUT (validado con el checksum de `lib/rut.ts`, mismo `isValidRut` que ya existe). Sin verificación de email obligatoria — la sesión queda activa apenas se registra.
 - Nueva tabla `profiles` (una fila por cuenta, `id` = `auth.users.id`), con `name` y `rut`. El RUT es único entre cuentas (constraint a nivel de base de datos, sobre el RUT normalizado).
 - Login con email + contraseña, logout, y recuperación de contraseña ("olvidé mi contraseña") vía el flujo nativo de Supabase (`resetPasswordForEmail` + un callback que intercambia el link por sesión).
-- **Toda la app del flujo (`/flujo` y sus API routes bajo `/api/tratos`) exige sesión iniciada** — un `middleware.ts` nuevo redirige a `/login?next=<destino original>` a quien no esté logueado, y tras loguearse/registrarse vuelve automáticamente a ese destino (así compartir un link con código sigue funcionando: quien lo abre sin cuenta pasa por login/registro y cae de vuelta en el trato). La landing pública (`/`, `app/page.tsx`) **no** queda gateada — sigue siendo la página de marketing que atrae gente a registrarse.
+- **Toda acción real sobre un trato (`/api/tratos*`) exige sesión iniciada**, aplicado en el servidor vía `proxy.ts` + `requireSessionUser()` en cada route handler. **Corrección post-implementación** (ver el bloque al final del documento): la carga de la *página* `/flujo` en sí **no** está bloqueada — se ve sin sesión — el gate para crear cuenta es un modal en el cliente, no un redirect de página. Los detalles de esa corrección están documentados aparte para no reescribir la implementación original.
 - `POST /api/tratos` y `POST /api/tratos/[code]/accept` dejan de recibir `name`/`rut` del cliente — los toman del perfil de la cuenta que hace la llamada (vía la sesión). `CrearDatosStep`/`DetalleStep` dejan de pedirlos: muestran la identidad de la cuenta en solo lectura (nombre + `formatRut(rut)`).
 - `BancoStep`/`CancelarStep` dejan de pedir el campo RUT (el servidor ya conoce el RUT de identidad desde el perfil; solo falta banco/tipo de cuenta/número de cuenta).
 - Se bloquea que la misma cuenta cree y acepte su propio trato (mismo `user_id` en ambos lados).
@@ -116,20 +116,20 @@ Se reusa `lib/rut.ts` tal cual (`isValidRut`, `cleanRut`, `formatRut`, `sameRut`
 
 ## Acceptance criteria
 
-- [ ] `npm run test`, `npm run build` y `npm run lint` terminan sin errores.
-- [ ] Visitar `/flujo` (con o sin código) sin sesión redirige a `/login?next=...`; tras loguearse o registrarse, vuelve automáticamente al destino original.
-- [ ] La landing (`/`) sigue cargando sin sesión iniciada.
-- [ ] El registro exige email, contraseña, nombre y RUT válido (checksum); un RUT ya usado por otra cuenta es rechazado.
-- [ ] Tras registrarse, la sesión queda activa de inmediato, sin exigir confirmación de email.
-- [ ] `CrearDatosStep`/`DetalleStep` ya no piden nombre ni RUT — muestran la identidad de la cuenta en solo lectura.
-- [ ] `BancoStep`/`CancelarStep` ya no piden RUT.
-- [ ] `POST /api/tratos` y `POST /api/tratos/[code]/accept` ya no aceptan `name`/`rut` en el body — los toman del perfil de la sesión.
-- [ ] Una cuenta no puede aceptar un trato que ella misma creó (con el otro rol) — error claro, no un estado inconsistente.
-- [ ] `POST /api/tratos/[code]/bank-details` responde 403 si la sesión activa no es el `seller_user_id` guardado en el trato.
-- [ ] `POST /api/tratos/[code]/cancel` responde 403 si la sesión activa no es el `buyer_user_id` guardado en el trato.
-- [ ] "Olvidé mi contraseña" permite fijar una nueva contraseña y loguearse con ella.
-- [ ] El botón de logout limpia la sesión y redirige a `/`.
-- [ ] `qr-token`/`verify-qr` siguen funcionando exactamente igual que antes de este spec (sin regresión en SPEC 02).
+- [x] `npm run test`, `npm run build` y `npm run lint` terminan sin errores.
+- [x] ~~Visitar `/flujo` sin sesión redirige a `/login?next=...`~~ — **superado por la corrección post-implementación** (ver esa sección al final): `/flujo` ahora carga sin sesión, y el gate para crear cuenta es un modal en el cliente (por timer o al intentar interactuar), no un redirect de página. Verificado con Playwright.
+- [x] La landing (`/`) sigue cargando sin sesión iniciada.
+- [x] El registro exige email, contraseña, nombre y RUT válido (checksum); un RUT ya usado por otra cuenta es rechazado. Verificado contra Supabase real (email inválido → 400, RUT duplicado → 400 "Ese RUT ya está asociado a otra cuenta").
+- [x] Tras registrarse, la sesión queda activa de inmediato, sin exigir confirmación de email. Requiere "Confirm email" apagado en el dashboard de Supabase (dependencia externa documentada en Decisions) — verificado una vez apagado.
+- [x] `CrearDatosStep`/`DetalleStep` ya no piden nombre ni RUT — muestran la identidad de la cuenta en solo lectura. Verificado visualmente (Playwright): "Vas a figurar como: Beto Vendedor Test · 22.333.444-K".
+- [x] `BancoStep`/`CancelarStep` ya no piden RUT.
+- [x] `POST /api/tratos` y `POST /api/tratos/[code]/accept` ya no aceptan `name`/`rut` en el body — los toman del perfil de la sesión.
+- [x] Una cuenta no puede aceptar un trato que ella misma creó (con el otro rol) — error claro, no un estado inconsistente. Verificado contra Supabase real (400 "No podés aceptar un trato que vos mismo creaste").
+- [x] `POST /api/tratos/[code]/bank-details` responde 403 si la sesión activa no es el `seller_user_id` guardado en el trato. Verificado contra Supabase real.
+- [x] `POST /api/tratos/[code]/cancel` responde 403 si la sesión activa no es el `buyer_user_id` guardado en el trato. Verificado contra Supabase real.
+- [~] "Olvidé mi contraseña" permite fijar una nueva contraseña y loguearse con ella. `POST /api/auth/reset-password` verificado (200, no filtra si el email existe). El circuito completo (clic en el link real del correo → `/auth/callback` → `/reset-password/confirm`) no se pudo probar de punta a punta porque requiere acceso a una bandeja de entrada real, fuera del alcance de esta verificación.
+- [x] El botón de logout limpia la sesión y redirige a `/`. Verificado con Playwright — además se confirmó que `signOut()` invalida la sesión globalmente (afectó también una sesión de `curl` de la misma cuenta), evidencia extra de que corta la sesión de verdad.
+- [x] `qr-token`/`verify-qr` siguen funcionando exactamente igual que antes de este spec (sin regresión en SPEC 02). Código no tocado; confirmado que siguen exigiendo sesión (vía `proxy.ts`) igual que el resto de `/api/tratos/*`.
 
 ---
 
@@ -143,7 +143,7 @@ Se reusa `lib/rut.ts` tal cual (`isValidRut`, `cleanRut`, `formatRut`, `sameRut`
 - **Yes:** sin verificación de email obligatoria — menos fricción, consistente con que la app hoy tampoco verifica nada externo (RUT autodeclarado).
 - **Yes:** recuperación de contraseña incluida en este spec (flujo nativo de Supabase Auth).
 - **Yes:** se agregan `buyer_user_id`/`seller_user_id` en `tratos` **y** se sigue denormalizando `name`/`rut` en la fila (copiados desde el perfil al crear/aceptar, no en vivo vía join) — mismo patrón que SPEC 03, el histórico de un trato no cambia si el perfil se edita después (aunque este spec no ofrece edición de perfil todavía).
-- **Yes:** toda la app del flujo (`/flujo` + sus API routes) exige sesión — decisión explícita del usuario ("toda la app requiere login"). Se interpreta que esto no incluye la landing pública `/`, que es la página de marketing y necesita seguir siendo accesible sin cuenta para poder atraer registros — gatear el marketing detrás de login sería contradictorio con el propósito de esa página.
+- **Yes → corregido:** la primera implementación gateaba `/flujo` a nivel de página (redirect a `/login`). El usuario pidió, después de ver el resultado, que la página cargue igual y el pedido de cuenta aparezca como modal — ver "Corrección post-implementación" al final del documento. `/api/tratos*` (las acciones reales) siguen exigiendo sesión del lado del servidor sin cambios.
 - **Yes:** se bloquea que la misma cuenta cree y acepte su propio trato.
 - **Yes:** las acciones (`bank-details`, `cancel`) pasan a exigir que la sesión coincida con el `user_id` dueño de ese lado del trato — el código deja de ser, por sí solo, credencial suficiente para esas dos acciones. Cierra el hueco que SPEC 03 documentó explícitamente ("el código es la única credencial hoy").
 - **Yes:** al abrir un link de trato sin sesión, se preserva el destino (`next`) y se vuelve ahí automáticamente tras loguearse/registrarse — no rompe la experiencia de compartir un link.
@@ -177,3 +177,20 @@ Se reusa `lib/rut.ts` tal cual (`isValidRut`, `cleanRut`, `formatRut`, `sameRut`
 - Cambios a `qr-token`, `verify-qr` o `lib/tratos/release.ts` (SPEC 02 ya los cubre con su propio mecanismo).
 
 Cada uno de estos, si se necesita, va en su propio spec.
+
+---
+
+## Corrección post-implementación
+
+Tras implementar y verificar el spec completo (ver checklist de aceptación arriba), el usuario pidió un cambio en **cómo se presenta** el login — no en qué tan protegida queda la app. Cambios:
+
+- **`proxy.ts` ya no incluye `/flujo` en `config.matcher`** — solo `/api/tratos` y `/api/tratos/:path*`. La página `/flujo` (pantalla "¿Cómo quieres partir?") se ve sin sesión iniciada.
+- **`FlujoApp.tsx` gana el gate real**, del lado del cliente: `useSession` expone `status: "loading" | "authenticated" | "anonymous"`. Si `anonymous`:
+  - Un timer de 4 segundos muestra `AuthModal` automáticamente si el usuario no hizo nada.
+  - `onStartCrear`/`onStartCodigo` (los dos únicos botones de la pantalla "inicio") quedan envueltos en `requireAuthOrGate`: si no hay sesión, abren el modal en el acto y **no** avanzan el wizard.
+- **`AuthModal`** (`components/auth/AuthModal.tsx`) es un modal con toggle registro/login (reusa `SignupFields`/`LoginFields`, los mismos componentes que usan las páginas `/signup`/`/login`). Al autenticarse, cierra el modal y llama `session.refresh()` — no navega a ningún lado, el usuario simplemente vuelve a intentar la acción que quería hacer.
+- Los botones "Soy comprador"/"Soy vendedor" de la landing (`Hero.tsx`, `HowItWorks.tsx`, `Navbar.tsx`) **vuelven a ser** `<a href="/flujo?role=...">` simples — la primera versión de esta corrección los había convertido en botones que abrían el modal ahí mismo en la landing (sin navegar), pero el usuario aclaró que quería navegar de verdad a `/flujo` y recién ahí mostrar el gate. Los componentes intermedios de esa primera versión (`RoleCta`, `AuthModalContext`) se borraron.
+- **Sin cambios en la seguridad real:** `/api/tratos*` sigue exigiendo `requireSessionUser()` en cada route handler, más `proxy.ts` como refuerzo. Lo único que cambió es que la *página* ya no depende de esa protección para decidir si se muestra — el servidor sigue siendo la única fuente de verdad para las acciones que de verdad mueven datos.
+- Páginas `/login`/`/signup`/`/reset-password*` no se tocaron — siguen existiendo como URLs directas (bookmarkeables, y las que usa el flujo de recuperación de contraseña), solo dejaron de ser el camino principal.
+
+Verificado con Playwright contra el dev server real: `/flujo?role=comprador` carga la pantalla "inicio" sin sesión; el modal aparece solo pasados ~4s; clic en "Crear el trato" sin sesión abre el modal y no avanza; completar el registro en el modal lo cierra y un segundo clic en "Crear el trato" sí avanza a "Datos del trato", mostrando la identidad de la cuenta recién creada en `IdentitySummary`.

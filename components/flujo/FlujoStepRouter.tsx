@@ -24,10 +24,14 @@ import ListoStep from "./steps/ListoStep";
  */
 export type FlujoStepContext = {
   role: Role;
+  // SPEC 04: identidad de la cuenta logueada (useSession) — de solo lectura
+  // en CrearDatosStep/DetalleStep, reemplaza los campos name/rut que se
+  // tipeaban por trato (SPEC 03).
+  profileName: string;
+  profileRut: string;
   fields: WizardFields;
   onFieldChange: (field: keyof WizardFields, value: string) => void;
   onCodeChange: (value: string) => void;
-  onNameChange: (value: string) => void;
   onStartCrear: () => void;
   onStartCodigo: () => void;
   onOpenCancel: () => void;
@@ -71,7 +75,14 @@ const STEP_RENDERERS: Record<Screen, StepRenderer> = {
   inicio: (ctx) => <InicioStep role={ctx.role} onCrear={ctx.onStartCrear} onCodigo={ctx.onStartCodigo} />,
 
   "crear-datos": (ctx) => (
-    <CrearDatosStep role={ctx.role} fields={ctx.fields} onFieldChange={ctx.onFieldChange} feeLineValue={ctx.feeLineValue} />
+    <CrearDatosStep
+      role={ctx.role}
+      fields={ctx.fields}
+      onFieldChange={ctx.onFieldChange}
+      feeLineValue={ctx.feeLineValue}
+      profileName={ctx.profileName}
+      profileRut={ctx.profileRut}
+    />
   ),
 
   "crear-codigo": (ctx) => (
@@ -94,10 +105,8 @@ const STEP_RENDERERS: Record<Screen, StepRenderer> = {
       summaryAmount={ctx.summaryAmount}
       feeDisplay={ctx.feeDisplay}
       totalAmount={ctx.totalAmount}
-      name={ctx.fields.name}
-      onNameChange={ctx.onNameChange}
-      rut={ctx.fields.rut}
-      onRutChange={(value) => ctx.onFieldChange("rut", value)}
+      profileName={ctx.profileName}
+      profileRut={ctx.profileRut}
     />
   ),
 

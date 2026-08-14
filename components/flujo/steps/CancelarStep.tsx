@@ -6,10 +6,9 @@ import StepHeading from "../ui/StepHeading";
 import SummaryRow from "../ui/SummaryRow";
 import { colors } from "../theme";
 import { CHILE_BANKS } from "@/lib/fintoc/banks";
-import { isValidRut } from "@/lib/rut";
 import type { WizardFields } from "../types";
 
-type CancelFields = Pick<WizardFields, "rut" | "bankInstitutionId" | "account" | "accountType">;
+type CancelFields = Pick<WizardFields, "bankInstitutionId" | "account" | "accountType">;
 
 type CancelarStepProps = {
   summaryItem: string;
@@ -27,10 +26,14 @@ const ACCOUNT_TYPE_OPTIONS = [
 ];
 const BANK_OPTIONS = CHILE_BANKS.map((bank) => ({ label: bank.label, value: bank.institutionId }));
 
-/** Confirmation screen for the buyer's cancel escape hatch — collects where to refund (never asked before this point) and one deliberate extra tap before money moves back. */
+/**
+ * Confirmation screen for the buyer's cancel escape hatch — collects where
+ * to refund (never asked before this point) and one deliberate extra tap
+ * before money moves back. SPEC 04: ya no pide RUT — el destino usa el RUT
+ * de identidad guardado desde el perfil al crear/aceptar.
+ */
 export default function CancelarStep({ summaryItem, totalAmount, fields, onFieldChange, isRefundPending, isSubmitting, onConfirm }: CancelarStepProps) {
-  const rutHint = fields.rut && !isValidRut(fields.rut) ? "Ese RUT no parece válido." : undefined;
-  const canConfirm = isValidRut(fields.rut) && Boolean(fields.bankInstitutionId) && Boolean(fields.account) && Boolean(fields.accountType);
+  const canConfirm = Boolean(fields.bankInstitutionId) && Boolean(fields.account) && Boolean(fields.accountType);
 
   return (
     <div>
@@ -51,10 +54,6 @@ export default function CancelarStep({ summaryItem, totalAmount, fields, onField
       <div style={{ marginTop: "18px", display: "flex", flexDirection: "column", gap: "18px" }}>
         <div style={{ fontSize: "13px", fontWeight: "700", letterSpacing: "0.06em", textTransform: "uppercase", color: colors.textFaint }}>
           ¿A qué cuenta te devolvemos?
-        </div>
-        <div>
-          <FormField label="RUT" value={fields.rut} onChange={(v) => onFieldChange("rut", v)} placeholder="12.345.678-9" />
-          {rutHint && <div style={{ fontSize: "13px", color: colors.dangerText, marginTop: "7px" }}>{rutHint}</div>}
         </div>
         <SelectField label="Banco" value={fields.bankInstitutionId} onChange={(v) => onFieldChange("bankInstitutionId", v)} options={BANK_OPTIONS} placeholder="Elige tu banco" />
         <SelectField

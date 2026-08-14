@@ -11,9 +11,7 @@ describe("useWizardState", () => {
     expect(result.current.fields).toEqual({
       item: "",
       amount: "",
-      name: "",
       code: "",
-      rut: "",
       bankInstitutionId: "",
       account: "",
       accountType: "",

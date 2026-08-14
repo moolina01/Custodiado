@@ -1,44 +1,36 @@
 import { z } from "zod";
 import { MAX_TRATO_AMOUNT, MIN_TRATO_AMOUNT } from "@/lib/pricing";
 import { isValidInstitutionId } from "@/lib/fintoc/banks";
-import { isValidRut } from "@/lib/rut";
 
 const roleSchema = z.enum(["comprador", "vendedor"]);
-const nameSchema = z.string().trim().min(1, "Falta el nombre").max(80);
 const itemSchema = z.string().trim().min(1, "Falta el producto").max(200);
 const amountSchema = z
   .number()
   .int()
   .min(MIN_TRATO_AMOUNT, `El monto mínimo es $${MIN_TRATO_AMOUNT}`)
   .max(MAX_TRATO_AMOUNT, `El monto máximo es $${MAX_TRATO_AMOUNT}`);
-// SPEC 03: RUT de identidad, obligatorio para ambos roles — se compara luego
-// (vía `sameRut`) contra el RUT de la cuenta bancaria real (payout del
-// vendedor, destino de reembolso del comprador, remitente de la transferencia
-// entrante del comprador).
-const rutSchema = z.string().trim().refine(isValidRut, "RUT inválido");
 
+// SPEC 04: ni `name` ni `rut` se piden más acá — vienen del perfil de la
+// cuenta logueada (ver lib/profiles/validation.ts para esa validación, y
+// lib/tratos/repository.ts para dónde se resuelve). El cliente ya no los
+// manda en el body de create/accept.
 export const createTratoSchema = z.object({
   role: roleSchema,
   item: itemSchema,
   amountClp: amountSchema,
-  name: nameSchema,
-  rut: rutSchema,
 });
 export type CreateTratoPayload = z.infer<typeof createTratoSchema>;
 
 export const acceptTratoSchema = z.object({
   role: roleSchema,
-  name: nameSchema,
-  rut: rutSchema,
 });
 export type AcceptTratoPayload = z.infer<typeof acceptTratoSchema>;
 
-// Shared by the seller's payout details (bank-details route) and the
-// buyer's refund destination (cancel route) — same 4 fields Fintoc's
-// `counterparty` object needs for a Chilean transfer, just for whichever
-// side money is about to move to.
+// SPEC 04: ya no lleva `rut` — el RUT de identidad viene del perfil de la
+// cuenta logueada (mismo que ya quedó guardado en `seller_rut`/`buyer_rut`
+// al crear/aceptar), así que no hace falta que el cliente lo reenvíe acá.
+// Solo quedan los datos de la cuenta bancaria en sí.
 const payoutAccountSchema = {
-  rut: rutSchema,
   bankInstitutionId: z.string().refine(isValidInstitutionId, "Banco no reconocido"),
   accountNumber: z
     .string()

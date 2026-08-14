@@ -36,6 +36,13 @@ export interface TratoRow {
   seller_name: string | null;
   accepted_at: string | null;
 
+  // SPEC 04: cuenta dueña de cada lado, una vez hay sesión — habilita el
+  // chequeo de "la sesión activa es la dueña de este lado del trato" en
+  // bank-details/cancel (ver lib/tratos/repository.ts), en vez de que el
+  // código del trato siga siendo la única credencial para esas acciones.
+  buyer_user_id: string | null;
+  seller_user_id: string | null;
+
   seller_rut: string | null;
   seller_bank_institution_id: string | null;
   seller_account_number: string | null;
@@ -66,13 +73,19 @@ export interface TratoRow {
   updated_at: string;
 }
 
-/** Fields the client is allowed to set when creating a trato. */
+/**
+ * Fields the client is allowed to set when creating a trato.
+ *
+ * SPEC 04: no lleva `name`/`rut` — antes (SPEC 03) el cliente los mandaba
+ * sueltos; ahora `createTrato(input, userId)` los resuelve del lado del
+ * servidor, desde el perfil de la cuenta logueada (`lib/profiles/
+ * repository.ts`), la misma identidad para cualquier trato que esa cuenta
+ * cree o acepte.
+ */
 export interface CreateTratoInput {
   role: CreatedByRole;
   item: string;
   amountClp: number;
-  name: string;
-  rut: string; // SPEC 03: RUT de identidad, obligatorio — ver lib/tratos/validation.ts
 }
 
 // SPEC 03: por qué un trato terminó en refund_pending/refunded — distingue
