@@ -38,6 +38,12 @@ body {
   line-height: 1.5;
   overflow-x: hidden;
   letter-spacing: -0.011em;
+  /* SPEC 05: the real landing page (app/page.tsx) is always taller than the
+     viewport, so this was never needed there. /panel — this class's first
+     reuse outside the landing page — can be shorter than the viewport (few
+     tratos), leaving `body`'s own background exposed below it. `.flujo-page`
+     (this class's sibling, same recipe) already has this for the same reason. */
+  min-height: 100vh;
 }
 .custodio-landing a {
   color: #0e3a34;
@@ -328,4 +334,30 @@ body {
 }
 .nav-cta:hover {
   background: #0a2b27;
+}
+
+/* -----------------------------------------------------------------------
+ * /panel — SPEC 05. Same hover-affordance convention as the nav classes
+ * above (a color/shadow shift, no layout jump), scoped here instead of
+ * inline since inline styles can't express `:hover`.
+ * --------------------------------------------------------------------- */
+.panel-card {
+  transition: box-shadow 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+}
+.panel-card:hover {
+  box-shadow: 0 10px 28px rgba(14, 42, 36, 0.08);
+  transform: translateY(-2px);
+  border-color: #c7d6d0;
+}
+.panel-btn-primary:hover {
+  background: #0a2b27 !important;
+}
+.panel-btn-secondary:hover {
+  border-color: #0e3a34 !important;
+  color: #0e3a34 !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel-card {
+    transition: none;
+  }
 }

@@ -20,6 +20,10 @@ export const colors = {
   warnBorder: "#F3D8B8",
   dangerBorder: "#E0A9A0",
   dangerText: "#B3402C",
+  // SPEC 05: pale red surface for the panel's "Cancelado/Reembolsado"
+  // category badge — same family as dangerBorder/dangerText above, the
+  // wizard itself never needed a background version of it.
+  dangerBg: "#FBEAE5",
 } as const;
 
 /** The accent color tied to whichever side of the deal is looking at the screen. */

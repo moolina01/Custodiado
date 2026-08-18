@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useReducer } from "react";
 import { formatThousands } from "./format";
 import { screenFor, stepsFor } from "./flow";
 import { loadWizard, saveWizard, clearWizard, type PersistedWizard } from "./persistence";
-import type { Mode, Role, WizardState } from "./types";
+import type { Mode, Role, Screen, WizardState } from "./types";
 
 type FieldName = Exclude<keyof WizardState["fields"], never>;
 
@@ -16,7 +16,8 @@ type WizardAction =
   | { type: "confirmCancel" }
   | { type: "setField"; field: FieldName; value: string }
   | { type: "reset" }
-  | { type: "restore"; state: PersistedWizard };
+  | { type: "restore"; state: PersistedWizard }
+  | { type: "jumpTo"; mode: Exclude<Mode, null>; stepIndex: number; cancelStage: WizardState["cancelStage"] };
 
 // The server render has no `window`, so it can never see what's in
 // `localStorage` — reading it during the initial render (e.g. a lazy
@@ -82,6 +83,13 @@ function createReducer(role: Role) {
       case "restore":
         return action.state;
 
+      // SPEC 05: `/flujo?code=...` (see FlujoApp) — jumps straight to a
+      // mode+step for a trato that already exists, instead of walking
+      // through "codigo-ingresar"/"crear-datos". `fields` carries over
+      // untouched (nothing here needs re-typing).
+      case "jumpTo":
+        return { ...state, mode: action.mode, stepIndex: action.stepIndex, cancelStage: action.cancelStage };
+
       default:
         return state;
     }
@@ -133,5 +141,17 @@ export function useWizardState(role: Role) {
     confirmCancel: () => dispatch({ type: "confirmCancel" }),
     setField: (field: FieldName, value: string) => dispatch({ type: "setField", field, value }),
     reset: () => dispatch({ type: "reset" }),
+    // SPEC 05: used once, by FlujoApp's `?code=` deep-link effect. "cancelado"
+    // isn't a step inside `stepsFor` — it's reached via `cancelStage`
+    // overriding whatever step/mode is underneath (see `screenFor`), same as
+    // the live `confirmCancel` path.
+    jumpToScreen: (mode: Exclude<Mode, null>, screen: Screen) => {
+      if (screen === "cancelado") {
+        dispatch({ type: "jumpTo", mode, stepIndex: 0, cancelStage: "done" });
+        return;
+      }
+      const stepIndex = stepsFor(role, mode).indexOf(screen);
+      dispatch({ type: "jumpTo", mode, stepIndex: stepIndex === -1 ? 1 : stepIndex, cancelStage: "none" });
+    },
   };
 }

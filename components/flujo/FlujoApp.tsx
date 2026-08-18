@@ -14,20 +14,20 @@ import { devQrTokenRequest, getPlatformAccountRequest } from "./api";
 import { logoutRequest } from "@/components/auth/api";
 import { DEFAULT_ITEM_LABEL } from "./data";
 import { calculateFee, money, toAmountNumber } from "./format";
-import { nextButtonLabel, phaseFor, phaseName, showsNextButton, showsProgress } from "./flow";
+import { nextButtonLabel, phaseFor, phaseName, screenForExistingTrato, showsNextButton, showsProgress } from "./flow";
 import { clearAllFlujoState, loadTratoCode } from "./persistence";
 import { roleColor } from "./theme";
 import { useAdvanceOnTratoStatus } from "./useAdvanceOnTratoStatus";
 import { useHelpChat } from "./useHelpChat";
 import { useQrScanner } from "./useQrScanner";
 import { useSellerQrToken } from "./useSellerQrToken";
-import { useSession } from "./useSession";
+import { useSession } from "@/components/auth/useSession";
 import { useTrato } from "./useTrato";
 import { useWizardState } from "./useWizardState";
 import { formatTratoCodeForDisplay } from "@/lib/codeFormat";
-import type { Role } from "./types";
+import type { Mode, Role } from "./types";
 
-type FlujoAppProps = { initialRole: Role };
+type FlujoAppProps = { initialRole: Role; initialCode?: string };
 
 /**
  * Orchestrates the whole `/flujo` wizard: owns the step machine, derives
@@ -58,7 +58,7 @@ type FlujoAppProps = { initialRole: Role };
  * same way: "Confirmar cancelación" calls `cancel`, then the screen waits
  * for the refund webhook (via the same hook) before moving to `cancelado`.
  */
-export default function FlujoApp({ initialRole }: FlujoAppProps) {
+export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
   const role = initialRole;
   const isBuyer = role === "comprador";
   const router = useRouter();
@@ -132,13 +132,33 @@ export default function FlujoApp({ initialRole }: FlujoAppProps) {
   // "inicio" instead of sitting on a step with no data behind it.
   useEffect(() => {
     if (session.status !== "authenticated") return;
+    if (initialCode) return; // SPEC 05: the deep-link effect below handles this case instead
     const code = loadTratoCode(role);
     if (!code) return;
     tratoState.restore(code).then((found) => {
       if (!found) wizard.reset();
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- tratoState.restore/wizard.reset are stable for a fixed `role`; re-running this on every render of theirs would refetch on every state change instead of once per session-status transition.
-  }, [session.status, role]);
+  }, [session.status, role, initialCode]);
+
+  // SPEC 05: `/flujo?code=...` — how the panel (`/panel`) opens an
+  // in-progress trato in the wizard, instead of dumping the user on
+  // "codigo-ingresar" to retype a code they already had. Same lookup the
+  // manual "tengo un código" step uses (`tratoState.lookup`, shows
+  // `tratoState.error` on failure, same as that step would) — the only
+  // difference is what happens on success: straight to the screen that
+  // matches the trato's current status (`screenForExistingTrato`) instead
+  // of `wizard.goNext()` into "detalle".
+  useEffect(() => {
+    if (session.status !== "authenticated") return;
+    if (!initialCode) return;
+    tratoState.lookup(initialCode).then((found) => {
+      if (!found) return;
+      const mode: Exclude<Mode, null> = found.createdByRole === role ? "crear" : "codigo";
+      wizard.jumpToScreen(mode, screenForExistingTrato(found.status, role, mode === "crear"));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- tratoState.lookup/wizard.jumpToScreen are stable for a fixed `role`; this should only run once per session-status transition, not on every render of theirs.
+  }, [session.status, initialCode, role]);
 
   // `useWizardState` clears its own saved step once it's back to a blank
   // "inicio" (finished via "listo", or backed out before a trato existed) —
@@ -350,7 +370,7 @@ export default function FlujoApp({ initialRole }: FlujoAppProps) {
 
   return (
     <div className="flujo-page">
-      <FlujoHeader role={role} onLogout={handleLogout} />
+      <FlujoHeader role={role} isAuthenticated={session.status === "authenticated"} name={session.name} onLogout={handleLogout} />
 
       <div style={{ maxWidth: "560px", margin: "0 auto", padding: "26px 20px 64px" }}>
         {showsProgress(screen) && <ProgressBar activeColor={accent} filledBars={phase !== undefined ? phase + 1 : 0} stepLabel={phaseName(phase)} />}

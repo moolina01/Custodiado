@@ -1,3 +1,4 @@
+import { categorizeForPanel, type PanelCategory } from "./status";
 import type { CreatedByRole, RefundReason, TratoRow } from "./types";
 
 /**
@@ -47,6 +48,26 @@ export function toPublicDto(row: TratoRow): PublicTratoDto {
     refundReason: row.refund_reason,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+  };
+}
+
+/**
+ * SPEC 05: what `GET /api/tratos/mine` and `GET /api/tratos/mine/[code]`
+ * send back — everything `PublicTratoDto` has, plus two fields derived
+ * for the requesting account specifically: which role it played in *this*
+ * trato (not necessarily `createdByRole`) and which of the panel's 4
+ * buckets the status falls into (see `categorizeForPanel`).
+ */
+export interface PanelTratoDto extends PublicTratoDto {
+  myRole: CreatedByRole;
+  category: PanelCategory;
+}
+
+export function toPanelDto(row: TratoRow, userId: string): PanelTratoDto {
+  return {
+    ...toPublicDto(row),
+    myRole: row.buyer_user_id === userId ? "comprador" : "vendedor",
+    category: categorizeForPanel(row.status),
   };
 }
 

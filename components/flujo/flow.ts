@@ -1,3 +1,4 @@
+import type { TratoStatus } from "@/lib/tratos/types";
 import type { CancelStage, Mode, Role, Screen } from "./types";
 
 /**
@@ -27,6 +28,53 @@ export function screenFor(role: Role, mode: Mode, stepIndex: number, cancelStage
   if (cancelStage === "form") return "cancelar";
   if (cancelStage === "done") return "cancelado";
   return stepsFor(role, mode)[stepIndex] ?? "inicio";
+}
+
+/**
+ * SPEC 05: which screen to land on when `/flujo` opens with `?code=` for a
+ * trato that's already found (see `FlujoApp`'s deep-link effect) — instead
+ * of walking through "codigo-ingresar"/"crear-datos" and "detalle" like a
+ * fresh flow would. `isCreator` picks which flow's screen sequence applies
+ * (`stepsFor`'s "crear" vs "codigo") — only matters for the seller's
+ * `awaiting_payment` step, the one place the two flows diverge before they
+ * converge again at "banco": the creator has no separate wait screen for
+ * it (stays on "crear-codigo", same as they were for `awaiting_acceptance`),
+ * the accepter does ("esperando-pago").
+ *
+ * `awaiting_acceptance` only ever maps to `isCreator` in practice — a
+ * trato only has *this* account's `buyer_user_id`/`seller_user_id` set
+ * (the precondition for it to reach here at all, see `getTratosForUser`)
+ * once it's been created or accepted, and accepting always moves the
+ * status past `awaiting_acceptance` in the same atomic step. The `!isCreator`
+ * branch below is just defensive, never actually exercised from the panel.
+ *
+ * `release_failed`/`refund_failed` are never deep-linked here in practice
+ * either — the panel classifies both as terminal (`categorizeForPanel`)
+ * and links to `/panel/[code]` instead. The fallbacks below only matter for
+ * someone hand-editing the URL.
+ */
+export function screenForExistingTrato(status: TratoStatus, role: Role, isCreator: boolean): Screen {
+  const isBuyer = role === "comprador";
+  switch (status) {
+    case "awaiting_acceptance":
+      return isCreator ? "crear-codigo" : "detalle";
+    case "awaiting_payment":
+    case "refund_pending": // SPEC 03: the RUT-mismatch auto-refund starts from this same wait screen
+      if (isBuyer) return "pagar";
+      return isCreator ? "crear-codigo" : "esperando-pago";
+    case "funds_held":
+      return isBuyer ? "retenidos" : "banco";
+    case "release_pending":
+      return "qr";
+    case "released":
+      return "listo";
+    case "refunded":
+      return "cancelado";
+    case "release_failed":
+      return "qr";
+    case "refund_failed":
+      return "cancelado";
+  }
 }
 
 // The 4 named phases shown above the progress bar, and which screens fall

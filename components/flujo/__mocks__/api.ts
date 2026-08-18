@@ -58,6 +58,13 @@ export function __resetMockApi() {
   sequence = 0;
 }
 
+// SPEC 05: seeds a trato directly (skipping create/accept) — for tests of
+// FlujoApp's `?code=` deep-link, which opens on a trato that already
+// exists rather than building one up through the wizard's own actions.
+export function __setMockTrato(seed: Trato) {
+  trato = seed;
+}
+
 function requireTrato(): Trato {
   if (!trato) throw new ApiError("Trato no encontrado.", 404);
   return trato;

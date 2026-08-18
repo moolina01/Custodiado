@@ -24,6 +24,9 @@ export type SessionStatus = "loading" | "authenticated" | "incomplete" | "anonym
  * montaje y `refresh` a propósito — inlinearla en ambos lados (en vez de
  * que el efecto llame a una función compartida que hace `setState`) es lo
  * que evita el warning de `react-hooks/set-state-in-effect`.
+ *
+ * SPEC 05: vivía en `components/flujo/useSession.ts` — se movió acá cuando
+ * `Navbar` (fuera de `flujo`) también lo necesitó, para no duplicarlo.
  */
 export function useSession() {
   const [status, setStatus] = useState<SessionStatus>("loading");

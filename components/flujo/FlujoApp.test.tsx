@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import FlujoApp from "./FlujoApp";
+import type { Trato } from "./__mocks__/api";
 
 // Manual mock of `./api` (see `__mocks__/api.ts`) — stands in for the
 // `app/api/tratos/**` backend with a single in-memory trato, so the wizard
@@ -20,11 +21,41 @@ vi.mock("@/components/auth/api", () => ({
 // real App Router mounted in this test environment, so it needs a stand-in.
 // None of the tests below click "Cerrar sesión", so push/refresh never
 // actually run; they just need to exist so the hook call itself doesn't throw.
+// SPEC 05 (ajuste): FlujoHeader now renders UserMenu (components/custodio/
+// UserMenu.tsx) when authenticated, which calls usePathname() too.
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  usePathname: () => "/flujo",
 }));
 
-const { __resetMockApi, acceptTratoRequest, verifyQrRequest, simulatePaymentRequest } = await import("./__mocks__/api");
+const { __resetMockApi, __setMockTrato, acceptTratoRequest, verifyQrRequest, simulatePaymentRequest } = await import("./__mocks__/api");
+
+// SPEC 05: fixture for `?code=` deep-link tests — a trato that already
+// exists, seeded directly instead of built up through create/accept.
+function seedTrato(overrides: Partial<Trato> = {}) {
+  const now = new Date().toISOString();
+  __setMockTrato({
+    id: "trato-seed",
+    code: "XYZ999",
+    status: "funds_held",
+    createdByRole: "vendedor",
+    item: "Bicicleta",
+    amountClp: 100000,
+    feeClp: 3000,
+    buyerName: "Ana Compradora",
+    sellerName: "Beto Vendedor",
+    hasSellerBankDetails: true,
+    acceptedAt: now,
+    paidAt: now,
+    releasedAt: null,
+    cancelledAt: null,
+    cancelReason: null,
+    refundReason: null,
+    createdAt: now,
+    updatedAt: now,
+    ...overrides,
+  });
+}
 
 const POLL_INTERVAL_MS = 3000; // must match components/flujo/useTratoPolling.ts
 
@@ -300,5 +331,50 @@ describe("FlujoApp", () => {
     // stays available and just returns to "retenidos" without cancelling.
     fireEvent.click(screen.getByText("Atrás"));
     expect(screen.getByText("Coordinen la entrega")).toBeInTheDocument();
+  });
+
+  // SPEC 05: how `/panel` opens an in-progress trato — `/flujo?role=...&code=...`.
+  describe("?code= deep-link", () => {
+    it("opens straight on the screen matching the trato's status, skipping 'inicio' and 'codigo-ingresar'", async () => {
+      seedTrato({ status: "funds_held" }); // buyer's screen for funds_held is "retenidos"
+
+      await act(async () => {
+        render(<FlujoApp initialRole="comprador" initialCode="XYZ999" />);
+        // Flushes the same chain the restore-effect test above does: useSession's
+        // meRequest() first, then the lookup itself.
+        await vi.advanceTimersByTimeAsync(0);
+      });
+
+      expect(screen.getByText("Coordinen la entrega")).toBeInTheDocument();
+      expect(screen.queryByText("¿Cómo quieres partir?")).not.toBeInTheDocument();
+      expect(screen.queryByText("Buscar el trato")).not.toBeInTheDocument(); // "codigo-ingresar"'s own button, never shown
+    });
+
+    it("puts the trato's own creator back on 'crear-codigo', not the accepter's 'esperando-pago'", async () => {
+      seedTrato({ status: "awaiting_payment", createdByRole: "vendedor" });
+
+      await act(async () => {
+        render(<FlujoApp initialRole="vendedor" initialCode="XYZ999" />);
+        await vi.advanceTimersByTimeAsync(0);
+      });
+
+      expect(screen.getByText("Pásale este código")).toBeInTheDocument();
+    });
+
+    it("puts an accepter (not the creator) on 'esperando-pago' for the same status", async () => {
+      seedTrato({ status: "awaiting_payment", createdByRole: "comprador" });
+
+      await act(async () => {
+        render(<FlujoApp initialRole="vendedor" initialCode="XYZ999" />);
+        await vi.advanceTimersByTimeAsync(0);
+      });
+
+      expect(screen.getByText("Aceptaste el trato")).toBeInTheDocument();
+    });
+
+    it("falls back to normal 'inicio' behavior when no code is in the URL", async () => {
+      render(<FlujoApp initialRole="comprador" />);
+      expect(screen.getByText("¿Cómo quieres partir?")).toBeInTheDocument();
+    });
   });
 });

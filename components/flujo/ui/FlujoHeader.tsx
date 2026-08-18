@@ -1,12 +1,28 @@
 import Link from "next/link";
+import UserMenu from "@/components/custodio/UserMenu";
 import { ROLE_BADGE_LABEL } from "../data";
 import { colors, roleColor } from "../theme";
 import type { Role } from "../types";
 
-type FlujoHeaderProps = { role: Role; onLogout: () => void };
+type FlujoHeaderProps = { role: Role; isAuthenticated: boolean; name: string; onLogout: () => void };
 
-/** Sticky top bar: logo back to the landing page, a badge reminding the user which side of the deal they're on, and — since SPEC 04 — a logout control (the whole wizard requires a session now). */
-export default function FlujoHeader({ role, onLogout }: FlujoHeaderProps) {
+/**
+ * Top bar: logo back to the landing page, a badge reminding the user which
+ * side of the deal they're on, and — since SPEC 04 — a logout control (the
+ * whole wizard requires a session now).
+ *
+ * SPEC 05 (ajuste post-implementación): el "Cerrar sesión" de texto plano
+ * pasó a ser el mismo `UserMenu` (ícono + Tratos/Cuenta/Cerrar sesión) que
+ * ya usa `Navbar` en el resto del sitio — mismo pedido del usuario de que
+ * el círculo de cuenta aparezca en todos lados una vez logueado, no solo
+ * en la landing. `onLogout` sigue siendo el de `FlujoApp` (limpia el
+ * estado persistido del wizard para ambos roles antes de navegar) — se le
+ * pasa a `UserMenu` como override completo, en vez de dejar que el propio
+ * `UserMenu` llame a `logoutRequest()` por su cuenta y se salte esa
+ * limpieza. Sin sesión (`/flujo` se ve igual sin cuenta, ver SPEC 04
+ * corrección), no hay nada que mostrar acá — ni ícono ni logout.
+ */
+export default function FlujoHeader({ role, isAuthenticated, name, onLogout }: FlujoHeaderProps) {
   const accent = roleColor(role);
   const badgeBg = role === "comprador" ? colors.accentSoft : colors.roleSellerBg;
 
@@ -29,21 +45,7 @@ export default function FlujoHeader({ role, onLogout }: FlujoHeaderProps) {
           <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: accent }} />
           <span style={{ fontSize: "13px", fontWeight: "700", color: accent }}>{ROLE_BADGE_LABEL[role]}</span>
         </div>
-        <button
-          onClick={onLogout}
-          style={{
-            background: "none",
-            border: "none",
-            fontFamily: "inherit",
-            fontSize: "13px",
-            fontWeight: "600",
-            color: colors.textFaint,
-            cursor: "pointer",
-            padding: 0,
-          }}
-        >
-          Cerrar sesión
-        </button>
+        {isAuthenticated && <UserMenu name={name} onLogout={onLogout} />}
       </div>
     </header>
   );

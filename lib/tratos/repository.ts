@@ -82,6 +82,23 @@ export async function getTratoByCode(rawCode: string): Promise<TratoRow | null> 
 }
 
 /**
+ * SPEC 05: every trato where `userId` was either side, newest first —
+ * backs `/panel`. Relies on the indexes added in
+ * `0006_add_trato_user_indexes.sql` (an unindexed `.or()` here would be a
+ * full table scan).
+ */
+export async function getTratosForUser(userId: string): Promise<TratoRow[]> {
+  const db = getSupabaseAdmin();
+  const { data, error } = await db
+    .from(TABLE)
+    .select()
+    .or(`buyer_user_id.eq.${userId},seller_user_id.eq.${userId}`)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(`No se pudieron listar los tratos: ${error.message}`);
+  return (data as TratoRow[] | null) ?? [];
+}
+
+/**
  * Reads the once-issued seller QR secret for `code`. Internal use only —
  * checked against the `x-seller-qr-secret` header in `GET /qr-token`, never
  * exposed in `PublicTratoDto` or any other client-facing response.

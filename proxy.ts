@@ -18,6 +18,17 @@ import { NextResponse, type NextRequest } from "next/server";
 // fintoc` no está en el matcher — Fintoc lo llama directo con su propia
 // firma, no con una sesión de usuario.
 //
+// SPEC 05: `/panel` SÍ está en el matcher, a diferencia de `/flujo` — no
+// existe una versión anónima con sentido ("ver mi historial" sin cuenta no
+// significa nada), así que acá el gate duro (redirect a `/login`, no un
+// modal) vive del lado del servidor. No se resuelve llamando
+// `getSessionUser()` desde `app/panel/page.tsx` (un Server Component):
+// `supabase.auth.getUser()` puede necesitar rotar el token y reescribir la
+// cookie, y `lib/supabase/authClient.ts` tira error a propósito si eso se
+// intenta desde un lugar que no puede escribir cookies (ver ese archivo).
+// Proxy sí puede escribir cookies — por eso el gate de `/panel` vive acá,
+// no en la página.
+//
 // `next/headers`' `cookies()` (used by `lib/supabase/authClient.ts`) only
 // works in Route Handlers/Server Components — not here. Proxy reads/writes
 // cookies straight off `NextRequest`/`NextResponse`, so this builds its own
@@ -51,15 +62,27 @@ export default async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Every matched path is under /api/tratos — a `fetch()` from
-  // `components/flujo/api.ts` expects JSON back, never an HTML redirect.
   if (!user) {
-    return NextResponse.json({ error: "No hay sesión activa." }, { status: 401 });
+    // `/api/tratos*`: a `fetch()` from `components/flujo/api.ts`/
+    // `components/panel/api.ts` expects JSON back, never an HTML redirect.
+    if (request.nextUrl.pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "No hay sesión activa." }, { status: 401 });
+    }
+
+    // SPEC 05: `/panel*` — real page navigation, so a real redirect,
+    // preserving where the visitor was headed (`next`) the same way
+    // `/login` already supports for any other entry point.
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("next", request.nextUrl.pathname + request.nextUrl.search);
+    return NextResponse.redirect(loginUrl);
   }
 
   return response;
 }
 
 export const config = {
-  matcher: ["/api/tratos", "/api/tratos/:path*"],
+  // SPEC 05 (ajuste): `/cuenta` (perfil de la cuenta, solo lectura por
+  // ahora) es el mismo caso que `/panel` — sin sesión no significa nada,
+  // mismo gate duro.
+  matcher: ["/api/tratos", "/api/tratos/:path*", "/panel", "/panel/:path*", "/cuenta"],
 };
