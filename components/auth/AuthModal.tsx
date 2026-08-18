@@ -27,6 +27,13 @@ type AuthModalProps = {
 export default function AuthModal({ onClose, onAuthenticated }: AuthModalProps) {
   const [mode, setMode] = useState<AuthMode>("signup");
 
+  // "Continuar con Google" es un redirect real (deja el modal/SPA por
+  // completo) — necesita una URL absoluta a la que Google pueda volver una
+  // vez termine. Como este modal solo existe montado en el cliente (nunca
+  // en el HTML servido inicialmente, ver FlujoApp), leer `window` acá es
+  // seguro, no hay mismatch de hidratación posible.
+  const googleNext = typeof window !== "undefined" ? window.location.pathname + window.location.search : "/flujo";
+
   // Cerrar con Escape — comportamiento esperado de cualquier modal.
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -88,6 +95,7 @@ export default function AuthModal({ onClose, onAuthenticated }: AuthModalProps) 
         {mode === "signup" ? (
           <SignupFields
             onSuccess={onAuthenticated}
+            googleNext={googleNext}
             footer={
               <div style={{ marginTop: "18px", fontSize: "14px", textAlign: "center" }}>
                 ¿Ya tenés cuenta?{" "}
@@ -100,6 +108,7 @@ export default function AuthModal({ onClose, onAuthenticated }: AuthModalProps) 
         ) : (
           <LoginFields
             onSuccess={onAuthenticated}
+            googleNext={googleNext}
             footer={
               <div style={{ marginTop: "18px", fontSize: "14px", textAlign: "center" }}>
                 ¿No tenés cuenta?{" "}

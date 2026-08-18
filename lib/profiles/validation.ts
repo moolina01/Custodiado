@@ -33,3 +33,11 @@ export const resetPasswordConfirmSchema = z.object({
   password: passwordSchema,
 });
 export type ResetPasswordConfirmPayload = z.infer<typeof resetPasswordConfirmSchema>;
+
+// SPEC 04 (Google): mismos nombre/RUT que `signupSchema`, pero solos — para
+// cuando la cuenta ya existe (Google ya la creó) y solo falta el perfil.
+export const completeProfileSchema = z.object({
+  name: nameSchema,
+  rut: rutSchema,
+});
+export type CompleteProfilePayload = z.infer<typeof completeProfileSchema>;

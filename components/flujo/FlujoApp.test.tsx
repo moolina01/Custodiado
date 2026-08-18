@@ -45,6 +45,12 @@ function fillBankFields(bankInstitutionId: string, accountType: string, accountN
 beforeEach(() => {
   vi.useFakeTimers();
   __resetMockApi();
+  // Each test mounts a fresh FlujoApp expecting to start on "inicio" — but
+  // useWizardState/useTrato persist to localStorage now (see
+  // components/flujo/persistence.ts), which otherwise survives across
+  // tests in this same jsdom environment and would resume a previous
+  // test's mid-flow state instead.
+  localStorage.clear();
 });
 
 afterEach(() => {
@@ -172,6 +178,12 @@ describe("FlujoApp", () => {
 
     await advancePoll(); // refund webhook, delivered on the next poll
     expect(screen.getByText("Trato cancelado")).toBeInTheDocument();
+
+    // "cancelado" is terminal but not a dead end: with the wizard persisted
+    // (see components/flujo/persistence.ts), a stray reload no longer
+    // resets it for free, so it needs its own explicit way back to "inicio".
+    fireEvent.click(screen.getByText("Volver al inicio"));
+    expect(screen.getByText("Crear el trato")).toBeInTheDocument();
   });
 
   it("SPEC 03: auto-refunds the buyer when the sender RUT doesn't match, from 'pagar' straight to 'cancelado'", async () => {
@@ -200,5 +212,36 @@ describe("FlujoApp", () => {
     });
     await advancePoll(); // refund webhook, delivered on the next poll
     expect(screen.getByText("No pudimos confirmar tu pago")).toBeInTheDocument();
+  });
+
+  it("resumes on the same screen, with the same trato, after an accidental exit (unmount + remount)", async () => {
+    const { unmount } = render(<FlujoApp initialRole="comprador" />);
+
+    fireEvent.click(screen.getByText("Crear el trato"));
+    fireEvent.change(screen.getByPlaceholderText("Bicicleta aro 29, poco uso"), { target: { value: "Bicicleta" } });
+    fireEvent.change(screen.getByPlaceholderText("180.000"), { target: { value: "100000" } });
+    await act(async () => {
+      fireEvent.click(screen.getByText("Generar el código")); // calls createTratoRequest
+    });
+    expect(screen.getByText("ABC-123")).toBeInTheDocument();
+
+    // Stands in for closing the tab / a stray reload — everything React was
+    // holding in memory (wizard step, fetched trato) is gone; only what
+    // components/flujo/persistence.ts wrote to localStorage survives.
+    unmount();
+
+    await act(async () => {
+      render(<FlujoApp initialRole="comprador" />);
+      // Flushes the chain this remount kicks off: FlujoApp's trato restore
+      // effect waits on `useSession`'s own `meRequest()` first, then awaits
+      // `getTratoRequest` itself — each its own microtask hop.
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    // Same screen (useWizardState restores which step) and the same real
+    // trato (FlujoApp's restore effect, once the session resolves), not the
+    // blank "inicio" a fresh mount would otherwise show.
+    expect(screen.getByText("Pásale este código")).toBeInTheDocument();
+    expect(screen.getByText("ABC-123")).toBeInTheDocument();
   });
 });

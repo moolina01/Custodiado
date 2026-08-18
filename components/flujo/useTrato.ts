@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ApiError,
   acceptTratoRequest,
@@ -16,6 +16,7 @@ import {
   type CancelInput,
   type Trato,
 } from "./api";
+import { clearTratoCode, saveTratoCode } from "./persistence";
 import type { Role } from "./types";
 
 /**
@@ -24,14 +25,23 @@ import type { Role } from "./types";
  * knows about server data, not which screen is showing. `FlujoApp` calls
  * these actions from the specific steps that create/fetch/accept a trato,
  * then advances the wizard's local step index itself on success.
+ *
+ * `role` is only used to key persistence (see `./persistence`) — every
+ * `trato.code` this hook lands on gets saved so `restore` (called from
+ * `FlujoApp` on mount) can fetch the same trato back after an accidental
+ * exit, the same way `useWizardState` restores which step was showing.
  */
-export function useTrato() {
+export function useTrato(role: Role) {
   const [trato, setTrato] = useState<Trato | null>(null);
   // The seller's once-issued QR secret (see SPEC 02) — kept separate from
   // `trato` itself, since the backend never sends it back on a later fetch.
   const [sellerQrSecret, setSellerQrSecret] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (trato) saveTratoCode(role, trato.code);
+  }, [role, trato]);
 
   const create = useCallback(async (role: Role, item: string, amountClp: number) => {
     setIsSubmitting(true);
@@ -223,6 +233,31 @@ export function useTrato() {
     }
   }, [trato]);
 
+  // FlujoApp's mount-time restore, for a `code` recovered from
+  // `localStorage` — same request as `lookup`, but silent on failure (a
+  // stale/inaccessible saved trato, e.g. from a since-logged-out account,
+  // shouldn't greet a returning user with an error banner). The caller
+  // reacts to a `null` return by clearing the wizard back to "inicio".
+  const restore = useCallback(async (code: string) => {
+    try {
+      const found = await getTratoRequest(code);
+      setTrato(found);
+      return found;
+    } catch {
+      clearTratoCode(role);
+      return null;
+    }
+  }, [role]);
+
+  // Clears the in-memory trato and its persisted code together — called
+  // once the wizard's back to a blank "inicio" (see FlujoApp), so a
+  // finished/abandoned trato never lingers to be wrongly `restore`d later.
+  const reset = useCallback(() => {
+    setTrato(null);
+    setSellerQrSecret(null);
+    clearTratoCode(role);
+  }, [role]);
+
   return {
     trato,
     sellerQrSecret,
@@ -238,6 +273,8 @@ export function useTrato() {
     verifyQr,
     cancel,
     refresh,
+    restore,
+    reset,
     clearError: () => setError(null),
   };
 }

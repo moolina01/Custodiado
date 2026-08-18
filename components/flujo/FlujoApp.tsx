@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import FlujoStepRouter from "./FlujoStepRouter";
 import HelpChat from "./HelpChat";
@@ -15,6 +15,7 @@ import { logoutRequest } from "@/components/auth/api";
 import { DEFAULT_ITEM_LABEL } from "./data";
 import { calculateFee, money, toAmountNumber } from "./format";
 import { nextButtonLabel, phaseFor, phaseName, showsNextButton, showsProgress } from "./flow";
+import { clearAllFlujoState, loadTratoCode } from "./persistence";
 import { roleColor } from "./theme";
 import { useAdvanceOnTratoStatus } from "./useAdvanceOnTratoStatus";
 import { useHelpChat } from "./useHelpChat";
@@ -62,7 +63,7 @@ export default function FlujoApp({ initialRole }: FlujoAppProps) {
   const isBuyer = role === "comprador";
   const router = useRouter();
   const wizard = useWizardState(role);
-  const tratoState = useTrato();
+  const tratoState = useTrato(role);
   const help = useHelpChat();
   // SPEC 04: identidad de la cuenta logueada — de solo lectura en
   // CrearDatosStep/DetalleStep vía IdentitySummary.
@@ -80,6 +81,15 @@ export default function FlujoApp({ initialRole }: FlujoAppProps) {
     return () => clearTimeout(timer);
   }, [session.status]);
 
+  // SPEC 04 (Google): sesión real pero sin perfil todavía — un login con
+  // Google que nunca pasó por /complete-profile (bookmark viejo, tab
+  // cerrada a mitad de camino). No tiene sentido mostrarle el modal de
+  // crear cuenta a alguien que ya tiene una — se lo manda a terminarla.
+  useEffect(() => {
+    if (session.status !== "incomplete") return;
+    router.push(`/complete-profile?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+  }, [session.status, router]);
+
   const requireAuthOrGate = (action: () => void) => {
     if (session.status === "anonymous") {
       setShowAuthGate(true);
@@ -94,7 +104,50 @@ export default function FlujoApp({ initialRole }: FlujoAppProps) {
   };
 
   const { screen, fields, canGoBack } = wizard;
-  const { trato } = tratoState;
+  const { trato, reset: resetTrato } = tratoState;
+
+  // Resumes a trato that was mid-flow when the user left (see
+  // `useWizardState`'s own restore, and `./persistence`). `useWizardState`
+  // already restores *which step* to show — via its own post-mount layout
+  // effect, so hydration never sees it — this fills in the real trato data
+  // behind it. Gated on `"authenticated"` — `/api/tratos*` 401s otherwise
+  // (proxy.ts), and firing this while the session is still `"loading"`
+  // would waste the request. If the saved trato turns out to be stale
+  // (deleted, or belongs to a different account now logged in on this
+  // browser), `restore` returns `null` and the wizard bails back to a clean
+  // "inicio" instead of sitting on a step with no data behind it.
+  useEffect(() => {
+    if (session.status !== "authenticated") return;
+    const code = loadTratoCode(role);
+    if (!code) return;
+    tratoState.restore(code).then((found) => {
+      if (!found) wizard.reset();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- tratoState.restore/wizard.reset are stable for a fixed `role`; re-running this on every render of theirs would refetch on every state change instead of once per session-status transition.
+  }, [session.status, role]);
+
+  // `useWizardState` clears its own saved step once it's back to a blank
+  // "inicio" (finished via "listo", or backed out before a trato existed) —
+  // this mirrors that for the trato half: no "current trato" survives past
+  // that point, so nothing stale is left for the restore effect above to
+  // pick up on the next visit.
+  //
+  // `hasMountedRef` guards against a false trigger on mount itself: every
+  // mount's *first* render is "inicio" for one commit even when there's a
+  // trato to restore — `useWizardState`'s layout effect only flips it to
+  // the real step in a second, synchronous re-render before paint, but
+  // this passive effect still fires once for that first, superseded
+  // "inicio" render too (layout-effect updates don't skip a fiber's
+  // already-scheduled passive effects). Without the guard, that one firing
+  // would `resetTrato()` — wiping the persisted code — before the restore
+  // effect above ever gets to read it.
+  const hasMountedRef = useRef(false);
+  useEffect(() => {
+    const isMountRender = !hasMountedRef.current;
+    hasMountedRef.current = true;
+    if (isMountRender) return;
+    if (screen === "inicio") resetTrato();
+  }, [screen, resetTrato]);
 
   // "qr" — SPEC 02: the seller's screen mints/renews a signed token every
   // 30s and renders it as an image; the buyer's camera decodes it and hands
@@ -252,7 +305,15 @@ export default function FlujoApp({ initialRole }: FlujoAppProps) {
           ? handleDetalleAccept
           : screen === "banco"
             ? handleBancoSubmit
-            : wizard.goNext;
+            : // "listo"'s own "Volver al inicio" works via plain goNext (see
+              // useWizardState: advancing past the last step resets the
+              // wizard). "cancelado" needs the explicit `reset` instead —
+              // it sits outside the step sequence entirely (cancelStage
+              // "done" overrides whatever step/mode goNext would compute),
+              // so goNext alone would never actually leave it.
+              screen === "cancelado"
+              ? wizard.reset
+              : wizard.goNext;
 
   const handleBack = () => {
     tratoState.clearError();
@@ -263,8 +324,15 @@ export default function FlujoApp({ initialRole }: FlujoAppProps) {
   // the missing/expired cookie means the app won't trust the old session
   // either way. `router.refresh()` forces the next server render to see the
   // now-cleared cookie instead of anything cached from before logout.
+  //
+  // Clears persisted wizard/trato state for *both* roles, not just this
+  // page's — whatever was saved belongs to the account that's signing out,
+  // and leaving it around would let it get restored under a different
+  // account that logs in next on the same browser.
   const handleLogout = async () => {
     await logoutRequest().catch(() => {});
+    clearAllFlujoState("comprador");
+    clearAllFlujoState("vendedor");
     router.push("/");
     router.refresh();
   };

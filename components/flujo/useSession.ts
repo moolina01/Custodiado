@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { meRequest, type MeResponse } from "@/components/auth/api";
+import { ApiError, meRequest, type MeResponse } from "@/components/auth/api";
 
-export type SessionStatus = "loading" | "authenticated" | "anonymous";
+export type SessionStatus = "loading" | "authenticated" | "incomplete" | "anonymous";
 
 /**
  * SPEC 04 (corrección): `/flujo` ya no está bloqueado a nivel de página
@@ -11,6 +11,12 @@ export type SessionStatus = "loading" | "authenticated" | "anonymous";
  * inicial sin cuenta. Esto es lo que le permite a `FlujoApp` saber si hay
  * sesión o no, para mostrar el `AuthModal` cuando corresponda (a los pocos
  * segundos, o apenas el usuario intenta hacer algo — ver `FlujoApp.tsx`).
+ *
+ * SPEC 04 (Google): `"incomplete"` es un tercer estado, distinto de
+ * `"anonymous"` — hay sesión, pero todavía no hay perfil (un primer login
+ * con Google que nunca pasó por `/complete-profile`). `FlujoApp` lo manda
+ * para allá en vez de mostrarle el modal de crear cuenta a alguien que ya
+ * tiene una cuenta a medio completar.
  *
  * `refresh()` se llama después de un login/signup exitoso en el modal, para
  * que `status` pase a `"authenticated"` sin recargar la página. La consulta
@@ -31,10 +37,10 @@ export function useSession() {
         setProfile(res);
         setStatus("authenticated");
       })
-      .catch(() => {
+      .catch((err) => {
         if (cancelled) return;
         setProfile(null);
-        setStatus("anonymous");
+        setStatus(err instanceof ApiError && err.status === 409 ? "incomplete" : "anonymous");
       });
     return () => {
       cancelled = true;
@@ -47,9 +53,9 @@ export function useSession() {
         setProfile(res);
         setStatus("authenticated");
       })
-      .catch(() => {
+      .catch((err) => {
         setProfile(null);
-        setStatus("anonymous");
+        setStatus(err instanceof ApiError && err.status === 409 ? "incomplete" : "anonymous");
       });
   }, []);
 

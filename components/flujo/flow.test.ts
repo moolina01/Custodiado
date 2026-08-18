@@ -77,7 +77,7 @@ describe("showsProgress", () => {
 });
 
 describe("showsNextButton", () => {
-  const noButtonScreens: Screen[] = ["inicio", "crear-codigo", "pagar", "esperando-pago", "qr", "cancelar", "cancelado"];
+  const noButtonScreens: Screen[] = ["inicio", "crear-codigo", "pagar", "esperando-pago", "qr", "cancelar"];
 
   it.each(noButtonScreens)("hides the next button on '%s'", (screen) => {
     expect(showsNextButton(screen)).toBe(false);
@@ -89,6 +89,10 @@ describe("showsNextButton", () => {
     expect(showsNextButton("banco")).toBe(true);
     expect(showsNextButton("retenidos")).toBe(true);
     expect(showsNextButton("listo")).toBe(true);
+    // "cancelado" is terminal, like "listo" — but still gets a "Volver al
+    // inicio" (see flow.ts), now that the wizard's progress persists across
+    // reloads and can no longer rely on one to bail it out for free.
+    expect(showsNextButton("cancelado")).toBe(true);
   });
 });
 
@@ -107,6 +111,7 @@ describe("nextButtonLabel", () => {
     expect(nextButtonLabel("banco", "vendedor")).toBe("Guardar y continuar");
     expect(nextButtonLabel("retenidos", "comprador")).toBe("Ya nos juntamos");
     expect(nextButtonLabel("listo", "comprador")).toBe("Volver al inicio");
+    expect(nextButtonLabel("cancelado", "vendedor")).toBe("Volver al inicio");
   });
 
   it("falls back to 'Continuar' for screens with no explicit label", () => {

@@ -1,8 +1,17 @@
 import { act, renderHook } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
+import { loadWizard } from "./persistence";
 import { useWizardState } from "./useWizardState";
 
 describe("useWizardState", () => {
+  // Each test renders a fresh hook expecting to start blank — persisted
+  // state (see ./persistence) would otherwise carry over from whichever
+  // test ran before it, since localStorage survives across tests in the
+  // same jsdom environment.
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
   it("starts on 'inicio' with empty fields and no way back", () => {
     const { result } = renderHook(() => useWizardState("comprador"));
 
@@ -132,5 +141,57 @@ describe("useWizardState", () => {
     act(() => result.current.setField("amount", "180000"));
 
     expect(result.current.fields.amount).toBe("180.000");
+  });
+
+  it("persists progress so remounting (e.g. after a reload) resumes on the same screen", () => {
+    const { result, unmount } = renderHook(() => useWizardState("vendedor"));
+
+    act(() => result.current.start("crear"));
+    act(() => result.current.goNext()); // crear-codigo
+    act(() => result.current.setField("item", "Bicicleta"));
+    unmount();
+
+    const { result: resumed } = renderHook(() => useWizardState("vendedor"));
+
+    expect(resumed.current.screen).toBe("crear-codigo");
+    expect(resumed.current.fields.item).toBe("Bicicleta");
+  });
+
+  it("keeps a comprador's and a vendedor's saved progress independent", () => {
+    const buyer = renderHook(() => useWizardState("comprador"));
+    act(() => buyer.result.current.start("crear"));
+    buyer.unmount();
+
+    const { result: seller } = renderHook(() => useWizardState("vendedor"));
+
+    expect(seller.current.screen).toBe("inicio");
+  });
+
+  it("clears the saved entry once back on a blank 'inicio' (goNext past 'listo')", () => {
+    const { result } = renderHook(() => useWizardState("vendedor"));
+
+    act(() => result.current.start("crear"));
+    // vendedor/crear: inicio, crear-datos, crear-codigo, banco, qr, listo
+    act(() => result.current.goNext()); // crear-codigo
+    act(() => result.current.goNext()); // banco
+    act(() => result.current.goNext()); // qr
+    act(() => result.current.goNext()); // listo
+    expect(loadWizard("vendedor")).not.toBeNull();
+
+    act(() => result.current.goNext()); // reset to inicio
+
+    expect(loadWizard("vendedor")).toBeNull();
+  });
+
+  it("reset() dispatches back to a blank 'inicio'", () => {
+    const { result } = renderHook(() => useWizardState("comprador"));
+
+    act(() => result.current.start("crear"));
+    act(() => result.current.goNext());
+    act(() => result.current.reset());
+
+    expect(result.current.screen).toBe("inicio");
+    expect(result.current.canGoBack).toBe(false);
+    expect(loadWizard("comprador")).toBeNull();
   });
 });

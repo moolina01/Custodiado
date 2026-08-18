@@ -1,18 +1,23 @@
 "use client";
 
 import { useState, type FormEvent, type ReactNode } from "react";
+import Link from "next/link";
 import Callout from "@/components/flujo/ui/Callout";
 import FormField from "@/components/flujo/ui/FormField";
-import StepHeading from "@/components/flujo/ui/StepHeading";
+import { colors } from "@/components/flujo/theme";
+import AuthHeading from "./AuthHeading";
+import GoogleButton from "./GoogleButton";
 import { ApiError, loginRequest } from "./api";
 import { primaryButtonStyle } from "./buttonStyle";
 
 type LoginFieldsProps = {
   onSuccess: () => void;
-  /** Rendered right after the submit button — the page version links to "olvidé mi contraseña"/`/signup`, the modal version toggles to the signup fields in place. */
+  /** Rendered right after "Continuar con Google" — the page version links to `/signup`, the modal version toggles to the signup fields in place. */
   footer?: ReactNode;
   /** Shown above the form — the page version uses it for "el link del callback venció"; the modal has no use for it. */
   banner?: ReactNode;
+  /** Where "Continuar con Google" sends the user back to once it's done (survives the full-page redirect to Google and back). */
+  googleNext?: string;
 };
 
 /**
@@ -22,7 +27,7 @@ type LoginFieldsProps = {
  * "success" means (no router, no `next`) — the caller decides via
  * `onSuccess`.
  */
-export default function LoginFields({ onSuccess, footer, banner }: LoginFieldsProps) {
+export default function LoginFields({ onSuccess, footer, banner, googleNext }: LoginFieldsProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -44,13 +49,19 @@ export default function LoginFields({ onSuccess, footer, banner }: LoginFieldsPr
 
   return (
     <form onSubmit={handleSubmit}>
-      <StepHeading title="Inicia sesión" subtitle="Tu nombre y RUT quedan guardados en tu cuenta — no hace falta escribirlos de nuevo en cada trato." />
+      <AuthHeading eyebrow="Ingresa tus datos" title="Bienvenido de nuevo" />
 
       {banner && <div style={{ marginBottom: "18px" }}>{banner}</div>}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-        <FormField label="Email" type="email" value={email} onChange={setEmail} placeholder="tu@email.com" />
-        <FormField label="Contraseña" type="password" value={password} onChange={setPassword} placeholder="••••••••" />
+      <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+        <FormField label="Email" hideLabel type="email" value={email} onChange={setEmail} placeholder="Email" />
+        <FormField label="Contraseña" hideLabel type="password" value={password} onChange={setPassword} placeholder="Contraseña" />
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "10px" }}>
+        <Link href="/reset-password" style={{ fontSize: "13.5px", fontWeight: "600", color: colors.brand }}>
+          ¿Olvidaste tu contraseña?
+        </Link>
       </div>
 
       {error && (
@@ -62,6 +73,8 @@ export default function LoginFields({ onSuccess, footer, banner }: LoginFieldsPr
       <button type="submit" disabled={isSubmitting} style={primaryButtonStyle(isSubmitting)}>
         {isSubmitting ? "Un momento…" : "Entrar"}
       </button>
+
+      <GoogleButton next={googleNext} />
 
       {footer}
     </form>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { loginSchema, resetPasswordConfirmSchema, resetPasswordRequestSchema, signupSchema } from "./validation";
+import { completeProfileSchema, loginSchema, resetPasswordConfirmSchema, resetPasswordRequestSchema, signupSchema } from "./validation";
 
 const validSignup = { email: "vendedor@example.com", password: "un-password-largo", name: "María Pérez", rut: "12.345.678-5" };
 
@@ -49,5 +49,19 @@ describe("resetPasswordConfirmSchema", () => {
   it("enforces the same minimum password length as signup", () => {
     expect(resetPasswordConfirmSchema.safeParse({ password: "1234567" }).success).toBe(false);
     expect(resetPasswordConfirmSchema.safeParse({ password: "un-password-largo" }).success).toBe(true);
+  });
+});
+
+describe("completeProfileSchema", () => {
+  it("accepts a valid name + RUT, without email/password", () => {
+    expect(completeProfileSchema.safeParse({ name: "María Pérez", rut: "12.345.678-5" }).success).toBe(true);
+  });
+
+  it("rejects an invalid RUT", () => {
+    expect(completeProfileSchema.safeParse({ name: "María Pérez", rut: "12.345.678-9" }).success).toBe(false);
+  });
+
+  it("rejects an empty name", () => {
+    expect(completeProfileSchema.safeParse({ name: "  ", rut: "12.345.678-5" }).success).toBe(false);
   });
 });

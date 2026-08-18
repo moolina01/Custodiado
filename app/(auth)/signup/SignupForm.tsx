@@ -17,6 +17,7 @@ export default function SignupForm() {
         router.push(next);
         router.refresh(); // re-run proxy/server components now that the session cookie is set
       }}
+      googleNext={next}
       footer={
         <div style={{ marginTop: "18px", fontSize: "14px", textAlign: "center" }}>
           ¿Ya tenés cuenta? <Link href={loginHref}>Inicia sesión</Link>
