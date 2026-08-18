@@ -68,7 +68,7 @@ export type Testimonial = {
 export const TESTIMONIALS: Testimonial[] = [
   {
     quote:
-      '"Vendí mi notebook a alguien de Yapo que no conocía. Él no quería transferir primero y yo no quería entregar primero. Con Custodio se resolvió en un minuto."',
+      '"Vendí mi notebook a alguien de Yapo que no conocía. Él no quería transferir primero y yo no quería entregar primero. Con Custodiado se resolvió en un minuto."',
     initials: "CM",
     name: "Camila M.",
     role: "Vendedora · Ñuñoa",
@@ -77,7 +77,7 @@ export const TESTIMONIALS: Testimonial[] = [
   },
   {
     quote:
-      '"Ya me habían estafado una vez comprando por Marketplace. Ahora si el vendedor no acepta Custodio, simplemente no compro."',
+      '"Ya me habían estafado una vez comprando por Marketplace. Ahora si el vendedor no acepta Custodiado, simplemente no compro."',
     initials: "RS",
     name: "Rodrigo S.",
     role: "Comprador · Valparaíso",

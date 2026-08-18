@@ -47,7 +47,7 @@ export default function CancelarStep({ summaryItem, totalAmount, fields, onField
 
       <div style={{ marginTop: "16px" }}>
         <Callout tone="warning">
-          Si ya te juntaste y recibiste el producto, no canceles: escanea el QR. Cancelar un trato ya cumplido puede dejarte fuera de Custodio.
+          Si ya te juntaste y recibiste el producto, no canceles: escanea el QR. Cancelar un trato ya cumplido puede dejarte fuera de Custodiado.
         </Callout>
       </div>
 

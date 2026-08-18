@@ -103,8 +103,22 @@ export default function FlujoApp({ initialRole }: FlujoAppProps) {
     session.refresh();
   };
 
-  const { screen, fields, canGoBack } = wizard;
+  const { screen, fields } = wizard;
   const { trato, reset: resetTrato } = tratoState;
+
+  // Once a real trato exists, the local step no longer has final say over
+  // what's happened — create()/lookup()/accept()/payment all already ran
+  // against the backend, so rewinding into an earlier step would either
+  // resubmit an action that's already done (a second "Generar el código"
+  // from "crear-datos" creates a *second* trato — see useTrato's `create`)
+  // or show a screen that flatly contradicts reality (e.g. "esperando el
+  // pago" on "banco" after the buyer already paid). So "Atrás" is only ever
+  // offered before a trato exists — while still filling in "crear-datos" or
+  // "codigo-ingresar" — where going back is just "let me pick differently
+  // from inicio", nothing to undo. The one exception is closing the cancel
+  // form without confirming ("cancelar"'s own back arrow): that's local UI
+  // state, not a backend action, so it stays available regardless.
+  const canGoBack = screen === "cancelar" ? wizard.canGoBack : wizard.canGoBack && !trato;
 
   // Resumes a trato that was mid-flow when the user left (see
   // `useWizardState`'s own restore, and `./persistence`). `useWizardState`
@@ -242,7 +256,7 @@ export default function FlujoApp({ initialRole }: FlujoAppProps) {
   const whatsappHref = useMemo(() => {
     if (!trato) return "https://wa.me/";
     const displayCode = formatTratoCodeForDisplay(trato.code);
-    return `https://wa.me/?text=${encodeURIComponent(`Hagamos el trato por Custodio. Entra a custodio.cl y pon el código ${displayCode}`)}`;
+    return `https://wa.me/?text=${encodeURIComponent(`Hagamos el trato por Custodiado. Entra a custodiado.cl y pon el código ${displayCode}`)}`;
   }, [trato]);
 
   // The only three actions that talk to the backend in this milestone.
@@ -250,9 +264,6 @@ export default function FlujoApp({ initialRole }: FlujoAppProps) {
   // on success — a failed create/lookup/accept leaves the user on the same
   // screen with `tratoState.error` shown, instead of moving forward blind.
   const handleCrearDatosSubmit = async () => {
-    // Note: going "Atrás" from crear-codigo and submitting again would
-    // create a second trato rather than editing the first — acceptable for
-    // this milestone (test-mode, low stakes) but worth revisiting later.
     const created = await tratoState.create(role, fields.item, toAmountNumber(fields.amount));
     if (created) wizard.goNext();
   };

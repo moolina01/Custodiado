@@ -22,7 +22,7 @@ export default function FlujoHeader({ role, onLogout }: FlujoHeaderProps) {
       }}
     >
       <Link href="/" style={{ fontWeight: "600", fontSize: "18px", letterSpacing: "-0.02em", color: colors.brandDeep }}>
-        Custodio<span style={{ color: colors.accent }}>.cl</span>
+        Custodiado<span style={{ color: colors.accent }}>.cl</span>
       </Link>
       <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "7px", background: badgeBg, padding: "7px 14px", borderRadius: "9999px" }}>

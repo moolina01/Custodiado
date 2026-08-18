@@ -46,7 +46,7 @@ export default function HelpWidget() {
                 <span style={{ position: "absolute", right: "-1px", bottom: "-1px", width: "11px", height: "11px", borderRadius: "50%", background: colors.successAlt, border: "2px solid #ffffff" }} />
               </div>
               <div>
-                <div style={{ fontSize: "15px", fontWeight: "700", lineHeight: "1.2" }}>Asistente Custodio</div>
+                <div style={{ fontSize: "15px", fontWeight: "700", lineHeight: "1.2" }}>Asistente Custodiado</div>
                 <div style={{ fontSize: "12.5px", color: colors.successAlt, fontWeight: "600" }}>En línea · responde al tiro</div>
               </div>
             </div>

@@ -14,7 +14,7 @@ import HelpWidget from "@/components/custodio/HelpWidget";
 import ScrollReveal from "@/components/custodio/ScrollReveal";
 
 export const metadata: Metadata = {
-  title: "Custodio.cl — Vende y compra sin miedo por Marketplace",
+  title: "Custodiado.cl — Vende y compra sin miedo por Marketplace",
   description:
     "Custodiamos tu dinero hasta que veas el producto. Pago seguro entre particulares, procesado por Fintoc.",
 };

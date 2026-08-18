@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import SignupForm from "./SignupForm";
 
 export const metadata: Metadata = {
-  title: "Custodio.cl — Crea tu cuenta",
+  title: "Custodiado.cl — Crea tu cuenta",
   description: "Regístrate para crear o aceptar un trato.",
 };
 

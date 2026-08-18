@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import LoginForm from "./LoginForm";
 
 export const metadata: Metadata = {
-  title: "Custodio.cl — Inicia sesión",
+  title: "Custodiado.cl — Inicia sesión",
   description: "Inicia sesión para crear o aceptar un trato.",
 };
 

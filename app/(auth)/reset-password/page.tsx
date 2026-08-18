@@ -36,7 +36,7 @@ export default function ResetPasswordPage() {
   if (sent) {
     return (
       <div>
-        <StepHeading title="Revisa tu correo" subtitle={`Si ${email} tiene una cuenta en Custodio, te mandamos un link para elegir una nueva contraseña.`} />
+        <StepHeading title="Revisa tu correo" subtitle={`Si ${email} tiene una cuenta en Custodiado, te mandamos un link para elegir una nueva contraseña.`} />
         <Link href="/login">Volver a iniciar sesión</Link>
       </div>
     );

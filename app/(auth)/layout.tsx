@@ -22,7 +22,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         }}
       >
         <Link href="/" style={{ fontWeight: "600", fontSize: "18px", letterSpacing: "-0.02em", color: colors.brandDeep }}>
-          Custodio<span style={{ color: colors.accent }}>.cl</span>
+          Custodiado<span style={{ color: colors.accent }}>.cl</span>
         </Link>
       </header>
 

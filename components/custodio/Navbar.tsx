@@ -41,7 +41,7 @@ export default function Navbar() {
             color: colors.brandDeep,
           }}
         >
-          Custodio<span style={{ color: colors.accent }}>.cl</span>
+          Custodiado<span style={{ color: colors.accent }}>.cl</span>
         </a>
 
         <nav style={{ display: "flex", alignItems: "start", gap: "4px" }}>

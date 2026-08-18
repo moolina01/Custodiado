@@ -3,7 +3,7 @@ import FlujoApp from "@/components/flujo/FlujoApp";
 import type { Role } from "@/components/flujo/types";
 
 export const metadata: Metadata = {
-  title: "Custodio.cl — Cierra tu trato",
+  title: "Custodiado.cl — Cierra tu trato",
   description: "Crea el trato o entra con un código. Tu plata queda en custodia hasta que confirmes la entrega.",
 };
 

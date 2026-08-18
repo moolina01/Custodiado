@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import CompleteProfileForm from "./CompleteProfileForm";
 
 export const metadata: Metadata = {
-  title: "Custodio.cl — Completa tu cuenta",
+  title: "Custodiado.cl — Completa tu cuenta",
   description: "Un último dato antes de empezar.",
 };
 

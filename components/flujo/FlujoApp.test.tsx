@@ -244,4 +244,61 @@ describe("FlujoApp", () => {
     expect(screen.getByText("Pásale este código")).toBeInTheDocument();
     expect(screen.getByText("ABC-123")).toBeInTheDocument();
   });
+
+  it("offers 'Atrás' before a trato exists, but hides it once one does — no more resubmitting an already-taken step", async () => {
+    render(<FlujoApp initialRole="comprador" />);
+
+    fireEvent.click(screen.getByText("Crear el trato"));
+    // Still just local form fields, no trato yet — safe to reconsider from "inicio".
+    expect(screen.getByText("Atrás")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText("Bicicleta aro 29, poco uso"), { target: { value: "Bicicleta" } });
+    fireEvent.change(screen.getByPlaceholderText("180.000"), { target: { value: "100000" } });
+    await act(async () => {
+      fireEvent.click(screen.getByText("Generar el código")); // calls createTratoRequest
+    });
+
+    // A real trato exists now — "Atrás" is gone, so there's no way back to
+    // "crear-datos" to hit "Generar el código" again and mint a *second*
+    // trato out from under the one just shared with the counterpart.
+    expect(screen.getByText("Pásale este código")).toBeInTheDocument();
+    expect(screen.queryByText("Atrás")).not.toBeInTheDocument();
+
+    await act(async () => {
+      await acceptTratoRequest("ABC123", "vendedor");
+    });
+    await advancePoll();
+    expect(screen.getByText("Transfiere a la cuenta de custodia")).toBeInTheDocument();
+    // Still no "Atrás" — rewinding into "detalle" here would let the buyer
+    // hit "Aceptar y pagar" again against a trato that's already accepted.
+    expect(screen.queryByText("Atrás")).not.toBeInTheDocument();
+  });
+
+  it("keeps 'Atrás' working to close the cancel form without cancelling, even with a trato in play", async () => {
+    render(<FlujoApp initialRole="comprador" />);
+
+    fireEvent.click(screen.getByText("Crear el trato"));
+    fireEvent.change(screen.getByPlaceholderText("Bicicleta aro 29, poco uso"), { target: { value: "Bicicleta" } });
+    fireEvent.change(screen.getByPlaceholderText("180.000"), { target: { value: "100000" } });
+    await act(async () => {
+      fireEvent.click(screen.getByText("Generar el código"));
+    });
+    await act(async () => {
+      await acceptTratoRequest("ABC123", "vendedor");
+    });
+    await advancePoll();
+    await act(async () => {
+      fireEvent.click(screen.getByText("Simular transferencia (Fintoc test)"));
+    });
+    await advancePoll();
+    expect(screen.getByText("Coordinen la entrega")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Cancelar el trato y recuperar mi plata"));
+    expect(screen.getByText("Cancelar el trato")).toBeInTheDocument();
+
+    // Backing out of the cancel form is local UI, not a backend action — it
+    // stays available and just returns to "retenidos" without cancelling.
+    fireEvent.click(screen.getByText("Atrás"));
+    expect(screen.getByText("Coordinen la entrega")).toBeInTheDocument();
+  });
 });

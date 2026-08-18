@@ -52,7 +52,7 @@ export default function HelpChat({ role, summaryLabel, isOpen, onOpen, onClose, 
                 <span style={{ position: "absolute", right: "-1px", bottom: "-1px", width: "11px", height: "11px", borderRadius: "50%", background: colors.successAlt, border: "2px solid #ffffff" }} />
               </div>
               <div>
-                <div style={{ fontSize: "15px", fontWeight: "700", lineHeight: "1.2" }}>Asistente Custodio</div>
+                <div style={{ fontSize: "15px", fontWeight: "700", lineHeight: "1.2" }}>Asistente Custodiado</div>
                 <div style={{ fontSize: "12.5px", color: colors.successAlt, fontWeight: "600" }}>En línea · responde al tiro</div>
               </div>
             </div>
@@ -70,7 +70,7 @@ export default function HelpChat({ role, summaryLabel, isOpen, onOpen, onClose, 
             </div>
 
             <div style={{ alignSelf: "flex-start", maxWidth: "84%", background: "#ffffff", border: `1px solid ${colors.border}`, color: colors.brandDeep, fontSize: "14.5px", padding: "12px 14px", borderRadius: "14px 14px 14px 4px" }}>
-              Hola 👋 Soy el asistente de Custodio. Te puedo resolver las dudas más comunes al toque.
+              Hola 👋 Soy el asistente de Custodiado. Te puedo resolver las dudas más comunes al toque.
             </div>
 
             {messages.map((msg, i) => (
