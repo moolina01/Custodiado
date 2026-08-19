@@ -274,8 +274,9 @@ export default function HelpWidget() {
         onClick={() => setIsOpen(true)}
         style={{ position: "fixed", right: "18px", bottom: "18px", zIndex: "55", display: "flex", alignItems: "center", gap: "9px", background: colors.brand, border: "none", color: "#ffffff", fontFamily: "inherit", fontWeight: "700", fontSize: "15px", padding: "14px 20px", borderRadius: "9999px", cursor: "pointer", boxShadow: "0 10px 30px rgba(22,35,74,0.32)" }}
       >
-        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 12c0 4.4-4 8-9 8-1.2 0-2.4-.2-3.4-.6L3 21l1.5-4.2C3.5 15.4 3 13.7 3 12c0-4.4 4-8 9-8s9 3.6 9 8z" />
+        {/* Same shield mark as the header/Ayuda tab, not a generic chat bubble — "tu asistente de Custodiado". */}
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 2.5 4 5.5v6c0 5 3.4 8 8 10 4.6-2 8-5 8-10v-6L12 2.5z" />
         </svg>
         <span>Ayuda</span>
         <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#7EB6F5", animation: "dotBlink 2s ease-in-out infinite" }} />
