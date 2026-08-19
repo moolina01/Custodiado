@@ -1,10 +1,12 @@
+import Logo from "./Logo";
+
 /** Site footer: brand blurb, contact and legal links. */
 export default function Footer() {
   return (
     <footer style={{ background: "#0A2B27", padding: "48px 20px 28px" }}>
       <div style={{ maxWidth: "1100px", margin: "0 auto", display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: "32px" }}>
         <div>
-          <span style={{ fontWeight: "700", fontSize: "17px", color: "#ffffff" }}>Custodiado.cl</span>
+          <Logo size={17} variant="dark" />
           <div style={{ fontSize: "13px", color: "#9BB0AB", marginTop: "10px" }}>Pago seguro entre particulares.</div>
           <div style={{ fontSize: "13px", color: "#9BB0AB", marginTop: "6px" }}>Hecho en Chile 🇨🇱</div>
         </div>

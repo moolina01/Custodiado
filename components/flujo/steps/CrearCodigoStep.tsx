@@ -29,6 +29,7 @@ export default function CrearCodigoStep({ role, dealCode, summaryLabel, whatsapp
         <div style={{ fontSize: "13.5px", color: colors.textFaint, marginBottom: "22px" }}>{summaryLabel}</div>
         <a
           href={whatsappHref}
+          className="flujo-link-cta"
           style={{ display: "block", background: colors.accent, color: "#ffffff", fontWeight: "700", fontSize: "17px", padding: "16px 22px", borderRadius: "14px", boxShadow: "0 8px 24px rgba(242,140,56,0.32)" }}
         >
           Enviar por WhatsApp

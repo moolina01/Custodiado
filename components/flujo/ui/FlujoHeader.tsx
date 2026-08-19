@@ -1,5 +1,8 @@
-import Link from "next/link";
+"use client";
+
+import Logo from "@/components/custodio/Logo";
 import UserMenu from "@/components/custodio/UserMenu";
+import { useScrolled } from "@/components/custodio/useScrolled";
 import { ROLE_BADGE_LABEL } from "../data";
 import { colors, roleColor } from "../theme";
 import type { Role } from "../types";
@@ -21,31 +24,60 @@ type FlujoHeaderProps = { role: Role; isAuthenticated: boolean; name: string; on
  * `UserMenu` llame a `logoutRequest()` por su cuenta y se salte esa
  * limpieza. Sin sesión (`/flujo` se ve igual sin cuenta, ver SPEC 04
  * corrección), no hay nada que mostrar acá — ni ícono ni logout.
+ *
+ * Pedido del usuario: "el navbar debe ser el mismo del home". Se reutiliza
+ * el chrome real de `Navbar` — mismas clases `navbar-header`/`nav-shell`
+ * (grid de 3 columnas que centra el logo desde 720px, flex en mobile),
+ * mismo comportamiento sticky + blur + sombra al hacer scroll (`useScrolled`,
+ * compartido con `Navbar`) y el mismo logo que crece un poco al fijarse.
+ * Lo que cambia es el contenido de los costados: acá no tiene sentido
+ * mostrar los links de marketing (`#como-funciona`, etc. — anclas que ni
+ * siquiera existen en esta página) ni las CTAs "Soy vendedor"/"Empezar",
+ * que abandonarían un trato a medio hacer — su equivalente real en este
+ * contexto es el badge de rol (a la izquierda, donde Navbar pone los
+ * nav-links) y el menú de cuenta (a la derecha, donde Navbar pone sus CTAs).
  */
 export default function FlujoHeader({ role, isAuthenticated, name, onLogout }: FlujoHeaderProps) {
   const accent = roleColor(role);
   const badgeBg = role === "comprador" ? colors.accentSoft : colors.roleSellerBg;
+  const scrolled = useScrolled();
 
   return (
     <header
+      className="navbar-header"
       style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "14px 20px",
-        background: "#ffffff",
+        position: "sticky",
+        top: "0",
+        zIndex: "50",
+        background: scrolled ? "rgba(246,249,248,0.97)" : "rgba(246,249,248,0.82)",
+        backdropFilter: "blur(20px)",
+        boxShadow: scrolled ? "0 4px 20px rgba(14,42,36,0.08)" : "none",
         borderBottom: `1px solid ${colors.border}`,
       }}
     >
-      <Link href="/" style={{ fontWeight: "600", fontSize: "18px", letterSpacing: "-0.02em", color: colors.brandDeep }}>
-        Custodiado<span style={{ color: colors.accent }}>.cl</span>
-      </Link>
-      <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "7px", background: badgeBg, padding: "7px 14px", borderRadius: "9999px" }}>
+      <div
+        className="nav-shell"
+        style={{
+          maxWidth: "1100px",
+          margin: "0 auto",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "20px",
+          padding: "12px 20px",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "7px", background: badgeBg, padding: "7px 14px", borderRadius: "9999px", width: "fit-content" }}>
           <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: accent }} />
-          <span style={{ fontSize: "13px", fontWeight: "700", color: accent }}>{ROLE_BADGE_LABEL[role]}</span>
+          <span style={{ fontSize: "13px", fontWeight: "700", color: accent, whiteSpace: "nowrap" }}>{ROLE_BADGE_LABEL[role]}</span>
         </div>
-        {isAuthenticated && <UserMenu name={name} onLogout={onLogout} />}
+
+        <span className="navbar-logo-scale" style={{ display: "inline-flex", transform: scrolled ? "scale(1.06)" : "scale(1)" }}>
+          <Logo href="/" size={20} />
+        </span>
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "10px" }}>
+          {isAuthenticated && <UserMenu name={name} onLogout={onLogout} />}
+        </div>
       </div>
     </header>
   );

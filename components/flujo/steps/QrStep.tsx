@@ -146,6 +146,7 @@ export default function QrStep({
             </div>
             <button
               onClick={onSellerConfirmMeetup}
+              className="flujo-btn-next"
               style={{
                 width: "100%",
                 marginTop: "16px",

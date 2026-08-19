@@ -6,12 +6,15 @@ type CardProps = {
   padding?: string;
   shadow?: boolean;
   style?: CSSProperties;
+  /** For hover/animation rules inline styles can't express (e.g. `.flujo-fade-in`, see globals.css). */
+  className?: string;
 };
 
 /** Standard white bordered card used for every summary/form box in the wizard. */
-export default function Card({ children, padding = "20px", shadow = false, style }: CardProps) {
+export default function Card({ children, padding = "20px", shadow = false, style, className }: CardProps) {
   return (
     <div
+      className={className}
       style={{
         background: "#ffffff",
         border: `1px solid ${colors.border}`,

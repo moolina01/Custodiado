@@ -125,6 +125,39 @@ export function showsNextButton(screen: Screen): boolean {
   return !NO_NEXT_BUTTON_SCREENS.includes(screen);
 }
 
+// What `FlujoErrorModal` titles itself with when an action fails on a given
+// screen — one concrete, plain-language sentence about what didn't work
+// ("no pudimos crear el trato") instead of a generic "Ocurrió un error" that
+// leaves the user guessing which of the page's actions actually failed. The
+// body of the modal is still the specific reason (see `friendlyErrorMessage`
+// in `./api`); this is just the headline above it.
+const ERROR_HEADING: Partial<Record<Screen, string>> = {
+  "crear-datos": "No pudimos crear el trato",
+  "codigo-ingresar": "No encontramos ese trato",
+  detalle: "No pudimos aceptar el trato",
+  banco: "No pudimos guardar tus datos",
+  cancelar: "No pudimos cancelar el trato",
+  qr: "No pudimos liberar el pago",
+};
+
+export function errorHeading(screen: Screen): string {
+  return ERROR_HEADING[screen] ?? "Algo no resultó";
+}
+
+/**
+ * Turns a form's empty required fields into one plain-language sentence for
+ * `FlujoErrorModal` — "Falta completar el producto y el precio para crear
+ * el trato." — checked client-side before the request ever goes out
+ * (`FlujoApp`'s `handle*Submit`), instead of sending an incomplete form and
+ * showing back whatever generic "Datos inválidos." the API returns. `fields`
+ * are plain noun phrases ("el precio", "el banco"), so they read naturally
+ * whether there's one missing or several.
+ */
+export function missingFieldsMessage(fields: string[], actionPhrase: string): string {
+  const list = fields.length <= 1 ? fields.join("") : `${fields.slice(0, -1).join(", ")} y ${fields[fields.length - 1]}`;
+  return `Falta completar ${list} para ${actionPhrase}.`;
+}
+
 export function nextButtonLabel(screen: Screen, role: Role): string {
   const isBuyer = role === "comprador";
   switch (screen) {

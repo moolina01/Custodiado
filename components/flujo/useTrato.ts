@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
-  ApiError,
   acceptTratoRequest,
   cancelTratoRequest,
   createTratoRequest,
   forceAdvancePaymentRequest,
+  friendlyErrorMessage,
   getTratoRequest,
   simulatePaymentRequest,
   simulateRutMismatchRequest,
@@ -52,7 +52,7 @@ export function useTrato(role: Role) {
       if (created.sellerQrSecret) setSellerQrSecret(created.sellerQrSecret);
       return created.trato;
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "No se pudo crear el trato.");
+      setError(friendlyErrorMessage(err, "No se pudo crear el trato."));
       return null;
     } finally {
       setIsSubmitting(false);
@@ -67,7 +67,7 @@ export function useTrato(role: Role) {
       setTrato(found);
       return found;
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "No se pudo buscar el trato.");
+      setError(friendlyErrorMessage(err, "No se pudo buscar el trato."));
       return null;
     } finally {
       setIsSubmitting(false);
@@ -84,7 +84,7 @@ export function useTrato(role: Role) {
       if (accepted.sellerQrSecret) setSellerQrSecret(accepted.sellerQrSecret);
       return accepted.trato;
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "No se pudo aceptar el trato.");
+      setError(friendlyErrorMessage(err, "No se pudo aceptar el trato."));
       return null;
     } finally {
       setIsSubmitting(false);
@@ -101,7 +101,7 @@ export function useTrato(role: Role) {
         setTrato(updated);
         return updated;
       } catch (err) {
-        setError(err instanceof ApiError ? err.message : "No se pudieron guardar los datos bancarios.");
+        setError(friendlyErrorMessage(err, "No se pudieron guardar los datos bancarios."));
         return null;
       } finally {
         setIsSubmitting(false);
@@ -122,7 +122,7 @@ export function useTrato(role: Role) {
       await simulatePaymentRequest(trato.code);
       return true;
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "No se pudo simular el pago.");
+      setError(friendlyErrorMessage(err, "No se pudo simular el pago."));
       return false;
     } finally {
       setIsSubmitting(false);
@@ -148,7 +148,7 @@ export function useTrato(role: Role) {
       setTrato(updated);
       return updated;
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "No se pudo forzar el avance del pago.");
+      setError(friendlyErrorMessage(err, "No se pudo forzar el avance del pago."));
       return null;
     } finally {
       setIsSubmitting(false);
@@ -171,7 +171,7 @@ export function useTrato(role: Role) {
       setTrato(updated);
       return updated;
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "No se pudo simular el RUT no coincidente.");
+      setError(friendlyErrorMessage(err, "No se pudo simular el RUT no coincidente."));
       return null;
     } finally {
       setIsSubmitting(false);
@@ -191,7 +191,7 @@ export function useTrato(role: Role) {
         setTrato(updated);
         return updated;
       } catch (err) {
-        setError(err instanceof ApiError ? err.message : "No se pudo liberar el pago.");
+        setError(friendlyErrorMessage(err, "No se pudo liberar el pago."));
         return null;
       } finally {
         setIsSubmitting(false);
@@ -213,7 +213,7 @@ export function useTrato(role: Role) {
         setTrato(updated);
         return updated;
       } catch (err) {
-        setError(err instanceof ApiError ? err.message : "No se pudo cancelar el trato.");
+        setError(friendlyErrorMessage(err, "No se pudo cancelar el trato."));
         return null;
       } finally {
         setIsSubmitting(false);

@@ -1,10 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useSession } from "@/components/auth/useSession";
+import { useScrolled } from "./useScrolled";
 import { colors } from "./theme";
 import { NAV_LINKS } from "./data";
 import UserMenu from "./UserMenu";
+import Logo from "./Logo";
 
 /** Sticky site header: logo, section links, the account menu (logged in), and the two role CTAs. */
 export default function Navbar() {
@@ -16,43 +17,37 @@ export default function Navbar() {
   // either way.
   const session = useSession();
 
+  // Header is `position: sticky` the whole time, but reads as "floating"
+  // at the very top of the page — once you've actually scrolled past it,
+  // it solidifies (opaque background + soft shadow) and the logo grows a
+  // touch, so it visibly registers as "now pinned" instead of just always
+  // looking the same. `FlujoHeader` shares this exact behavior via the same hook.
+  const scrolled = useScrolled();
+
   return (
     <header
+      className="navbar-header"
       style={{
         position: "sticky",
         top: "0",
         zIndex: "50",
-        background: "rgba(246,249,248,0.82)",
+        background: scrolled ? "rgba(246,249,248,0.97)" : "rgba(246,249,248,0.82)",
         backdropFilter: "blur(20px)",
+        boxShadow: scrolled ? "0 4px 20px rgba(14,42,36,0.08)" : "none",
         borderBottom: `1px solid ${colors.border}`,
       }}
     >
       <div
+        className="nav-shell"
         style={{
           maxWidth: "1100px",
           margin: "0 auto",
-          display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           gap: "20px",
           padding: "12px 20px",
         }}
       >
-        <Link
-          href="/"
-          style={{
-            display: "flex",
-            alignItems: "baseline",
-            gap: "1px",
-            fontWeight: "600",
-            fontSize: "25px",
-            letterSpacing: "-0.02em",
-            color: colors.brandDeep,
-          }}
-        >
-          Custodiado<span style={{ color: colors.accent }}>.cl</span>
-        </Link>
-
         <nav style={{ display: "flex", alignItems: "start", gap: "4px" }}>
           {NAV_LINKS.map((link) => (
             <a
@@ -73,7 +68,14 @@ export default function Navbar() {
           ))}
         </nav>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <span
+          className="navbar-logo-scale"
+          style={{ display: "inline-flex", transform: scrolled ? "scale(1.06)" : "scale(1)" }}
+        >
+          <Logo href="/" size={25} />
+        </span>
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "10px" }}>
           {session.status === "authenticated" ? (
             <UserMenu name={session.name} onLoggedOut={session.refresh} />
           ) : (
@@ -104,7 +106,7 @@ export default function Navbar() {
                   display: "flex",
                   alignItems: "center",
                   gap: "7px",
-                  background: colors.brand,
+                  background: colors.brandDeep,
                   color: colors.background,
                   fontWeight: "600",
                   fontSize: "14px",

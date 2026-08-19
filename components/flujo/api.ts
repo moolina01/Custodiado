@@ -15,6 +15,21 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * What `useTrato`'s catch blocks show the user. 4xx `ApiError`s are already
+ * written for a person to read (see the `jsonError(...)` calls across
+ * `app/api/tratos/**` — "Trato no encontrado. Revisa el código.", etc.), so
+ * those pass straight through. 5xx ones can carry a raw Postgres/driver
+ * message bubbled up via `error.message` (see `lib/tratos/repository.ts`,
+ * e.g. "No se pudo crear el trato: duplicate key value violates ...") —
+ * accurate for debugging, meaningless to a user, so those fall back to
+ * `fallback` instead of leaking that text into the UI.
+ */
+export function friendlyErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof ApiError) return err.status >= 500 ? fallback : err.message;
+  return fallback;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     ...init,

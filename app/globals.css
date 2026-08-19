@@ -23,6 +23,13 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  /* Lives here, not on `.custodio-landing`, on purpose: `overflow-x` on an
+     ancestor of a `position: sticky` element breaks the stickiness (the
+     element sticks to that ancestor's scroll box instead of the viewport).
+     `body` IS the document's scroll box, so it's the one safe place for
+     this — still clips the decorative full-bleed elements (aurora, hero
+     beam, etc.) without breaking Navbar's `position: sticky`. */
+  overflow-x: hidden;
 }
 
 /* -----------------------------------------------------------------------
@@ -36,7 +43,6 @@ body {
   background: #f6f9f8;
   color: #0f241f;
   line-height: 1.5;
-  overflow-x: hidden;
   letter-spacing: -0.011em;
   /* SPEC 05: the real landing page (app/page.tsx) is always taller than the
      viewport, so this was never needed there. /panel — this class's first
@@ -121,16 +127,35 @@ body {
     display: inline-block !important;
   }
 }
+/* Navbar shell: flex on mobile (logo stays left, nav links are hidden by
+ * `.nav-link` above anyway), 3-column grid from 720px up so the logo sits
+ * dead-center regardless of how wide the nav/CTA groups on either side are. */
+.nav-shell {
+  display: flex;
+}
+@media (min-width: 720px) {
+  .nav-shell {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+  }
+}
+.navbar-header {
+  transition: background 0.25s ease, box-shadow 0.25s ease;
+}
+.navbar-logo-scale {
+  transition: transform 0.25s ease;
+  transform-origin: center;
+}
+@media (prefers-reduced-motion: reduce) {
+  .navbar-header,
+  .navbar-logo-scale {
+    transition: none;
+  }
+}
 @media (max-width: 760px) {
   .flujo-notas {
     grid-template-columns: 1fr !important;
     gap: 20px !important;
-  }
-}
-@media (max-width: 720px) {
-  .paso-fila {
-    grid-template-columns: 1fr !important;
-    gap: 12px !important;
   }
 }
 @media (max-width: 980px) {
@@ -335,6 +360,18 @@ body {
 .nav-cta:hover {
   background: #0a2b27;
 }
+.logo-text {
+  transition: background-position 0.4s ease;
+}
+.logo-mark:hover .logo-text,
+.logo-mark:focus-visible .logo-text {
+  background-position: 100% 0% !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .logo-text {
+    transition: none;
+  }
+}
 
 /* -----------------------------------------------------------------------
  * /panel — SPEC 05. Same hover-affordance convention as the nav classes
@@ -359,5 +396,265 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .panel-card {
     transition: none;
+  }
+}
+
+/* -----------------------------------------------------------------------
+ * /flujo — step transitions + micro-interactions. Kept here (rather than
+ * inline) for the same reason as `.flujo-input:focus` above: hover/animation
+ * can't be expressed as a React inline `style` object.
+ * --------------------------------------------------------------------- */
+
+/* Every wizard screen maps to a different step component (see
+ * FlujoStepRouter's lookup table), so switching screens already mounts a
+ * fresh subtree — StepTransition just gives that fresh mount a class to
+ * animate in on, instead of snapping straight to the next screen. */
+@keyframes flujoStepIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.flujo-step-enter {
+  animation: flujoStepIn 0.44s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Whole-page settle-in on first paint — subtle, plays once. */
+@keyframes flujoPageIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.flujo-page {
+  animation: flujoPageIn 0.5s ease both;
+}
+
+/* ProgressBar: smoother fill transition + a small "pop" on the segment that
+ * just became active, so a phase change reads as an event, not a snap. */
+.flujo-progress-bar {
+  transition: background 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes flujoBarPulse {
+  0% {
+    transform: scaleY(1);
+  }
+  40% {
+    transform: scaleY(2.2);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+.flujo-progress-bar-active {
+  animation: flujoBarPulse 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes flujoLabelIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.flujo-progress-label {
+  animation: flujoLabelIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Terminal screens ("listo"/"cancelado"): the outcome circle pops in, then
+ * its icon draws itself — a small, deliberate "done" moment instead of the
+ * icon just appearing fully formed. */
+@keyframes flujoOutcomePop {
+  from {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.flujo-outcome-circle {
+  animation: flujoOutcomePop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes flujoDraw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.flujo-outcome-icon-path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: flujoDraw 0.45s 0.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.flujo-outcome-icon-path-delay {
+  animation-delay: 0.45s;
+}
+
+/* FlujoErrorModal: backdrop fades in, card pops in a beat after — an
+ * action failing should register as an actual interruption, not just
+ * another element appearing on the page. */
+@keyframes flujoBackdropIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.flujo-error-backdrop {
+  animation: flujoBackdropIn 0.2s ease both;
+}
+@keyframes flujoModalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+.flujo-error-modal {
+  animation: flujoModalIn 0.28s 0.05s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Buttons: a small lift + shadow grow on hover, a settle on press — reads
+ * more like a real product surface than a flat, static form. */
+.flujo-btn-next {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+}
+.flujo-btn-next:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(14, 58, 52, 0.3);
+}
+.flujo-btn-next:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 6px 16px rgba(14, 58, 52, 0.22);
+}
+.flujo-btn-back {
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+.flujo-btn-back:hover:not(:disabled) {
+  border-color: #0e3a34;
+  color: #0e3a34;
+  background: #f6f9f8;
+}
+/* Solid danger button (dark red background, white text — CancelarStep's confirm). */
+.flujo-btn-danger {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+.flujo-btn-danger:hover:not(:disabled) {
+  filter: brightness(0.92);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(179, 64, 44, 0.28);
+}
+/* Outline danger button (white background, red border/text — RetenidosStep's cancel escape hatch). */
+.flujo-danger-outline {
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.flujo-danger-outline:hover:not(:disabled) {
+  background: #fbeae5;
+  border-color: #b3402c;
+  transform: translateY(-1px);
+}
+/* InicioStep: the two path cards + the "Antes de partir" card below them
+ * settle in one after another (see each element's own `animationDelay`)
+ * instead of popping in together — a small "this page was composed for
+ * you" beat on the very first screen of the wizard. */
+@keyframes flujoFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.flujo-fade-in {
+  animation: flujoFadeIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+/* InicioStep's two gradient choice panels (`--panel-shadow` is set inline
+ * per panel, see PathPanel) — same entrance beat as `.flujo-fade-in`, plus
+ * a hover lift that grows each panel's own colored shadow instead of a
+ * generic dark one. */
+.flujo-path-panel {
+  animation: flujoFadeIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  box-shadow: 0 14px 32px var(--panel-shadow);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.flujo-path-panel:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 20px 44px var(--panel-shadow);
+}
+.flujo-link-cta {
+  transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
+}
+.flujo-link-cta:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+}
+.flujo-secondary-cta {
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+.flujo-secondary-cta:hover {
+  border-color: #0e3a34;
+  color: #0e3a34;
+  transform: translateY(-1px);
+}
+
+/* Spinner shown inside a primary button while its request is in flight. */
+@keyframes flujoSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.flujo-spinner {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  animation: flujoSpin 0.7s linear infinite;
+  vertical-align: -3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flujo-step-enter,
+  .flujo-page,
+  .flujo-progress-bar-active,
+  .flujo-progress-label,
+  .flujo-outcome-circle,
+  .flujo-outcome-icon-path,
+  .flujo-fade-in,
+  .flujo-path-panel,
+  .flujo-error-backdrop,
+  .flujo-error-modal {
+    animation: none !important;
+  }
+  .flujo-outcome-icon-path {
+    stroke-dashoffset: 0;
+  }
+  .flujo-btn-next:hover:not(:disabled),
+  .flujo-btn-back:hover:not(:disabled),
+  .flujo-btn-danger:hover:not(:disabled),
+  .flujo-danger-outline:hover:not(:disabled),
+  .flujo-path-panel:hover,
+  .flujo-link-cta:hover,
+  .flujo-secondary-cta:hover {
+    transform: none;
+  }
+  .flujo-spinner {
+    animation: none !important;
   }
 }

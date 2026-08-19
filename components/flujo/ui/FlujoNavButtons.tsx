@@ -1,3 +1,4 @@
+import ButtonSpinner from "./ButtonSpinner";
 import { colors } from "../theme";
 
 type FlujoNavButtonsProps = {
@@ -19,6 +20,7 @@ export default function FlujoNavButtons({ canGoBack, showNext, nextLabel, onBack
         <button
           onClick={onBack}
           disabled={isLoading}
+          className="flujo-btn-back"
           style={{
             flex: "0 0 auto",
             background: "#ffffff",
@@ -39,6 +41,7 @@ export default function FlujoNavButtons({ canGoBack, showNext, nextLabel, onBack
         <button
           onClick={onNext}
           disabled={isLoading}
+          className="flujo-btn-next"
           style={{
             flex: 1,
             background: colors.brand,
@@ -54,7 +57,14 @@ export default function FlujoNavButtons({ canGoBack, showNext, nextLabel, onBack
             boxShadow: "0 8px 24px rgba(14,58,52,0.24)",
           }}
         >
-          {isLoading ? "Un momento…" : nextLabel}
+          {isLoading ? (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "10px" }}>
+              <ButtonSpinner />
+              Un momento…
+            </span>
+          ) : (
+            nextLabel
+          )}
         </button>
       )}
     </div>

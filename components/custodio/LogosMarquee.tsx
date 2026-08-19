@@ -2,25 +2,24 @@ import Reveal from "./Reveal";
 import { colors } from "./theme";
 import { MARQUEE_PLATFORMS } from "./data";
 
-function PlatformPill({ hidden = false }: { hidden?: boolean }) {
+// SPEC 05 (ajuste post-implementación): pedido explícito del usuario a
+// partir de la misma referencia del Hero — los nombres de marca van
+// pelados sobre la barra, como logos de verdad (Zoom, Nike, Stripe en la
+// referencia), no como chips con fondo/borde/sombra. Sin logos reales
+// disponibles, se re-tipografía cada nombre en bold, gris oscuro
+// desaturado — mismo peso visual que un wordmark, sin inventar marca.
+function PlatformWordmarks({ hidden = false }: { hidden?: boolean }) {
   return (
-    <div style={{ display: "flex", gap: "14px", alignItems: "center", paddingRight: "14px" }} aria-hidden={hidden || undefined}>
+    <div style={{ display: "flex", gap: "56px", alignItems: "center", paddingRight: "56px" }} aria-hidden={hidden || undefined}>
       {MARQUEE_PLATFORMS.map((name) => (
         <span
           key={name}
           style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "8px",
-            fontSize: "15px",
-            fontWeight: "600",
-            color: "#2C3D37",
+            fontSize: "21px",
+            fontWeight: "700",
+            letterSpacing: "-0.02em",
+            color: "rgba(15,36,31,0.45)",
             whiteSpace: "nowrap",
-            background: "rgba(255,255,255,0.9)",
-            border: `1px solid ${colors.border}`,
-            borderRadius: "9999px",
-            padding: "9px 16px",
-            boxShadow: "0 2px 8px rgba(14,58,52,0.05)",
           }}
         >
           {name}
@@ -81,9 +80,9 @@ export default function LogosMarquee() {
         }}
       >
         {/* Rendered twice back-to-back so the CSS animation can loop seamlessly. */}
-        <div className="marquee-track" style={{ display: "flex", width: "max-content", gap: "14px" }}>
-          <PlatformPill />
-          <PlatformPill hidden />
+        <div className="marquee-track" style={{ display: "flex", width: "max-content", gap: "56px" }}>
+          <PlatformWordmarks />
+          <PlatformWordmarks hidden />
         </div>
       </div>
     </section>

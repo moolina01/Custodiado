@@ -1,3 +1,4 @@
+import ButtonSpinner from "../ui/ButtonSpinner";
 import Callout from "../ui/Callout";
 import Card from "../ui/Card";
 import FormField from "../ui/FormField";
@@ -89,6 +90,7 @@ export default function CancelarStep({ summaryItem, totalAmount, fields, onField
         <button
           onClick={onConfirm}
           disabled={!canConfirm || isSubmitting}
+          className="flujo-btn-danger"
           style={{
             width: "100%",
             marginTop: "18px",
@@ -104,7 +106,14 @@ export default function CancelarStep({ summaryItem, totalAmount, fields, onField
             opacity: !canConfirm || isSubmitting ? 0.6 : 1,
           }}
         >
-          {isSubmitting ? "Un momento…" : "Confirmar cancelación"}
+          {isSubmitting ? (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "10px" }}>
+              <ButtonSpinner />
+              Un momento…
+            </span>
+          ) : (
+            "Confirmar cancelación"
+          )}
         </button>
       )}
     </div>

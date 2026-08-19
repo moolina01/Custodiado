@@ -5,16 +5,18 @@ import { useRouter } from "next/navigation";
 import FlujoStepRouter from "./FlujoStepRouter";
 import HelpChat from "./HelpChat";
 import AuthModal from "@/components/auth/AuthModal";
-import Callout from "./ui/Callout";
+import Footer from "@/components/custodio/Footer";
+import FlujoErrorModal from "./ui/FlujoErrorModal";
 import FlujoHeader from "./ui/FlujoHeader";
 import FlujoNavButtons from "./ui/FlujoNavButtons";
 import FlujoFooter from "./ui/FlujoFooter";
 import ProgressBar from "./ui/ProgressBar";
+import StepTransition from "./ui/StepTransition";
 import { devQrTokenRequest, getPlatformAccountRequest } from "./api";
 import { logoutRequest } from "@/components/auth/api";
 import { DEFAULT_ITEM_LABEL } from "./data";
 import { calculateFee, money, toAmountNumber } from "./format";
-import { nextButtonLabel, phaseFor, phaseName, screenForExistingTrato, showsNextButton, showsProgress } from "./flow";
+import { errorHeading, missingFieldsMessage, nextButtonLabel, phaseFor, phaseName, screenForExistingTrato, showsNextButton, showsProgress } from "./flow";
 import { clearAllFlujoState, loadTratoCode } from "./persistence";
 import { roleColor } from "./theme";
 import { useAdvanceOnTratoStatus } from "./useAdvanceOnTratoStatus";
@@ -24,7 +26,7 @@ import { useSellerQrToken } from "./useSellerQrToken";
 import { useSession } from "@/components/auth/useSession";
 import { useTrato } from "./useTrato";
 import { useWizardState } from "./useWizardState";
-import { formatTratoCodeForDisplay } from "@/lib/codeFormat";
+import { formatTratoCodeForDisplay, normalizeTratoCode } from "@/lib/codeFormat";
 import type { Mode, Role } from "./types";
 
 type FlujoAppProps = { initialRole: Role; initialCode?: string };
@@ -97,6 +99,17 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
     }
     action();
   };
+
+  // Client-side validation for "crear-datos"/"codigo-ingresar"/"banco" — set
+  // by each `handle*Submit` below *instead of* calling the API when a
+  // required field is empty, and shown through the same `FlujoErrorModal`
+  // as a real request failure (see the render below), just with its own
+  // fixed heading instead of `errorHeading(screen)`. Before this, an empty
+  // field either bounced off the server's generic "Datos inválidos." (item)
+  // or — worse, for the amount field — never errored at all: `toAmountNumber`
+  // silently falls back to `DEFAULT_AMOUNT` for an empty string, so a
+  // blank price used to create a real $180.000 trato with no warning.
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const handleAuthenticated = () => {
     setShowAuthGate(false);
@@ -284,11 +297,18 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
   // on success — a failed create/lookup/accept leaves the user on the same
   // screen with `tratoState.error` shown, instead of moving forward blind.
   const handleCrearDatosSubmit = async () => {
+    const missing: string[] = [];
+    if (!fields.item.trim()) missing.push("el producto");
+    if (!fields.amount.trim()) missing.push("el precio"); // checked on the raw string — `toAmountNumber` would silently default an empty one instead of catching it
+    if (missing.length > 0) return setValidationError(missingFieldsMessage(missing, "crear el trato"));
+
     const created = await tratoState.create(role, fields.item, toAmountNumber(fields.amount));
     if (created) wizard.goNext();
   };
 
   const handleCodigoIngresarSubmit = async () => {
+    if (normalizeTratoCode(fields.code).length !== 6) return setValidationError(missingFieldsMessage(["el código completo"], "buscar el trato"));
+
     const found = await tratoState.lookup(fields.code);
     if (found) wizard.goNext();
   };
@@ -299,6 +319,12 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
   };
 
   const handleBancoSubmit = async () => {
+    const missing: string[] = [];
+    if (!fields.bankInstitutionId) missing.push("el banco");
+    if (!fields.accountType) missing.push("el tipo de cuenta");
+    if (!fields.account.trim()) missing.push("el número de cuenta");
+    if (missing.length > 0) return setValidationError(missingFieldsMessage(missing, "guardar tus datos bancarios"));
+
     const saved = await tratoState.saveBankDetails({
       bankInstitutionId: fields.bankInstitutionId,
       accountNumber: fields.account,
@@ -348,6 +374,7 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
 
   const handleBack = () => {
     tratoState.clearError();
+    setValidationError(null);
     wizard.goBack();
   };
 
@@ -375,52 +402,48 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
       <div style={{ maxWidth: "560px", margin: "0 auto", padding: "26px 20px 64px" }}>
         {showsProgress(screen) && <ProgressBar activeColor={accent} filledBars={phase !== undefined ? phase + 1 : 0} stepLabel={phaseName(phase)} />}
 
-        <FlujoStepRouter
-          screen={screen}
-          role={role}
-          profileName={session.name}
-          profileRut={session.rut}
-          fields={fields}
-          onFieldChange={wizard.setField}
-          onCodeChange={(value) => wizard.setField("code", value)}
-          onStartCrear={() => requireAuthOrGate(() => wizard.start("crear"))}
-          onStartCodigo={() => requireAuthOrGate(() => wizard.start("codigo"))}
-          onOpenCancel={wizard.openCancel}
-          dealCode={trato ? formatTratoCodeForDisplay(trato.code) : ""}
-          summaryItem={summaryItem}
-          summaryAmount={summaryAmount}
-          feeDisplay={feeDisplay}
-          totalAmount={totalAmount}
-          feeLineValue={feeLineValue}
-          listoAmount={listoAmount}
-          counterpartName={counterpartName}
-          whatsappHref={whatsappHref}
-          platformAccountNumber={platformAccountNumber}
-          onSimulatePayment={() => tratoState.simulatePayment()}
-          onForceAdvancePayment={() => tratoState.forceAdvancePayment()}
-          onSimulateRutMismatch={() => tratoState.simulateRutMismatch()}
-          isSubmitting={tratoState.isSubmitting}
-          isRefundPending={trato?.status === "refund_pending"}
-          isReleasePending={isBuyer && trato?.status === "release_pending"}
-          refundReason={trato?.refundReason ?? null}
-          onCancelarConfirm={handleCancelarConfirm}
-          qrImageDataUrl={sellerQr.qrImageDataUrl}
-          qrCountdownLabel={sellerQr.countdownLabel}
-          qrProgressPercent={sellerQr.progressPercent}
-          sellerQrError={sellerQr.error}
-          sellerConfirmedMeetup={sellerConfirmedMeetup}
-          onSellerConfirmMeetup={() => setSellerConfirmedMeetup(true)}
-          qrVideoRef={scanner.videoRef}
-          qrScannerError={scanner.error}
-          isQrScanning={scanner.isScanning}
-          onDevQrScan={handleDevQrScan}
-        />
-
-        {tratoState.error && (
-          <div style={{ marginTop: "16px" }}>
-            <Callout tone="warning">{tratoState.error}</Callout>
-          </div>
-        )}
+        <StepTransition stepKey={screen}>
+          <FlujoStepRouter
+            screen={screen}
+            role={role}
+            profileName={session.name}
+            profileRut={session.rut}
+            fields={fields}
+            onFieldChange={wizard.setField}
+            onCodeChange={(value) => wizard.setField("code", value)}
+            onStartCrear={() => requireAuthOrGate(() => wizard.start("crear"))}
+            onStartCodigo={() => requireAuthOrGate(() => wizard.start("codigo"))}
+            onOpenCancel={wizard.openCancel}
+            dealCode={trato ? formatTratoCodeForDisplay(trato.code) : ""}
+            summaryItem={summaryItem}
+            summaryAmount={summaryAmount}
+            feeDisplay={feeDisplay}
+            totalAmount={totalAmount}
+            feeLineValue={feeLineValue}
+            listoAmount={listoAmount}
+            counterpartName={counterpartName}
+            whatsappHref={whatsappHref}
+            platformAccountNumber={platformAccountNumber}
+            onSimulatePayment={() => tratoState.simulatePayment()}
+            onForceAdvancePayment={() => tratoState.forceAdvancePayment()}
+            onSimulateRutMismatch={() => tratoState.simulateRutMismatch()}
+            isSubmitting={tratoState.isSubmitting}
+            isRefundPending={trato?.status === "refund_pending"}
+            isReleasePending={isBuyer && trato?.status === "release_pending"}
+            refundReason={trato?.refundReason ?? null}
+            onCancelarConfirm={handleCancelarConfirm}
+            qrImageDataUrl={sellerQr.qrImageDataUrl}
+            qrCountdownLabel={sellerQr.countdownLabel}
+            qrProgressPercent={sellerQr.progressPercent}
+            sellerQrError={sellerQr.error}
+            sellerConfirmedMeetup={sellerConfirmedMeetup}
+            onSellerConfirmMeetup={() => setSellerConfirmedMeetup(true)}
+            qrVideoRef={scanner.videoRef}
+            qrScannerError={scanner.error}
+            isQrScanning={scanner.isScanning}
+            onDevQrScan={handleDevQrScan}
+          />
+        </StepTransition>
 
         <FlujoNavButtons
           canGoBack={canGoBack}
@@ -434,6 +457,14 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
         <FlujoFooter />
       </div>
 
+      {/* The real site Footer (logo, contact, legal) — only on "inicio",
+          before there's any trato to lose focus on. Every other screen
+          keeps just `FlujoFooter`'s one-line trust strip above: once
+          someone's mid-flow (typing an amount, waiting on a payment,
+          scanning a QR), Términos/Privacidad and a contact email are exits
+          from the task at hand, not something worth surfacing. */}
+      {screen === "inicio" && <Footer />}
+
       <HelpChat
         role={role}
         summaryLabel={`${summaryItem} · ${summaryAmount}`}
@@ -446,6 +477,12 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
       />
 
       {showAuthGate && <AuthModal role={role} onClose={() => setShowAuthGate(false)} onAuthenticated={handleAuthenticated} />}
+
+      {validationError ? (
+        <FlujoErrorModal heading="Falta un dato" message={validationError} onClose={() => setValidationError(null)} />
+      ) : (
+        tratoState.error && <FlujoErrorModal heading={errorHeading(screen)} message={tratoState.error} onClose={tratoState.clearError} />
+      )}
     </div>
   );
 }

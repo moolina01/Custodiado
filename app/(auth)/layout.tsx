@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
+import Logo from "@/components/custodio/Logo";
 import { colors } from "@/components/flujo/theme";
 
 /**
@@ -21,9 +21,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           borderBottom: `1px solid ${colors.border}`,
         }}
       >
-        <Link href="/" style={{ fontWeight: "600", fontSize: "18px", letterSpacing: "-0.02em", color: colors.brandDeep }}>
-          Custodiado<span style={{ color: colors.accent }}>.cl</span>
-        </Link>
+        <Logo href="/" size={18} />
       </header>
 
       <main style={{ maxWidth: "420px", margin: "0 auto", padding: "48px 20px 64px" }}>{children}</main>

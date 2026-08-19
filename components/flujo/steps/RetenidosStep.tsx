@@ -37,6 +37,7 @@ export default function RetenidosStep({ role, summaryItem, counterpartLabel, cou
         <SummaryRow label={counterpartLabel} value={counterpartName} last />
         <a
           href={WHATSAPP_SUPPORT_URL}
+          className="flujo-secondary-cta"
           style={{
             display: "block",
             textAlign: "center",
@@ -62,6 +63,7 @@ export default function RetenidosStep({ role, summaryItem, counterpartLabel, cou
           </div>
           <button
             onClick={onCancel}
+            className="flujo-danger-outline"
             style={{
               width: "100%",
               background: "#ffffff",

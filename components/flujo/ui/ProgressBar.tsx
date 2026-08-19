@@ -6,7 +6,14 @@ type ProgressBarProps = {
   stepLabel: string;
 };
 
-/** The 4-segment progress bar + phase label shown above every step except "inicio". */
+/**
+ * The 4-segment progress bar + phase label shown above every step except
+ * "inicio". The segment that just became active gets a small pop
+ * (`.flujo-progress-bar-active`, globals.css) and the label fades/slides in
+ * on change (keyed by its own text, since a `key` change is what re-triggers
+ * a CSS entrance animation) — small cues that a phase change is an event
+ * worth noticing, not just a color swap.
+ */
 export default function ProgressBar({ activeColor, filledBars, stepLabel }: ProgressBarProps) {
   return (
     <div>
@@ -14,17 +21,19 @@ export default function ProgressBar({ activeColor, filledBars, stepLabel }: Prog
         {Array.from({ length: 4 }, (_, i) => (
           <div
             key={i}
+            className={i === filledBars - 1 ? "flujo-progress-bar flujo-progress-bar-active" : "flujo-progress-bar"}
             style={{
               flex: 1,
               height: "4px",
               borderRadius: "2px",
               background: i < filledBars ? activeColor : colors.border,
-              transition: "background 0.3s ease",
             }}
           />
         ))}
       </div>
-      <div style={{ fontSize: "13px", fontWeight: "600", color: colors.textFaint, marginBottom: "24px" }}>{stepLabel}</div>
+      <div key={stepLabel} className="flujo-progress-label" style={{ fontSize: "13px", fontWeight: "600", color: colors.textFaint, marginBottom: "24px" }}>
+        {stepLabel}
+      </div>
     </div>
   );
 }

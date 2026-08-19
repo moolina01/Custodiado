@@ -1,5 +1,6 @@
 import Card from "../ui/Card";
 import StepHeading from "../ui/StepHeading";
+import { RetainedFundsIllustration, QrVerifiedIllustration } from "@/components/custodio/illustrations";
 import { colors } from "../theme";
 import type { Role } from "../types";
 
@@ -30,46 +31,45 @@ const SELLER_REMINDERS = [
 /** Landing step of the wizard: pick how to start, plus a reminder of what each role can expect. */
 export default function InicioStep({ role, onCrear, onCodigo }: InicioStepProps) {
   const isBuyer = role === "comprador";
-  const counterpart = isBuyer ? "vendedor" : "comprador";
   const reminders = isBuyer ? BUYER_REMINDERS : SELLER_REMINDERS;
 
   return (
     <div>
-      <StepHeading title="¿Cómo quieres partir?" subtitle="Puedes partir tú, o entrar con el código que te pasaron." />
+      <StepHeading title="¿Cómo quieres partir?" subtitle="Crea uno nuevo, o entra con un código." />
 
-      <div className="paso-fila" style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "12px" }}>
-        <OptionButton
+      {/* Same illustrated, gradient-panel language as the Hero's two stacked
+          panels (`components/custodio/illustrations.tsx`) instead of small
+          flat cards — this is the wizard's own opening moment, it should
+          feel like one. Stacked full-width rather than side-by-side: at the
+          column's 560px max-width, two side-by-side panels would squeeze
+          the illustrations down to nothing. */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+        <PathPanel
           onClick={onCrear}
-          iconBg={colors.roleSellerBg}
-          iconColor={colors.roleSeller}
+          gradient={`linear-gradient(135deg, ${colors.brand} 0%, #146856 55%, #7ED4A9 130%)`}
+          shadow="rgba(14,58,52,0.32)"
           title="Crear el trato"
-          description={`Pones el monto y le mandas el código al ${counterpart}.`}
-          breadcrumb={["Datos", "Código", "QR"]}
-          icon={
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={colors.roleSeller} strokeWidth="2" strokeLinecap="round">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-          }
+          tagline="Tú pones el monto"
+          illustration={<RetainedFundsIllustration />}
+          illustrationSize={{ width: 108, height: 98 }}
+          animationDelay="0ms"
         />
-        <OptionButton
+        <PathPanel
           onClick={onCodigo}
-          iconBg={colors.accentSoft}
-          iconColor={colors.accent}
+          gradient={`linear-gradient(135deg, ${colors.accent} 0%, #F6A85B 60%, #FCE7BE 130%)`}
+          shadow="rgba(242,140,56,0.32)"
           title="Tengo un código"
-          description={`El ${counterpart} ya creó el trato.`}
-          breadcrumb={["Código", "Revisar", "QR"]}
-          icon={
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="7" height="7" rx="1" />
-              <rect x="14" y="3" width="7" height="7" rx="1" />
-              <rect x="3" y="14" width="7" height="7" rx="1" />
-              <path d="M14 14h3v3h-3z" />
-            </svg>
-          }
+          tagline="Alguien ya lo creó"
+          illustration={<QrVerifiedIllustration />}
+          illustrationSize={{ width: 112, height: 82 }}
+          animationDelay="80ms"
         />
       </div>
 
-      <Card style={{ marginTop: "22px" }}>
+      <Card
+        className="flujo-fade-in"
+        style={{ marginTop: "24px", background: colors.successBg, border: `1px solid ${colors.border}`, animationDelay: "180ms" }}
+      >
         <div style={{ fontSize: "12px", fontWeight: "700", letterSpacing: "0.08em", textTransform: "uppercase", color: colors.textFaint, marginBottom: "14px" }}>
           Antes de partir
         </div>
@@ -86,51 +86,55 @@ export default function InicioStep({ role, onCrear, onCodigo }: InicioStepProps)
   );
 }
 
-type OptionButtonProps = {
+type PathPanelProps = {
   onClick: () => void;
-  iconBg: string;
-  iconColor: string;
-  icon: React.ReactNode;
+  gradient: string;
+  shadow: string;
   title: string;
-  description: string;
-  breadcrumb: string[];
+  /** Three words max — the illustration and the color carry the rest of the story. */
+  tagline: string;
+  illustration: React.ReactNode;
+  illustrationSize: { width: number; height: number };
+  /** Staggers the two panels' entrance (`.flujo-path-panel`'s own animation, globals.css) so they settle in one after another instead of both popping at once. */
+  animationDelay: string;
 };
 
-function OptionButton({ onClick, iconBg, icon, title, description, breadcrumb }: OptionButtonProps) {
+/**
+ * One large, illustrated, tap-anywhere choice — the wizard's equivalent of
+ * the Hero's gradient panels. `--panel-shadow` is a CSS custom property
+ * (globals.css reads it for both the resting and `:hover` box-shadow) so
+ * each panel's own colored shadow can grow on hover without a bespoke CSS
+ * rule per gradient.
+ */
+function PathPanel({ onClick, gradient, shadow, title, tagline, illustration, illustrationSize, animationDelay }: PathPanelProps) {
   return (
     <button
       onClick={onClick}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "14px",
-        textAlign: "left",
-        width: "100%",
-        background: "#ffffff",
-        border: `1px solid ${colors.border}`,
-        borderRadius: "16px",
-        padding: "20px",
-        cursor: "pointer",
-        fontFamily: "inherit",
-        boxShadow: "0 4px 20px rgba(14,42,36,0.05)",
-      }}
+      className="flujo-path-panel"
+      style={
+        {
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "16px",
+          textAlign: "left",
+          width: "100%",
+          border: "none",
+          borderRadius: "22px",
+          padding: "24px 22px",
+          cursor: "pointer",
+          fontFamily: "inherit",
+          background: gradient,
+          animationDelay,
+          "--panel-shadow": shadow,
+        } as React.CSSProperties
+      }
     >
-      <div style={{ flexShrink: 0, width: "44px", height: "44px", borderRadius: "12px", background: iconBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {icon}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: "21px", fontWeight: "800", letterSpacing: "-0.01em", color: "#ffffff", marginBottom: "5px" }}>{title}</div>
+        <div style={{ fontSize: "14.5px", fontWeight: "500", color: "rgba(255,255,255,0.88)" }}>{tagline}</div>
       </div>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: "16px", fontWeight: "700", marginBottom: "2px" }}>{title}</div>
-        <div style={{ fontSize: "14px", color: colors.textMuted }}>{description}</div>
-        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "6px", marginTop: "10px", fontSize: "12.5px", color: colors.textFaint }}>
-          {breadcrumb.map((label, i) => (
-            <span key={label} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              {i > 0 && <span style={{ color: colors.border }}>→</span>}
-              <span>{label}</span>
-            </span>
-          ))}
-        </div>
-      </div>
-      <span style={{ color: "#B9C7C2", fontSize: "20px" }}>›</span>
+      <div style={{ flexShrink: 0, width: `${illustrationSize.width}px`, height: `${illustrationSize.height}px` }}>{illustration}</div>
     </button>
   );
 }

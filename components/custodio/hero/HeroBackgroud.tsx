@@ -58,47 +58,6 @@
               "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E\")",
           }}
         />
-        <div
-          style={{
-            position: "absolute",
-            inset: "0",
-            zIndex: "0",
-            backgroundImage:
-              "linear-gradient(#DCE6E2 1px, transparent 1px), linear-gradient(90deg, #DCE6E2 1px, transparent 1px)",
-            backgroundSize: "72px 72px",
-            opacity: "0.5",
-            WebkitMaskImage: "radial-gradient(ellipse 70% 60% at 50% 35%, #000 0%, transparent 75%)",
-            maskImage: "radial-gradient(ellipse 70% 60% at 50% 35%, #000 0%, transparent 75%)",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            top: "-140px",
-            left: "50%",
-            width: "620px",
-            height: "620px",
-            marginLeft: "-310px",
-            border: `1px solid #CFDEDA`,
-            borderRadius: "50%",
-            opacity: "0.55",
-            zIndex: "0",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            top: "-60px",
-            left: "50%",
-            width: "420px",
-            height: "420px",
-            marginLeft: "-210px",
-            border: `1px solid #CFDEDA`,
-            borderRadius: "50%",
-            opacity: "0.45",
-            zIndex: "0",
-          }}
-        />
       </>
     );
   }

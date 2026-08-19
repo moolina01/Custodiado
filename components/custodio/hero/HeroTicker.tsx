@@ -4,7 +4,7 @@ import { colors } from "../theme";
 /** Rotating strip of recent (fictional) deals shown just under the CTAs. */
 export default function HeroTicker() {
     return (
-      <div style={{ position: "relative", height: "22px", marginTop: "20px" }}>
+      <div style={{ position: "relative", height: "22px", marginTop: "18px" }}>
         {HERO_TICKER_ITEMS.map((item, i) => (
           <div
             key={item.highlight}
@@ -14,7 +14,7 @@ export default function HeroTicker() {
               inset: "0",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
+              justifyContent: "flex-start",
               gap: "8px",
               fontSize: "13px",
               color: colors.textMuted,
