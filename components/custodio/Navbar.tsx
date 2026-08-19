@@ -56,9 +56,11 @@ export default function Navbar() {
               className="nav-link"
               style={{
                 display: "none",
-                fontSize: "14px",
-                fontWeight: "500",
-                color: colors.textMuted,
+                fontFamily: "var(--font-nav)",
+                fontSize: "17px",
+                fontWeight: "600",
+                letterSpacing: "0",
+                color: colors.brandDeep,
                 padding: "8px 12px",
                 borderRadius: "9999px",
               }}
