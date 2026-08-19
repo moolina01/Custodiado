@@ -314,12 +314,15 @@ function ChatIcon({ active }: { active: boolean }) {
   );
 }
 
+// Shield instead of a plain circled "?" — same silhouette as the brand
+// mark elsewhere in the widget, so "Ayuda" reads as "protección" rather
+// than a generic FAQ glyph.
 function HelpIcon({ active }: { active: boolean }) {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? colors.accent : colors.textFaint} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M9.1 9a3 3 0 1 1 4.9 2.4c-.8.6-1.5 1.1-1.5 2.1" />
-      <path d="M12 17h.01" />
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? colors.accent : colors.textFaint} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2.5 4 5.5v6c0 5 3.4 8 8 10 4.6-2 8-5 8-10v-6L12 2.5z" />
+      <path d="M9.9 9.6a2.3 2.3 0 1 1 3.4 2c-.7.45-1.2.8-1.2 1.5" />
+      <path d="M12 15.7h.01" />
     </svg>
   );
 }
