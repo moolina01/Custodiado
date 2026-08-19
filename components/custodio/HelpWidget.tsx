@@ -46,24 +46,22 @@ export default function HelpWidget() {
 
   return (
     <>
+      {/* Invisible full-screen layer, only to catch outside clicks and close — no dimming, the page stays untouched. */}
       <div
-        style={{
-          position: "fixed",
-          inset: "0",
-          zIndex: "60",
-          background: "rgba(11,18,32,0.4)",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "20px",
-          display: isOpen ? "flex" : "none",
-        }}
+        onClick={() => setIsOpen(false)}
+        style={{ position: "fixed", inset: "0", zIndex: "60", display: isOpen ? "block" : "none" }}
       >
+        {/* The panel itself always anchors bottom-right, next to the launcher — never centered on screen. */}
         <div
+          onClick={(e) => e.stopPropagation()}
           style={{
-            width: "100%",
-            maxWidth: "440px",
+            position: "fixed",
+            right: "18px",
+            bottom: "88px",
+            width: "380px",
+            maxWidth: "calc(100vw - 36px)",
             height: "600px",
-            maxHeight: "82vh",
+            maxHeight: "calc(100vh - 110px)",
             background: "#ffffff",
             borderRadius: "20px",
             boxShadow: "0 24px 60px rgba(11,18,32,0.28)",
