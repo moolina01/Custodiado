@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { colors } from "./theme";
 import { FAQ_ITEMS, QUICK_QUESTIONS, type ChatMessage } from "./data";
+import Logo from "./Logo";
 
 // How long the fake "typing…" indicator shows before the bot answer appears.
 const BOT_REPLY_DELAY_MS = 900;
@@ -14,6 +15,22 @@ const TABS: { id: Tab; label: string; icon: (active: boolean) => React.ReactNode
   { id: "mensajes", label: "Mensajes", icon: (active) => <ChatIcon active={active} /> },
   { id: "ayuda", label: "Ayuda", icon: (active) => <HelpIcon active={active} /> },
 ];
+
+// Soft-elevation card, no border — the "Mensaje reciente" / "Hablar con nosotros" / status cards on Inicio.
+const cardStyle: React.CSSProperties = {
+  background: "#ffffff",
+  borderRadius: "16px",
+  boxShadow: "0 1px 2px rgba(11,18,32,0.04), 0 10px 24px rgba(11,18,32,0.06)",
+};
+const cardButtonStyle: React.CSSProperties = {
+  ...cardStyle,
+  width: "100%",
+  textAlign: "left",
+  border: "none",
+  padding: "14px",
+  cursor: "pointer",
+  fontFamily: "inherit",
+};
 
 /**
  * Floating help button that opens a small help-center shell — an "Inicio"
@@ -70,7 +87,8 @@ export default function HelpWidget() {
             overflow: "hidden",
           }}
         >
-          {/* Header — persistent brand identity, shared across every tab. */}
+          {/* Header — wordmark + "always staffed" avatar cluster, shared across every tab.
+              The two avatars are generic (icon, not photos) — no real teammates are pictured. */}
           <div
             style={{
               flexShrink: 0,
@@ -78,74 +96,77 @@ export default function HelpWidget() {
               alignItems: "center",
               justifyContent: "space-between",
               gap: "14px",
-              padding: "16px 18px",
-              borderBottom: `1px solid ${colors.borderSoft}`,
+              padding: "18px",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "11px" }}>
-              <div style={{ position: "relative", width: "38px", height: "38px", borderRadius: "50%", background: colors.brand, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#7EB6F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2.5 4 5.5v6c0 5 3.4 8 8 10 4.6-2 8-5 8-10v-6L12 2.5z" />
-                </svg>
-                <span style={{ position: "absolute", right: "-1px", bottom: "-1px", width: "11px", height: "11px", borderRadius: "50%", background: colors.successAlt, border: "2px solid #ffffff" }} />
+            <Logo size={17} />
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <div style={{ display: "flex" }}>
+                <span style={{ width: "34px", height: "34px", borderRadius: "50%", background: colors.accentSoft, border: "2px solid #ffffff", marginRight: "-10px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <PersonIcon color={colors.accent} />
+                </span>
+                <span style={{ position: "relative", width: "34px", height: "34px", borderRadius: "50%", background: colors.brand, border: "2px solid #ffffff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <PersonIcon color="#7EB6F5" />
+                  <span style={{ position: "absolute", right: "-1px", bottom: "-1px", width: "10px", height: "10px", borderRadius: "50%", background: colors.successAlt, border: "2px solid #ffffff" }} />
+                </span>
               </div>
-              <div>
-                <div style={{ fontSize: "15px", fontWeight: "700", lineHeight: "1.2" }}>Asistente Custodiado</div>
-                <div style={{ fontSize: "12.5px", color: colors.successAlt, fontWeight: "600" }}>En línea · responde al tiro</div>
-              </div>
+              <button
+                onClick={() => setIsOpen(false)}
+                style={{ flexShrink: "0", background: "none", border: "none", fontSize: "20px", color: colors.textMuted, cursor: "pointer", fontFamily: "inherit", lineHeight: "1" }}
+              >
+                ×
+              </button>
             </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              style={{ flexShrink: "0", background: colors.background, border: `1px solid ${colors.border}`, borderRadius: "50%", width: "32px", height: "32px", fontSize: "17px", color: colors.textMuted, cursor: "pointer", fontFamily: "inherit", lineHeight: "1" }}
-            >
-              ×
-            </button>
           </div>
 
           {/* Body — swaps per tab, each one owns its own scroll/layout. */}
           <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden", background: colors.background }}>
             {tab === "inicio" && (
-              <div style={{ flex: 1, overflowY: "auto", padding: "22px 18px", display: "flex", flexDirection: "column", gap: "12px" }}>
-                <div style={{ fontSize: "22px", fontWeight: "800", lineHeight: "1.25", color: colors.brandDeep, margin: "2px 0 4px" }}>
+              <div style={{ flex: 1, overflowY: "auto", padding: "8px 18px 22px", display: "flex", flexDirection: "column", gap: "14px" }}>
+                <div style={{ fontSize: "27px", fontWeight: "800", lineHeight: "1.28", color: colors.brandDeep, margin: "10px 0 2px" }}>
                   ¡Hola! 👋
                   <br />
                   ¿Cómo podemos ayudarte?
                 </div>
 
                 {lastExchange && (
-                  <button
-                    onClick={() => setTab("mensajes")}
-                    style={{ textAlign: "left", background: "#ffffff", border: `1px solid ${colors.border}`, borderRadius: "14px", padding: "13px 14px", cursor: "pointer", fontFamily: "inherit" }}
-                  >
-                    <div style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "0.06em", textTransform: "uppercase", color: colors.textFaint, marginBottom: "6px" }}>
-                      Mensaje reciente
+                  <button onClick={() => setTab("mensajes")} style={cardButtonStyle}>
+                    <div style={{ fontSize: "12px", fontWeight: "700", color: colors.brandDeep, marginBottom: "10px" }}>Mensaje reciente</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <span style={{ flexShrink: 0, width: "32px", height: "32px", borderRadius: "50%", background: colors.brand, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <PersonIcon color="#7EB6F5" size={16} />
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "8px" }}>
+                          <span style={{ fontSize: "14px", fontWeight: "700", color: colors.brandDeep, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lastExchange.question.text}</span>
+                          <span style={{ flexShrink: 0, fontSize: "12px", color: colors.textFaint }}>Ahora</span>
+                        </div>
+                        <div style={{ fontSize: "13px", color: colors.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lastExchange.answer.text}</div>
+                      </div>
                     </div>
-                    <div style={{ fontSize: "14px", fontWeight: "700", color: colors.brandDeep, marginBottom: "2px" }}>{lastExchange.question.text}</div>
-                    <div style={{ fontSize: "13px", color: colors.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lastExchange.answer.text}</div>
                   </button>
                 )}
 
-                <button
-                  onClick={() => setTab("mensajes")}
-                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", textAlign: "left", background: "#ffffff", border: `1px solid ${colors.border}`, borderRadius: "14px", padding: "14px", cursor: "pointer", fontFamily: "inherit" }}
-                >
+                <button onClick={() => setTab("mensajes")} style={{ ...cardButtonStyle, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" }}>
                   <div>
-                    <div style={{ fontSize: "14.5px", fontWeight: "700", color: colors.brandDeep }}>Hablar con nosotros</div>
+                    <div style={{ fontSize: "15px", fontWeight: "700", color: colors.brandDeep }}>Hablar con nosotros</div>
                     <div style={{ fontSize: "13px", color: colors.textMuted }}>Te respondemos al tiro</div>
                   </div>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9 6l6 6-6 6" />
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill={colors.accent}>
+                    <path d="M7 4.5v15l13-7.5z" />
                   </svg>
                 </button>
 
-                {/* Static reassurance line — not wired to real monitoring, just a trust signal for now. */}
-                <div style={{ display: "flex", alignItems: "center", gap: "9px", padding: "10px 2px", marginTop: "auto" }}>
-                  <span style={{ width: "18px", height: "18px", borderRadius: "50%", background: colors.successAlt, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M20 6 9 17l-5-5" />
-                    </svg>
-                  </span>
-                  <span style={{ fontSize: "13px", color: colors.textMuted, fontWeight: "600" }}>Todo funcionando con normalidad</span>
+                {/* Static reassurance line for now — not wired to a real status/monitoring feed yet. */}
+                <div style={cardStyle}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "14px" }}>
+                    <span style={{ width: "22px", height: "22px", borderRadius: "50%", background: colors.successAlt, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 6 9 17l-5-5" />
+                      </svg>
+                    </span>
+                    <span style={{ fontSize: "14px", fontWeight: "700", color: colors.brandDeep }}>Estado: todo funcionando con normalidad</span>
+                  </div>
                 </div>
               </div>
             )}
@@ -263,12 +284,24 @@ export default function HelpWidget() {
   );
 }
 
+// Generic avatar glyph for the header's "always staffed" cluster and the
+// "Mensaje reciente" card — deliberately an icon, not a photo: no real
+// teammate is pictured here.
+function PersonIcon({ color, size = 17 }: { color: string; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 20c0-4 3.6-6 8-6s8 2 8 6" />
+    </svg>
+  );
+}
+
 // Small line icons for the bottom tab bar — accent color when their tab is active, muted otherwise.
 function HomeIcon({ active }: { active: boolean }) {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? colors.accent : colors.textFaint} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 11 12 4l8 7" />
-      <path d="M6 10v9h12v-9" />
+      <path d="M4 6h16v13H4z" />
+      <path d="M4 7l8 6 8-6" />
     </svg>
   );
 }
