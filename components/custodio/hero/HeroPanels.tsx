@@ -16,8 +16,8 @@ import { RetainedFundsIllustration, QrVerifiedIllustration } from "../illustrati
 // The same mint/gold bright used inside the illustrations, for this
 // file's own gradient backgrounds — kept in sync by eye since they're
 // meant to blend into one continuous color, not matched programmatically.
-const mint = { bright: "#7ED4A9" };
-const gold = { pale: "#FCE7BE" };
+const mint = { bright: "#7EB6F5" };
+const gold = { pale: "#BFDAFB" };
 
 type PanelProps = { gradient: string; shadow: string; delay: number; flex: number; children: React.ReactNode };
 
@@ -47,10 +47,10 @@ function Panel({ gradient, shadow, delay, flex, children }: PanelProps) {
 export default function HeroPanels() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px", height: "100%", minHeight: "420px" }}>
-      <Panel gradient={`linear-gradient(150deg, ${colors.brand} 0%, #146856 55%, ${mint.bright} 130%)`} shadow="rgba(14,58,52,0.28)" delay={80} flex={11}>
+      <Panel gradient={`linear-gradient(150deg, ${colors.brand} 0%, #1E3363 55%, ${mint.bright} 130%)`} shadow="rgba(22,35,74,0.28)" delay={80} flex={11}>
         <RetainedFundsIllustration />
       </Panel>
-      <Panel gradient={`linear-gradient(150deg, ${colors.accent} 0%, #F6A85B 60%, ${gold.pale} 130%)`} shadow="rgba(242,140,56,0.28)" delay={220} flex={9}>
+      <Panel gradient={`linear-gradient(150deg, ${colors.accent} 0%, #5B9DF7 60%, ${gold.pale} 130%)`} shadow="rgba(59,130,246,0.28)" delay={220} flex={9}>
         <QrVerifiedIllustration />
       </Panel>
     </div>

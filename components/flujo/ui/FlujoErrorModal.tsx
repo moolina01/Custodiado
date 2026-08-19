@@ -39,7 +39,7 @@ export default function FlujoErrorModal({ heading, message, onClose }: FlujoErro
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(15,36,31,0.55)",
+        background: "rgba(11,18,32,0.55)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -57,7 +57,7 @@ export default function FlujoErrorModal({ heading, message, onClose }: FlujoErro
           width: "100%",
           maxWidth: "380px",
           textAlign: "center",
-          boxShadow: "0 24px 60px rgba(15,36,31,0.3)",
+          boxShadow: "0 24px 60px rgba(11,18,32,0.3)",
         }}
       >
         <div
@@ -96,7 +96,7 @@ export default function FlujoErrorModal({ heading, message, onClose }: FlujoErro
             padding: "14px 18px",
             borderRadius: "12px",
             cursor: "pointer",
-            boxShadow: "0 8px 24px rgba(14,58,52,0.24)",
+            boxShadow: "0 8px 24px rgba(22,35,74,0.24)",
           }}
         >
           Entendido

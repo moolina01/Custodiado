@@ -20,7 +20,7 @@ export default function Hero() {
         position: "relative",
         padding: "48px 20px 40px",
         overflow: "hidden",
-        background: "radial-gradient(ellipse 90% 70% at 15% -10%, #E4EFEC 0%, transparent 65%)",
+        background: "radial-gradient(ellipse 90% 70% at 15% -10%, #E3EAF8 0%, transparent 65%)",
       }}
     >
       <HeroBackground />
@@ -114,7 +114,7 @@ export default function Hero() {
                 fontSize: "16px",
                 padding: "16px 22px",
                 borderRadius: "9999px",
-                boxShadow: "0 8px 24px rgba(242,140,56,0.35)",
+                boxShadow: "0 8px 24px rgba(59,130,246,0.35)",
               }}
             >
               <span style={{ position: "relative", zIndex: "1" }}>Soy comprador</span>
@@ -143,7 +143,7 @@ export default function Hero() {
                 fontSize: "16px",
                 padding: "16px 22px",
                 borderRadius: "9999px",
-                boxShadow: "0 8px 24px rgba(14,58,52,0.28)",
+                boxShadow: "0 8px 24px rgba(22,35,74,0.28)",
               }}
             >
               Soy vendedor

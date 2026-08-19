@@ -9,7 +9,7 @@ export const colors = {
   ...baseColors,
 
   // "Soy vendedor" role color — badge, checkmarks, teal accents. The buyer
-  // equivalent is `colors.accent` (orange), already in the base palette.
+  // equivalent is `colors.accent` (vivid blue), already in the base palette.
   roleSeller: "#0F6E5C",
   roleSellerBg: "#E6F2EF",
 

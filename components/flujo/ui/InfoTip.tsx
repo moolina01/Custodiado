@@ -59,7 +59,7 @@ export default function InfoTip({ text }: InfoTipProps) {
             lineHeight: "1.45",
             padding: "10px 12px",
             borderRadius: "10px",
-            boxShadow: "0 8px 20px rgba(15,36,31,0.28)",
+            boxShadow: "0 8px 20px rgba(11,18,32,0.28)",
             zIndex: 10,
           }}
         >

@@ -159,7 +159,7 @@ export default function QrStep({
                 padding: "15px 20px",
                 borderRadius: "14px",
                 cursor: "pointer",
-                boxShadow: "0 8px 24px rgba(14,58,52,0.24)",
+                boxShadow: "0 8px 24px rgba(22,35,74,0.24)",
               }}
             >
               Ya llegó el comprador

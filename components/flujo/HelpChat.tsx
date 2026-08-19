@@ -22,7 +22,7 @@ export default function HelpChat({ role, summaryLabel, isOpen, onOpen, onClose, 
           position: "fixed",
           inset: "0",
           zIndex: "60",
-          background: "rgba(15,36,31,0.4)",
+          background: "rgba(11,18,32,0.4)",
           alignItems: "center",
           justifyContent: "center",
           padding: "20px",
@@ -37,7 +37,7 @@ export default function HelpChat({ role, summaryLabel, isOpen, onOpen, onClose, 
             maxHeight: "640px",
             background: "#ffffff",
             borderRadius: "20px",
-            boxShadow: "0 24px 60px rgba(14,42,36,0.28)",
+            boxShadow: "0 24px 60px rgba(11,18,32,0.28)",
             display: "flex",
             flexDirection: "column",
             overflow: "hidden",
@@ -46,7 +46,7 @@ export default function HelpChat({ role, summaryLabel, isOpen, onOpen, onClose, 
           <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "14px", padding: "16px 18px", borderBottom: `1px solid ${colors.borderSoft}` }}>
             <div style={{ display: "flex", alignItems: "center", gap: "11px" }}>
               <div style={{ position: "relative", width: "38px", height: "38px", borderRadius: "50%", background: colors.brand, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#7ED4A9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#7EB6F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 2.5 4 5.5v6c0 5 3.4 8 8 10 4.6-2 8-5 8-10v-6L12 2.5z" />
                 </svg>
                 <span style={{ position: "absolute", right: "-1px", bottom: "-1px", width: "11px", height: "11px", borderRadius: "50%", background: colors.successAlt, border: "2px solid #ffffff" }} />
@@ -116,7 +116,7 @@ export default function HelpChat({ role, summaryLabel, isOpen, onOpen, onClose, 
               ))}
             </div>
             <a href={WHATSAPP_SUPPORT_URL} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", background: colors.brand, color: "#ffffff", fontWeight: "700", fontSize: "15px", padding: "14px 20px", borderRadius: "13px" }}>
-              <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#7ED4A9" }} />
+              <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#7EB6F5" }} />
               Hablar con un humano
             </a>
             <div style={{ fontSize: "12.5px", color: colors.textFaint, textAlign: "center", marginTop: "10px" }}>Tu plata sigue retenida mientras resolvemos.</div>
@@ -143,14 +143,14 @@ export default function HelpChat({ role, summaryLabel, isOpen, onOpen, onClose, 
           padding: "14px 20px",
           borderRadius: "9999px",
           cursor: "pointer",
-          boxShadow: "0 10px 30px rgba(14,58,52,0.32)",
+          boxShadow: "0 10px 30px rgba(22,35,74,0.32)",
         }}
       >
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M21 12c0 4.4-4 8-9 8-1.2 0-2.4-.2-3.4-.6L3 21l1.5-4.2C3.5 15.4 3 13.7 3 12c0-4.4 4-8 9-8s9 3.6 9 8z" />
         </svg>
         <span>Ayuda</span>
-        <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#7ED4A9", animation: "dotBlink 2s ease-in-out infinite" }} />
+        <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#7EB6F5", animation: "dotBlink 2s ease-in-out infinite" }} />
       </button>
     </>
   );

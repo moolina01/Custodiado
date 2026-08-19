@@ -9,10 +9,14 @@ type LogoProps = {
   variant?: "light" | "dark";
 };
 
-// Subtle gradients on "Custodiado" — same brand colors, just a bit of depth.
-// ".cl" stays a flat accent orange in both variants.
+// Gradients on "Custodiado" — ".cl" stays a flat accent blue in both
+// variants. "light" used to go brandDeep→brand (two navy tones close enough
+// in value to barely read as a gradient); it now sweeps all the way to
+// `accent` instead, so the wordmark carries real color — the same crisp,
+// confident quality the "dark" variant already had for free from white on
+// a dark navy background (Footer).
 const GRADIENTS: Record<NonNullable<LogoProps["variant"]>, string> = {
-  light: `linear-gradient(135deg, ${colors.brandDeep}, ${colors.brand})`,
+  light: `linear-gradient(135deg, ${colors.brandDeep}, ${colors.accent})`,
   dark: `linear-gradient(135deg, #ffffff, rgba(255,255,255,0.7))`,
 };
 

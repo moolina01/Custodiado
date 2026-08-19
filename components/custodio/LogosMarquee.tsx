@@ -18,7 +18,7 @@ function PlatformWordmarks({ hidden = false }: { hidden?: boolean }) {
             fontSize: "21px",
             fontWeight: "700",
             letterSpacing: "-0.02em",
-            color: "rgba(15,36,31,0.45)",
+            color: "rgba(11,18,32,0.45)",
             whiteSpace: "nowrap",
           }}
         >
@@ -37,7 +37,7 @@ export default function LogosMarquee() {
         position: "relative",
         padding: "26px 0 30px",
         overflow: "hidden",
-        background: "linear-gradient(180deg, #EFF5F3 0%, #F6F9F8 100%)",
+        background: "linear-gradient(180deg, #EEF2F9 0%, #F5F7FB 100%)",
         borderBottom: `1px solid ${colors.border}`,
       }}
     >
@@ -49,7 +49,7 @@ export default function LogosMarquee() {
           width: "700px",
           height: "220px",
           marginLeft: "-350px",
-          background: "radial-gradient(ellipse at 50% 0%, rgba(242,140,56,0.14) 0%, rgba(242,140,56,0) 70%)",
+          background: "radial-gradient(ellipse at 50% 0%, rgba(59,130,246,0.14) 0%, rgba(59,130,246,0) 70%)",
           filter: "blur(30px)",
           pointerEvents: "none",
         }}

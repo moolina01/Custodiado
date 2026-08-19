@@ -7,7 +7,7 @@ export default function AnnouncementBar() {
     <div
       style={{
         background: colors.brand,
-        color: "#C7D6D1",
+        color: "#C6D0E5",
         fontSize: "12.5px",
         padding: "8px 20px",
         textAlign: "center",
@@ -15,7 +15,7 @@ export default function AnnouncementBar() {
       }}
     >
       Tu plata protegida hasta la entrega ·{" "}
-      <span style={{ color: "#7ED4A9", fontWeight: "600" }}>Procesado por Fintoc</span>
+      <span style={{ color: "#7EB6F5", fontWeight: "600" }}>Procesado por Fintoc</span>
     </div>
   );
 }

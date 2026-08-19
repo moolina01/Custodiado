@@ -46,8 +46,8 @@ export default function InicioStep({ role, onCrear, onCodigo }: InicioStepProps)
       <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
         <PathPanel
           onClick={onCrear}
-          gradient={`linear-gradient(135deg, ${colors.brand} 0%, #146856 55%, #7ED4A9 130%)`}
-          shadow="rgba(14,58,52,0.32)"
+          gradient={`linear-gradient(135deg, ${colors.brand} 0%, #1E3363 55%, #7EB6F5 130%)`}
+          shadow="rgba(22,35,74,0.32)"
           title="Crear el trato"
           tagline="Tú pones el monto"
           illustration={<RetainedFundsIllustration />}
@@ -56,8 +56,8 @@ export default function InicioStep({ role, onCrear, onCodigo }: InicioStepProps)
         />
         <PathPanel
           onClick={onCodigo}
-          gradient={`linear-gradient(135deg, ${colors.accent} 0%, #F6A85B 60%, #FCE7BE 130%)`}
-          shadow="rgba(242,140,56,0.32)"
+          gradient={`linear-gradient(135deg, ${colors.accent} 0%, #5B9DF7 60%, #BFDAFB 130%)`}
+          shadow="rgba(59,130,246,0.32)"
           title="Tengo un código"
           tagline="Alguien ya lo creó"
           illustration={<QrVerifiedIllustration />}

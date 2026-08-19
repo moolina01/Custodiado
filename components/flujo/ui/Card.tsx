@@ -20,7 +20,7 @@ export default function Card({ children, padding = "20px", shadow = false, style
         border: `1px solid ${colors.border}`,
         borderRadius: "16px",
         padding,
-        boxShadow: shadow ? "0 4px 20px rgba(14,42,36,0.05)" : undefined,
+        boxShadow: shadow ? "0 4px 20px rgba(11,18,32,0.05)" : undefined,
         ...style,
       }}
     >

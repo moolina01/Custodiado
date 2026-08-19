@@ -112,7 +112,7 @@ export default function UserMenu({ name, onLoggedOut, onLogout }: UserMenuProps)
             background: "#ffffff",
             border: `1px solid ${colors.border}`,
             borderRadius: "12px",
-            boxShadow: "0 8px 24px rgba(14,42,36,0.14)",
+            boxShadow: "0 8px 24px rgba(11,18,32,0.14)",
             overflow: "hidden",
             zIndex: "60",
           }}

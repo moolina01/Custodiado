@@ -52,7 +52,7 @@ export default function DealCode() {
             borderRadius: "24px",
             padding: "40px 32px",
             textAlign: "center",
-            boxShadow: "0 12px 40px rgba(14,42,36,0.07)",
+            boxShadow: "0 12px 40px rgba(11,18,32,0.07)",
           }}
         >
           <div style={{ fontSize: "12px", fontWeight: "700", letterSpacing: "0.1em", textTransform: "uppercase", color: colors.textFaint, marginBottom: "16px" }}>

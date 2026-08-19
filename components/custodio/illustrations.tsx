@@ -12,7 +12,12 @@ import { colors } from "./theme";
  * (`colors`) plus a couple of mint/gold tints scoped to this file.
  */
 
-const mint = { pale: "#DFF3E8", soft: "#B9E6CE", bright: "#7ED4A9" };
+// "mint" is really "the light-blue accent used against a dark brand
+// surface" — same trio shifted from green to blue with the rest of the
+// rebrand, still shared with Footer/HelpChat/HelpWidget/AnnouncementBar's
+// own on-dark accents (`#7EB6F5`) even though those live in other files.
+// "gold" stays gold on purpose: coins are gold regardless of brand color.
+const mint = { pale: "#DCEBFC", soft: "#AFCFF7", bright: "#7EB6F5" };
 const gold = { pale: "#FCE7BE", bright: "#F3C368" };
 
 /** viewBox 220x200 (1.1:1) — a locked padlock with coins/bills, for anything about money held safely in custody. */
@@ -21,7 +26,7 @@ export function RetainedFundsIllustration() {
     <svg viewBox="0 0 220 200" width="100%" height="100%" role="img" aria-label="Candado con la plata retenida en custodia">
       <defs>
         <filter id="panel1Shadow" x="-40%" y="-40%" width="180%" height="180%">
-          <feDropShadow dx="0" dy="6" stdDeviation="6" floodColor="#062420" floodOpacity="0.25" />
+          <feDropShadow dx="0" dy="6" stdDeviation="6" floodColor="#060B18" floodOpacity="0.25" />
         </filter>
       </defs>
 
@@ -71,7 +76,7 @@ export function QrVerifiedIllustration() {
     <svg viewBox="0 0 220 160" width="100%" height="100%" role="img" aria-label="Código QR verificado al momento de la entrega">
       <defs>
         <filter id="panel2Shadow" x="-40%" y="-40%" width="180%" height="180%">
-          <feDropShadow dx="0" dy="6" stdDeviation="6" floodColor="#7A3B0D" floodOpacity="0.22" />
+          <feDropShadow dx="0" dy="6" stdDeviation="6" floodColor="#0A1E3D" floodOpacity="0.22" />
         </filter>
       </defs>
 

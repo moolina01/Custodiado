@@ -38,7 +38,7 @@ export const DEAL_PLATFORMS: string[] = [
 export type TickerItem = { dotColor: string; highlight: string; text: string };
 export const HERO_TICKER_ITEMS: TickerItem[] = [
   { dotColor: "#2D8A56", highlight: "Bicicleta $180.000", text: "· pago liberado en Ñuñoa" },
-  { dotColor: "#F28C38", highlight: "iPhone 13 $320.000", text: "· en custodia hasta la entrega" },
+  { dotColor: "#3B82F6", highlight: "iPhone 13 $320.000", text: "· en custodia hasta la entrega" },
   { dotColor: "#2D8A56", highlight: "Notebook $450.000", text: "· trato cerrado en Maipú" },
 ];
 
@@ -46,13 +46,13 @@ export const HERO_TICKER_ITEMS: TickerItem[] = [
 // undefined renders the muted arrow style used between highlighted words.
 export type FlowWord = { text: string; color?: string; bold?: boolean };
 export const FLOW_WORDS: FlowWord[] = [
-  { text: "El comprador paga", color: "#0F241F", bold: true },
+  { text: "El comprador paga", color: "#0B1220", bold: true },
   { text: "→" },
   { text: "la plata queda guardada", color: "#1D6E96", bold: true },
   { text: "→" },
-  { text: "el vendedor entrega", color: "#0F241F", bold: true },
+  { text: "el vendedor entrega", color: "#0B1220", bold: true },
   { text: "→" },
-  { text: "escanean el QR", color: "#F28C38", bold: true },
+  { text: "escanean el QR", color: "#3B82F6", bold: true },
   { text: "→" },
   { text: "listo.", color: "#2E8B57", bold: true },
 ];
@@ -182,8 +182,8 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     tag: "Transparencia",
-    tagColor: "#F28C38",
-    tagBg: "#FDECDC",
+    tagColor: "#3B82F6",
+    tagBg: "#DBEAFE",
     title: "Qué es un mandato de recaudación y por qué te protege",
     excerpt: "Por qué tu plata nunca pasa por una cuenta nuestra.",
     meta: "6 min · Junio 2026",

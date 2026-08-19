@@ -51,7 +51,7 @@ export default function AuthModal({ onClose, onAuthenticated }: AuthModalProps) 
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(15,36,31,0.55)",
+        background: "rgba(11,18,32,0.55)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -70,7 +70,7 @@ export default function AuthModal({ onClose, onAuthenticated }: AuthModalProps) 
           maxHeight: "90vh",
           overflowY: "auto",
           position: "relative",
-          boxShadow: "0 24px 60px rgba(15,36,31,0.3)",
+          boxShadow: "0 24px 60px rgba(11,18,32,0.3)",
         }}
       >
         <button

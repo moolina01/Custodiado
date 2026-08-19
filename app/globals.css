@@ -40,8 +40,8 @@ body {
  * --------------------------------------------------------------------- */
 .custodio-landing {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background: #f6f9f8;
-  color: #0f241f;
+  background: #f5f7fb;
+  color: #0b1220;
   line-height: 1.5;
   letter-spacing: -0.011em;
   /* SPEC 05: the real landing page (app/page.tsx) is always taller than the
@@ -52,11 +52,11 @@ body {
   min-height: 100vh;
 }
 .custodio-landing a {
-  color: #0e3a34;
+  color: #16234a;
   text-decoration: none;
 }
 .custodio-landing a:hover {
-  color: #f28c38;
+  color: #3b82f6;
 }
 .custodio-landing * {
   box-sizing: border-box;
@@ -69,18 +69,18 @@ body {
  * --------------------------------------------------------------------- */
 .flujo-page {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background: #f6f9f8;
-  color: #0f241f;
+  background: #f5f7fb;
+  color: #0b1220;
   line-height: 1.5;
   min-height: 100vh;
   letter-spacing: -0.011em;
 }
 .flujo-page a {
-  color: #0e3a34;
+  color: #16234a;
   text-decoration: none;
 }
 .flujo-page a:hover {
-  color: #f28c38;
+  color: #3b82f6;
 }
 .flujo-page * {
   box-sizing: border-box;
@@ -193,7 +193,7 @@ body {
   92% {
     opacity: 1;
     transform: none;
-    background: #fdecdc;
+    background: #dbeafe;
     border-color: #f3d8b8;
   }
   100% {
@@ -351,14 +351,14 @@ body {
   }
 }
 .nav-link:hover:not(.nav-link-outline) {
-  background: #e9efed;
-  color: #0f241f;
+  background: #e8ecf5;
+  color: #0b1220;
 }
 .nav-link-outline:hover {
-  border-color: #0e3a34;
+  border-color: #16234a;
 }
 .nav-cta:hover {
-  background: #0a2b27;
+  background: #0f1830;
 }
 .logo-text {
   transition: background-position 0.4s ease;
@@ -382,16 +382,16 @@ body {
   transition: box-shadow 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
 }
 .panel-card:hover {
-  box-shadow: 0 10px 28px rgba(14, 42, 36, 0.08);
+  box-shadow: 0 10px 28px rgba(11,18,32, 0.08);
   transform: translateY(-2px);
   border-color: #c7d6d0;
 }
 .panel-btn-primary:hover {
-  background: #0a2b27 !important;
+  background: #0f1830 !important;
 }
 .panel-btn-secondary:hover {
-  border-color: #0e3a34 !important;
-  color: #0e3a34 !important;
+  border-color: #16234a !important;
+  color: #16234a !important;
 }
 @media (prefers-reduced-motion: reduce) {
   .panel-card {
@@ -534,19 +534,19 @@ body {
 }
 .flujo-btn-next:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(14, 58, 52, 0.3);
+  box-shadow: 0 12px 28px rgba(22,35,74, 0.3);
 }
 .flujo-btn-next:active:not(:disabled) {
   transform: translateY(0);
-  box-shadow: 0 6px 16px rgba(14, 58, 52, 0.22);
+  box-shadow: 0 6px 16px rgba(22,35,74, 0.22);
 }
 .flujo-btn-back {
   transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease, transform 0.15s ease;
 }
 .flujo-btn-back:hover:not(:disabled) {
-  border-color: #0e3a34;
-  color: #0e3a34;
-  background: #f6f9f8;
+  border-color: #16234a;
+  color: #16234a;
+  background: #f5f7fb;
 }
 /* Solid danger button (dark red background, white text — CancelarStep's confirm). */
 .flujo-btn-danger {
@@ -607,8 +607,8 @@ body {
   transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease, transform 0.15s ease;
 }
 .flujo-secondary-cta:hover {
-  border-color: #0e3a34;
-  color: #0e3a34;
+  border-color: #16234a;
+  color: #16234a;
   transform: translateY(-1px);
 }
 

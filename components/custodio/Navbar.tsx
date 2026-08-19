@@ -31,9 +31,9 @@ export default function Navbar() {
         position: "sticky",
         top: "0",
         zIndex: "50",
-        background: scrolled ? "rgba(246,249,248,0.97)" : "rgba(246,249,248,0.82)",
+        background: scrolled ? "rgba(245,247,251,0.97)" : "rgba(245,247,251,0.82)",
         backdropFilter: "blur(20px)",
-        boxShadow: scrolled ? "0 4px 20px rgba(14,42,36,0.08)" : "none",
+        boxShadow: scrolled ? "0 4px 20px rgba(11,18,32,0.08)" : "none",
         borderBottom: `1px solid ${colors.border}`,
       }}
     >

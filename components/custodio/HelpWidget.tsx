@@ -29,18 +29,18 @@ export default function HelpWidget() {
           position: "fixed",
           inset: "0",
           zIndex: "60",
-          background: "rgba(15,36,31,0.4)",
+          background: "rgba(11,18,32,0.4)",
           alignItems: "center",
           justifyContent: "center",
           padding: "20px",
           display: isOpen ? "flex" : "none",
         }}
       >
-        <div style={{ width: "100%", maxWidth: "440px", background: "#ffffff", borderRadius: "20px", boxShadow: "0 24px 60px rgba(14,42,36,0.28)", overflow: "hidden" }}>
+        <div style={{ width: "100%", maxWidth: "440px", background: "#ffffff", borderRadius: "20px", boxShadow: "0 24px 60px rgba(11,18,32,0.28)", overflow: "hidden" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "14px", padding: "16px 18px", borderBottom: `1px solid ${colors.borderSoft}` }}>
             <div style={{ display: "flex", alignItems: "center", gap: "11px" }}>
               <div style={{ position: "relative", width: "38px", height: "38px", borderRadius: "50%", background: colors.brand, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#7ED4A9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#7EB6F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 2.5 4 5.5v6c0 5 3.4 8 8 10 4.6-2 8-5 8-10v-6L12 2.5z" />
                 </svg>
                 <span style={{ position: "absolute", right: "-1px", bottom: "-1px", width: "11px", height: "11px", borderRadius: "50%", background: colors.successAlt, border: "2px solid #ffffff" }} />
@@ -104,7 +104,7 @@ export default function HelpWidget() {
               ))}
             </div>
             <a href="https://wa.me/56900000000" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", background: colors.brand, color: "#ffffff", fontWeight: "700", fontSize: "15px", padding: "14px 20px", borderRadius: "13px" }}>
-              <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#7ED4A9" }} />
+              <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#7EB6F5" }} />
               Hablar con un humano
             </a>
           </div>
@@ -113,13 +113,13 @@ export default function HelpWidget() {
 
       <button
         onClick={() => setIsOpen(true)}
-        style={{ position: "fixed", right: "18px", bottom: "18px", zIndex: "55", display: "flex", alignItems: "center", gap: "9px", background: colors.brand, border: "none", color: "#ffffff", fontFamily: "inherit", fontWeight: "700", fontSize: "15px", padding: "14px 20px", borderRadius: "9999px", cursor: "pointer", boxShadow: "0 10px 30px rgba(14,58,52,0.32)" }}
+        style={{ position: "fixed", right: "18px", bottom: "18px", zIndex: "55", display: "flex", alignItems: "center", gap: "9px", background: colors.brand, border: "none", color: "#ffffff", fontFamily: "inherit", fontWeight: "700", fontSize: "15px", padding: "14px 20px", borderRadius: "9999px", cursor: "pointer", boxShadow: "0 10px 30px rgba(22,35,74,0.32)" }}
       >
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M21 12c0 4.4-4 8-9 8-1.2 0-2.4-.2-3.4-.6L3 21l1.5-4.2C3.5 15.4 3 13.7 3 12c0-4.4 4-8 9-8s9 3.6 9 8z" />
         </svg>
         <span>Ayuda</span>
-        <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#7ED4A9", animation: "dotBlink 2s ease-in-out infinite" }} />
+        <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#7EB6F5", animation: "dotBlink 2s ease-in-out infinite" }} />
       </button>
     </>
   );
