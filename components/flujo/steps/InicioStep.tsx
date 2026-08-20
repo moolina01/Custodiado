@@ -87,7 +87,10 @@ export default function InicioStep({ role, onCrear, onCodigo }: InicioStepProps)
 }
 
 type PathPanelProps = {
-  onClick: () => void;
+  /** Wizard-internal choice (advances a local step) — mutually exclusive with `href`. */
+  onClick?: () => void;
+  /** Cross-page choice (e.g. `ChooseRoleScreen` picking `?role=`) — renders an `<a>` instead of a `<button>`. */
+  href?: string;
   gradient: string;
   shadow: string;
   title: string;
@@ -105,36 +108,52 @@ type PathPanelProps = {
  * (globals.css reads it for both the resting and `:hover` box-shadow) so
  * each panel's own colored shadow can grow on hover without a bespoke CSS
  * rule per gradient.
+ *
+ * `href` (vs. `onClick`) swaps the root tag to an `<a>` — same
+ * `.flujo-path-panel` class/animation either way, only the navigation
+ * mechanics differ. `ChooseRoleScreen` uses `href` since picking a role
+ * there is a real page transition (`?role=` decided server-side by
+ * `app/flujo/page.tsx`), not local wizard state.
  */
-function PathPanel({ onClick, gradient, shadow, title, tagline, illustration, illustrationSize, animationDelay }: PathPanelProps) {
-  return (
-    <button
-      onClick={onClick}
-      className="flujo-path-panel"
-      style={
-        {
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "16px",
-          textAlign: "left",
-          width: "100%",
-          border: "none",
-          borderRadius: "22px",
-          padding: "24px 22px",
-          cursor: "pointer",
-          fontFamily: "inherit",
-          background: gradient,
-          animationDelay,
-          "--panel-shadow": shadow,
-        } as React.CSSProperties
-      }
-    >
+export function PathPanel({ onClick, href, gradient, shadow, title, tagline, illustration, illustrationSize, animationDelay }: PathPanelProps) {
+  const panelStyle = {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "16px",
+    textAlign: "left",
+    width: "100%",
+    border: "none",
+    borderRadius: "22px",
+    padding: "24px 22px",
+    cursor: "pointer",
+    fontFamily: "inherit",
+    background: gradient,
+    animationDelay,
+    "--panel-shadow": shadow,
+  } as React.CSSProperties;
+
+  const content = (
+    <>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: "21px", fontWeight: "800", letterSpacing: "-0.01em", color: "#ffffff", marginBottom: "5px" }}>{title}</div>
         <div style={{ fontSize: "14.5px", fontWeight: "500", color: "rgba(255,255,255,0.88)" }}>{tagline}</div>
       </div>
       <div style={{ flexShrink: 0, width: `${illustrationSize.width}px`, height: `${illustrationSize.height}px` }}>{illustration}</div>
+    </>
+  );
+
+  if (href) {
+    return (
+      <a href={href} className="flujo-path-panel" style={{ ...panelStyle, textDecoration: "none" }}>
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <button onClick={onClick} className="flujo-path-panel" style={panelStyle}>
+      {content}
     </button>
   );
 }

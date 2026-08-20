@@ -48,7 +48,7 @@ export default function Navbar() {
           padding: "12px 20px",
         }}
       >
-        <nav style={{ display: "flex", alignItems: "start", gap: "4px" }}>
+        <nav style={{ display: "flex", alignItems: "center", gap: "4px" }}>
           {NAV_LINKS.map((link) => (
             <a
               key={link.href}
@@ -57,12 +57,13 @@ export default function Navbar() {
               style={{
                 display: "none",
                 fontFamily: "var(--font-nav)",
-                fontSize: "17px",
+                fontSize: "15px",
                 fontWeight: "600",
                 letterSpacing: "0",
                 color: colors.brandDeep,
                 padding: "8px 12px",
                 borderRadius: "9999px",
+                whiteSpace: "nowrap",
               }}
             >
               {link.label}
@@ -82,45 +83,40 @@ export default function Navbar() {
             <UserMenu name={session.name} onLoggedOut={session.refresh} />
           ) : (
             // SPEC 05 (ajuste): con sesión, el ícono de cuenta reemplaza a
-            // estas dos CTAs por completo — ya no hace falta invitar a
-            // "empezar" a alguien que ya tiene cuenta. Mismo criterio que
-            // `UserMenu` para decidir cuándo mostrarse (status === "authenticated").
-            <>
-              <a
-                href="/flujo?role=vendedor"
-                className="nav-link nav-link-outline"
-                style={{
-                  display: "none",
-                  fontSize: "14px",
-                  fontWeight: "600",
-                  color: colors.brand,
-                  padding: "9px 14px",
-                  borderRadius: "9999px",
-                  border: `1px solid ${colors.border}`,
-                }}
-              >
-                Soy vendedor
-              </a>
-              <a
-                href="/flujo?role=comprador"
-                className="nav-cta"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "7px",
-                  background: colors.brandDeep,
-                  color: colors.background,
-                  fontWeight: "600",
-                  fontSize: "14px",
-                  padding: "10px 18px",
-                  borderRadius: "9999px",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                Empezar
-                <span style={{ fontSize: "15px", lineHeight: "1" }}>→</span>
-              </a>
-            </>
+            // esta CTA por completo — ya no hace falta invitar a "empezar" a
+            // alguien que ya tiene cuenta. Mismo criterio que `UserMenu`
+            // para decidir cuándo mostrarse (status === "authenticated").
+            //
+            // Un solo CTA a propósito: antes había "Soy vendedor" +
+            // "Empezar" (→ comprador) lado a lado, pero ese segundo link se
+            // perdió en un cambio a medio terminar y "Empezar" quedó
+            // apuntando siempre a comprador — cualquiera que quisiera
+            // vender caía ahí igual, sin darse cuenta. En vez de restaurar
+            // el segundo link, "Empezar" ahora manda a `/flujo` sin rol:
+            // `ChooseRoleScreen` (ver app/flujo/page.tsx) es quien pregunta
+            // "¿comprar o vender?" un paso después, con espacio real para
+            // explicar cada opción — mismo trato que ya reciben el resto de
+            // los puntos de entrada sin rol (`/panel`'s "Nuevo trato", el
+            // `next` por defecto tras login/signup/Google).
+            <a
+              href="/flujo"
+              className="nav-cta"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "7px",
+                background: colors.brandDeep,
+                color: colors.background,
+                fontWeight: "600",
+                fontSize: "14px",
+                padding: "10px 18px",
+                borderRadius: "9999px",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Empezar
+              <span style={{ fontSize: "15px", lineHeight: "1" }}>→</span>
+            </a>
           )}
         </div>
       </div>

@@ -7,7 +7,7 @@ import { ROLE_BADGE_LABEL } from "../data";
 import { colors, roleColor } from "../theme";
 import type { Role } from "../types";
 
-type FlujoHeaderProps = { role: Role; isAuthenticated: boolean; name: string; onLogout: () => void };
+type FlujoHeaderProps = { role: Role; showBackToHome: boolean; isAuthenticated: boolean; name: string; onLogout: () => void };
 
 /**
  * Top bar: logo back to the landing page, a badge reminding the user which
@@ -36,8 +36,16 @@ type FlujoHeaderProps = { role: Role; isAuthenticated: boolean; name: string; on
  * que abandonarían un trato a medio hacer — su equivalente real en este
  * contexto es el badge de rol (a la izquierda, donde Navbar pone los
  * nav-links) y el menú de cuenta (a la derecha, donde Navbar pone sus CTAs).
+ *
+ * `showBackToHome` (pedido del usuario): en "inicio" — antes de que exista
+ * cualquier trato — el badge de rol solo no deja claro cómo volver atrás si
+ * el usuario cambió de opinión, así que ahí se le antepone una flecha hacia
+ * "/". `FlujoNavButtons` no cubre este caso: su "Atrás" navega *dentro* del
+ * wizard (`wizard.goBack`), pero "inicio" es el primer paso — no hay paso
+ * previo a donde volver, solo la landing. En cualquier otro paso la flecha
+ * no se muestra: ahí "Atrás" ya existe abajo y es al wizard, no a home.
  */
-export default function FlujoHeader({ role, isAuthenticated, name, onLogout }: FlujoHeaderProps) {
+export default function FlujoHeader({ role, showBackToHome, isAuthenticated, name, onLogout }: FlujoHeaderProps) {
   const accent = roleColor(role);
   const badgeBg = role === "comprador" ? colors.accentSoft : colors.roleSellerBg;
   const scrolled = useScrolled();
@@ -66,9 +74,31 @@ export default function FlujoHeader({ role, isAuthenticated, name, onLogout }: F
           padding: "12px 20px",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "7px", background: badgeBg, padding: "7px 14px", borderRadius: "9999px", width: "fit-content" }}>
-          <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: accent }} />
-          <span style={{ fontSize: "13px", fontWeight: "700", color: accent, whiteSpace: "nowrap" }}>{ROLE_BADGE_LABEL[role]}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          {showBackToHome && (
+            <a
+              href="/"
+              aria-label="Volver al inicio"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "30px",
+                height: "30px",
+                borderRadius: "50%",
+                color: colors.textMuted,
+                flexShrink: 0,
+              }}
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+            </a>
+          )}
+          <div style={{ display: "flex", alignItems: "center", gap: "7px", background: badgeBg, padding: "7px 14px", borderRadius: "9999px", width: "fit-content" }}>
+            <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: accent }} />
+            <span style={{ fontSize: "13px", fontWeight: "700", color: accent, whiteSpace: "nowrap" }}>{ROLE_BADGE_LABEL[role]}</span>
+          </div>
         </div>
 
         <span className="navbar-logo-scale" style={{ display: "inline-flex", transform: scrolled ? "scale(1.06)" : "scale(1)" }}>

@@ -397,7 +397,13 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
 
   return (
     <div className="flujo-page">
-      <FlujoHeader role={role} isAuthenticated={session.status === "authenticated"} name={session.name} onLogout={handleLogout} />
+      <FlujoHeader
+        role={role}
+        showBackToHome={screen === "inicio"}
+        isAuthenticated={session.status === "authenticated"}
+        name={session.name}
+        onLogout={handleLogout}
+      />
 
       <div style={{ maxWidth: "560px", margin: "0 auto", padding: "26px 20px 64px" }}>
         {showsProgress(screen) && <ProgressBar activeColor={accent} filledBars={phase !== undefined ? phase + 1 : 0} stepLabel={phaseName(phase)} />}

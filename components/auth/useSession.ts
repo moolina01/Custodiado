@@ -65,7 +65,7 @@ function saveCachedIdentity(value: CachedIdentity | null) {
  *
  * SPEC 05 (ajuste post-implementación): `status` arranca en `"loading"` en
  * cada mount, así que una recarga siempre mostraba primero el estado
- * anónimo (CTAs "Empezar"/"Soy vendedor") y recién después, cuando
+ * anónimo (CTA "Empezar") y recién después, cuando
  * `GET /api/auth/me` resolvía, pasaba al ícono de cuenta — un parpadeo
  * feo y engañoso para alguien que sí tenía sesión. `name`/`rut` (los
  * únicos datos que este hook expone, ya visibles en la UI para la propia
