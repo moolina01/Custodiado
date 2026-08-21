@@ -360,6 +360,45 @@ describe("FlujoApp", () => {
     expect(loadTratoCode("comprador")).toBe("ABC123");
   });
 
+  // Companion to the regression above, checking the fix didn't overcorrect:
+  // `previousScreenRef` still has to catch a *genuine* transition into
+  // "inicio" (finishing the flow) and clear the trato then — not just
+  // survive Strict Mode's replay of the mount.
+  it("still clears the saved trato on a genuine finish, under <StrictMode> too", async () => {
+    render(
+      <StrictMode>
+        <FlujoApp initialRole="comprador" />
+      </StrictMode>
+    );
+
+    fireEvent.click(screen.getByText("Crear el trato"));
+    fireEvent.change(screen.getByPlaceholderText("Bicicleta aro 29, poco uso"), { target: { value: "Bicicleta" } });
+    fireEvent.change(screen.getByPlaceholderText("180.000"), { target: { value: "100000" } });
+    await act(async () => {
+      fireEvent.click(screen.getByText("Generar el código"));
+    });
+    expect(loadTratoCode("comprador")).toBe("ABC123");
+
+    await act(async () => {
+      await acceptTratoRequest("ABC123", "vendedor");
+    });
+    await advancePoll();
+    await act(async () => {
+      fireEvent.click(screen.getByText("Simular transferencia (Fintoc test)"));
+    });
+    await advancePoll();
+    fireEvent.click(screen.getByText("Ya nos juntamos"));
+    await act(async () => {
+      fireEvent.click(screen.getByText("Simular escaneo (dev)"));
+    });
+    await advancePoll();
+    expect(screen.getByText("Trato cerrado")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Volver al inicio"));
+    expect(screen.getByText("¿Cómo quieres partir?")).toBeInTheDocument();
+    expect(loadTratoCode("comprador")).toBeNull();
+  });
+
   it("offers 'Atrás' before a trato exists, but hides it once one does — no more resubmitting an already-taken step", async () => {
     render(<FlujoApp initialRole="comprador" />);
 
