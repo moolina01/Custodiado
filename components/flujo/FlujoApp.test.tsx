@@ -1,3 +1,4 @@
+import { StrictMode } from "react";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import FlujoApp from "./FlujoApp";
@@ -313,6 +314,49 @@ describe("FlujoApp", () => {
     // survives so a later retry (next reload, or the next poll) isn't
     // starting from nothing.
     expect(screen.getByText("¿Cómo quieres partir?")).toBeInTheDocument();
+    expect(loadTratoCode("comprador")).toBe("ABC123");
+  });
+
+  // Regression: the "landed on inicio" cleanup effect used to guard itself
+  // with a plain "have I mounted before" ref — which React only answers
+  // correctly outside <StrictMode>. Under Strict Mode (what `next dev`
+  // actually wraps the tree in), a mount's passive effects replay a second
+  // time for the very first, "inicio"-before-restore commit; that replay
+  // flipped the ref to "already mounted" one firing too early, so it read
+  // that first, superseded "inicio" as a *real* transition and wiped the
+  // just-restored code before the trato-restore effect ever got to read
+  // it — reproduced live against a real dev server, not just here. Confirms
+  // the fix (comparing against the previous screen, not a boolean flag)
+  // survives the exact replay that broke it.
+  it("keeps the restored trato even under <StrictMode>'s double-invoked mount effects", async () => {
+    const { unmount } = render(
+      <StrictMode>
+        <FlujoApp initialRole="comprador" />
+      </StrictMode>
+    );
+
+    fireEvent.click(screen.getByText("Crear el trato"));
+    fireEvent.change(screen.getByPlaceholderText("Bicicleta aro 29, poco uso"), { target: { value: "Bicicleta" } });
+    fireEvent.change(screen.getByPlaceholderText("180.000"), { target: { value: "100000" } });
+    await act(async () => {
+      fireEvent.click(screen.getByText("Generar el código"));
+    });
+    expect(screen.getByText("ABC-123")).toBeInTheDocument();
+    expect(loadTratoCode("comprador")).toBe("ABC123");
+
+    unmount();
+
+    await act(async () => {
+      render(
+        <StrictMode>
+          <FlujoApp initialRole="comprador" />
+        </StrictMode>
+      );
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    expect(screen.getByText("Comparte este código con el vendedor")).toBeInTheDocument();
+    expect(screen.getByText("ABC-123")).toBeInTheDocument();
     expect(loadTratoCode("comprador")).toBe("ABC123");
   });
 

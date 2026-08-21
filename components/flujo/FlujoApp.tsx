@@ -27,7 +27,7 @@ import { useSession } from "@/components/auth/useSession";
 import { useTrato } from "./useTrato";
 import { useWizardState } from "./useWizardState";
 import { formatTratoCodeForDisplay, normalizeTratoCode } from "@/lib/codeFormat";
-import type { Mode, Role } from "./types";
+import type { Mode, Role, Screen } from "./types";
 
 type FlujoAppProps = { initialRole: Role; initialCode?: string };
 
@@ -162,9 +162,9 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
       // still resolving, 429, a 500, a dropped request) leaves it in
       // `localStorage` on purpose, so the next attempt can still recover
       // it. But landing on "inicio" right below would otherwise trigger
-      // the `hasMountedRef` effect's own cleanup and wipe it anyway —
-      // this flag tells that effect to skip its *next* firing so a
-      // same-page retry isn't the only way back to the trato.
+      // the "landed on inicio" cleanup effect further down and wipe it
+      // anyway — this flag tells that effect to skip its *next* firing so
+      // a same-page retry isn't the only way back to the trato.
       skipNextInicioResetRef.current = true;
       wizard.reset();
     });
@@ -196,26 +196,32 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
   // that point, so nothing stale is left for the restore effect above to
   // pick up on the next visit.
   //
-  // `hasMountedRef` guards against a false trigger on mount itself: every
+  // Only fires on a genuine *transition into* "inicio" from something
+  // else — tracked via `previousScreenRef` — not just "screen currently is
+  // inicio". A boolean "have I mounted yet" ref used to guard this instead,
+  // but that only survives being asked "did this effect run before", which
+  // React (Strict Mode, dev only) answers "yes" a beat too early: every
   // mount's *first* render is "inicio" for one commit even when there's a
-  // trato to restore — `useWizardState`'s layout effect only flips it to
-  // the real step in a second, synchronous re-render before paint, but
-  // this passive effect still fires once for that first, superseded
-  // "inicio" render too (layout-effect updates don't skip a fiber's
-  // already-scheduled passive effects). Without the guard, that one firing
-  // would `resetTrato()` — wiping the persisted code — before the restore
-  // effect above ever gets to read it.
+  // trato to restore (`useWizardState`'s layout effect only flips it to the
+  // real step in a second, synchronous re-render before paint), and Strict
+  // Mode replays that first commit's passive effects a second time before
+  // the second commit ever happens — flipping the "have I mounted" ref to
+  // true one firing too soon, so the *replay* read `screen === "inicio"` as
+  // a real transition and wiped the just-restored code before the restore
+  // effect above ever got to read it. Comparing against the actual
+  // previous value sidesteps that: a replay re-reads the same `screen` it
+  // just wrote, sees no change, and no-ops either way.
   //
   // `skipNextInicioResetRef` (declared above, set by the restore effect)
   // covers the one case where landing on "inicio" does *not* mean "done
   // with this trato" — see that effect for the full story. Consumed once —
   // the very next genuine finish/back-out still clears normally.
-  const hasMountedRef = useRef(false);
+  const previousScreenRef = useRef<Screen | null>(null);
   useEffect(() => {
-    const isMountRender = !hasMountedRef.current;
-    hasMountedRef.current = true;
-    if (isMountRender) return;
-    if (screen !== "inicio") return;
+    const previousScreen = previousScreenRef.current;
+    previousScreenRef.current = screen;
+    if (previousScreen === null) return; // this effect's very first firing ever — nothing to compare against yet
+    if (previousScreen === "inicio" || screen !== "inicio") return; // not a transition *into* inicio
     if (skipNextInicioResetRef.current) {
       skipNextInicioResetRef.current = false;
       return;
