@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   acceptTratoRequest,
+  ApiError,
   cancelTratoRequest,
   createTratoRequest,
   forceAdvancePaymentRequest,
@@ -238,13 +239,22 @@ export function useTrato(role: Role) {
   // stale/inaccessible saved trato, e.g. from a since-logged-out account,
   // shouldn't greet a returning user with an error banner). The caller
   // reacts to a `null` return by clearing the wizard back to "inicio".
+  //
+  // Solo un 404 real ("Trato no encontrado") significa que el código
+  // guardado ya no sirve — cualquier otro error (401 porque la sesión
+  // recién está resolviendo justo al reabrir la pestaña, 429 del rate
+  // limit, un 500 transitorio, un fetch que falló por la red) no dice nada
+  // sobre si el trato sigue existiendo. Antes esto borraba el código en
+  // cualquier catch, así que un error de red pasajero al reabrir la
+  // pestaña dejaba a la cuenta sin forma de recuperar el trato: la próxima
+  // carga ya no tenía qué reintentar.
   const restore = useCallback(async (code: string) => {
     try {
       const found = await getTratoRequest(code);
       setTrato(found);
       return found;
-    } catch {
-      clearTratoCode(role);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) clearTratoCode(role);
       return null;
     }
   }, [role]);

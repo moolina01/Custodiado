@@ -133,6 +133,13 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
   // state, not a backend action, so it stays available regardless.
   const canGoBack = screen === "cancelar" ? wizard.canGoBack : wizard.canGoBack && !trato;
 
+  // Consumed by the "landed on inicio" cleanup effect further down — set
+  // right below, by the restore effect, for the one case where landing on
+  // "inicio" does *not* mean "done with this trato": a restore that failed
+  // for a transient reason rather than a real 404. See both usages below
+  // for the full story.
+  const skipNextInicioResetRef = useRef(false);
+
   // Resumes a trato that was mid-flow when the user left (see
   // `useWizardState`'s own restore, and `./persistence`). `useWizardState`
   // already restores *which step* to show — via its own post-mount layout
@@ -149,7 +156,17 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
     const code = loadTratoCode(role);
     if (!code) return;
     tratoState.restore(code).then((found) => {
-      if (!found) wizard.reset();
+      if (found) return;
+      // `tratoState.restore` only wipes the persisted code itself on a
+      // confirmed 404 — a transient failure (401 while the session was
+      // still resolving, 429, a 500, a dropped request) leaves it in
+      // `localStorage` on purpose, so the next attempt can still recover
+      // it. But landing on "inicio" right below would otherwise trigger
+      // the `hasMountedRef` effect's own cleanup and wipe it anyway —
+      // this flag tells that effect to skip its *next* firing so a
+      // same-page retry isn't the only way back to the trato.
+      skipNextInicioResetRef.current = true;
+      wizard.reset();
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- tratoState.restore/wizard.reset are stable for a fixed `role`; re-running this on every render of theirs would refetch on every state change instead of once per session-status transition.
   }, [session.status, role, initialCode]);
@@ -188,12 +205,22 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
   // already-scheduled passive effects). Without the guard, that one firing
   // would `resetTrato()` — wiping the persisted code — before the restore
   // effect above ever gets to read it.
+  //
+  // `skipNextInicioResetRef` (declared above, set by the restore effect)
+  // covers the one case where landing on "inicio" does *not* mean "done
+  // with this trato" — see that effect for the full story. Consumed once —
+  // the very next genuine finish/back-out still clears normally.
   const hasMountedRef = useRef(false);
   useEffect(() => {
     const isMountRender = !hasMountedRef.current;
     hasMountedRef.current = true;
     if (isMountRender) return;
-    if (screen === "inicio") resetTrato();
+    if (screen !== "inicio") return;
+    if (skipNextInicioResetRef.current) {
+      skipNextInicioResetRef.current = false;
+      return;
+    }
+    resetTrato();
   }, [screen, resetTrato]);
 
   // "qr" — SPEC 02: the seller's screen mints/renews a signed token every

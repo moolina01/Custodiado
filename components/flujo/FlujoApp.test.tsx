@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import FlujoApp from "./FlujoApp";
+import { loadTratoCode } from "./persistence";
 import type { Trato } from "./__mocks__/api";
 
 // Manual mock of `./api` (see `__mocks__/api.ts`) — stands in for the
@@ -28,7 +29,9 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/flujo",
 }));
 
-const { __resetMockApi, __setMockTrato, acceptTratoRequest, verifyQrRequest, simulatePaymentRequest } = await import("./__mocks__/api");
+const { __resetMockApi, __setMockTrato, acceptTratoRequest, verifyQrRequest, simulatePaymentRequest, getTratoRequest, ApiError } = await import(
+  "./__mocks__/api"
+);
 
 // SPEC 05: fixture for `?code=` deep-link tests — a trato that already
 // exists, seeded directly instead of built up through create/accept.
@@ -102,7 +105,7 @@ describe("FlujoApp", () => {
     await act(async () => {
       fireEvent.click(screen.getByText("Generar el código")); // calls createTratoRequest
     });
-    expect(screen.getByText("Pásale este código")).toBeInTheDocument();
+    expect(screen.getByText("Comparte este código con el vendedor")).toBeInTheDocument();
     expect(screen.getByText("ABC-123")).toBeInTheDocument();
 
     // No button to click here — the seller accepting on their own screen is
@@ -272,8 +275,45 @@ describe("FlujoApp", () => {
     // Same screen (useWizardState restores which step) and the same real
     // trato (FlujoApp's restore effect, once the session resolves), not the
     // blank "inicio" a fresh mount would otherwise show.
-    expect(screen.getByText("Pásale este código")).toBeInTheDocument();
+    expect(screen.getByText("Comparte este código con el vendedor")).toBeInTheDocument();
     expect(screen.getByText("ABC-123")).toBeInTheDocument();
+  });
+
+  // Regression: `useTrato`'s `restore` used to clear the persisted code on
+  // *any* thrown error, not just a real 404 — so a one-off transient
+  // failure right when a closed tab reopens (a 401 while the session is
+  // still resolving, a 429, a 500, a dropped request) permanently lost the
+  // only breadcrumb back to the trato, even though it was still perfectly
+  // fine server-side.
+  it("keeps the saved code after a transient restore failure, so the next attempt can still recover it", async () => {
+    const { unmount } = render(<FlujoApp initialRole="comprador" />);
+
+    fireEvent.click(screen.getByText("Crear el trato"));
+    fireEvent.change(screen.getByPlaceholderText("Bicicleta aro 29, poco uso"), { target: { value: "Bicicleta" } });
+    fireEvent.change(screen.getByPlaceholderText("180.000"), { target: { value: "100000" } });
+    await act(async () => {
+      fireEvent.click(screen.getByText("Generar el código"));
+    });
+    expect(screen.getByText("ABC-123")).toBeInTheDocument();
+    expect(loadTratoCode("comprador")).toBe("ABC123");
+
+    unmount();
+
+    // The remount's one and only `getTratoRequest` call — the restore
+    // effect's — fails transiently instead of finding the trato.
+    getTratoRequest.mockRejectedValueOnce(new ApiError("Error de red", 500));
+
+    await act(async () => {
+      render(<FlujoApp initialRole="comprador" />);
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    // Falls back to "inicio" for *this* attempt (nothing to show without a
+    // confirmed trato) — but, unlike before the fix, the code itself
+    // survives so a later retry (next reload, or the next poll) isn't
+    // starting from nothing.
+    expect(screen.getByText("¿Cómo quieres partir?")).toBeInTheDocument();
+    expect(loadTratoCode("comprador")).toBe("ABC123");
   });
 
   it("offers 'Atrás' before a trato exists, but hides it once one does — no more resubmitting an already-taken step", async () => {
@@ -292,7 +332,7 @@ describe("FlujoApp", () => {
     // A real trato exists now — "Atrás" is gone, so there's no way back to
     // "crear-datos" to hit "Generar el código" again and mint a *second*
     // trato out from under the one just shared with the counterpart.
-    expect(screen.getByText("Pásale este código")).toBeInTheDocument();
+    expect(screen.getByText("Comparte este código con el vendedor")).toBeInTheDocument();
     expect(screen.queryByText("Atrás")).not.toBeInTheDocument();
 
     await act(async () => {
@@ -358,7 +398,7 @@ describe("FlujoApp", () => {
         await vi.advanceTimersByTimeAsync(0);
       });
 
-      expect(screen.getByText("Pásale este código")).toBeInTheDocument();
+      expect(screen.getByText("Comparte este código con el comprador")).toBeInTheDocument();
     });
 
     it("puts an accepter (not the creator) on 'esperando-pago' for the same status", async () => {
