@@ -1,5 +1,6 @@
 import Callout from "../ui/Callout";
 import Card from "../ui/Card";
+import SafetyTips from "../ui/SafetyTips";
 import StepHeading from "../ui/StepHeading";
 import { colors } from "../theme";
 
@@ -29,6 +30,8 @@ export default function EsperandoPagoStep({ summaryAmount, summaryItem }: Espera
       <div style={{ fontSize: "13.5px", color: colors.textFaint, textAlign: "center", marginTop: "14px" }}>
         Si el comprador cancela antes de la entrega, se le devuelve la plata y el trato queda sin efecto.
       </div>
+
+      <SafetyTips />
     </div>
   );
 }
