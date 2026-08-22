@@ -41,7 +41,11 @@ export default function DetalleStep({
     <div>
       <StepHeading
         title="Revisa el trato"
-        subtitle={isBuyer ? "Si está todo bien, aceptas y pagas en un paso." : "Aceptar es gratis y no te compromete a nada todavía."}
+        subtitle={
+          isBuyer
+            ? "Si está todo bien, aceptas y pagas en un paso."
+            : "Revisa los detalles del trato — si todo está bien, acepta."
+        }
       />
 
       <div style={{ marginBottom: "18px" }}>
@@ -60,7 +64,7 @@ export default function DetalleStep({
         <Callout tone="info">
           {isBuyer
             ? "Tu plata queda retenida en custodia. El vendedor no recibe nada hasta que confirmes la entrega."
-            : "Aceptar no te pide datos bancarios. Te los pedimos recién cuando el comprador haya pagado."}
+            : "Aceptar no te compromete a entregar todavía — eso se coordina después, con la plata ya retenida."}
         </Callout>
       </div>
     </div>
