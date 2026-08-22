@@ -12,6 +12,7 @@ import FlujoNavButtons from "./ui/FlujoNavButtons";
 import FlujoFooter from "./ui/FlujoFooter";
 import ProgressBar from "./ui/ProgressBar";
 import StepTransition from "./ui/StepTransition";
+import TransferIdentityModal from "./ui/TransferIdentityModal";
 import { devQrTokenRequest, getPlatformAccountRequest } from "./api";
 import { logoutRequest } from "@/components/auth/api";
 import { DEFAULT_ITEM_LABEL } from "./data";
@@ -132,6 +133,23 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
   // form without confirming ("cancelar"'s own back arrow): that's local UI
   // state, not a backend action, so it stays available regardless.
   const canGoBack = screen === "cancelar" ? wizard.canGoBack : wizard.canGoBack && !trato;
+
+  // Buyer-only: explains *why* the transfer has to come from an account
+  // under their own name, right as they land on "pagar" (real transfer
+  // instructions). Rendered at this top level, alongside `AuthModal`/
+  // `FlujoErrorModal` below — not inside `PagarStep` itself — because
+  // `PagarStep` renders inside `StepTransition`'s animated wrapper
+  // (`.flujo-step-enter`, which uses `transform`), and a `transform` on an
+  // ancestor traps a `position: fixed` descendant's stacking order inside
+  // it: the modal's `z-index` would only ever be compared against its
+  // siblings *within* that wrapper, never against `HelpChat`'s floating
+  // "Ayuda" button (rendered outside it) — leaving that button visibly on
+  // top of the backdrop, undimmed and still clickable, instead of behind
+  // it like every other modal in the app.
+  const [showTransferIdentityModal, setShowTransferIdentityModal] = useState(false);
+  useEffect(() => {
+    if (screen === "pagar") setShowTransferIdentityModal(true);
+  }, [screen]);
 
   // Consumed by the "landed on inicio" cleanup effect further down — set
   // right below, by the restore effect, for the one case where landing on
@@ -516,6 +534,8 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
       />
 
       {showAuthGate && <AuthModal role={role} onClose={() => setShowAuthGate(false)} onAuthenticated={handleAuthenticated} />}
+
+      {showTransferIdentityModal && <TransferIdentityModal onClose={() => setShowTransferIdentityModal(false)} />}
 
       {validationError ? (
         <FlujoErrorModal heading="Falta un dato" message={validationError} onClose={() => setValidationError(null)} />

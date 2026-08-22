@@ -1,4 +1,3 @@
-import Callout from "../ui/Callout";
 import Card from "../ui/Card";
 import StepHeading from "../ui/StepHeading";
 import { colors } from "../theme";
@@ -29,14 +28,7 @@ export default function PagarStep({
 }: PagarStepProps) {
   return (
     <div>
-      <StepHeading title="Transfiere a la cuenta de custodia" subtitle="El dinero queda retenido. El vendedor no recibe nada hasta la entrega." />
-
-      <div style={{ marginBottom: "16px" }}>
-        <Callout tone="warning">
-          Transfiere desde una cuenta a tu propio nombre. Si la plata llega desde una cuenta que no es tuya, te la devolvemos
-          automáticamente y el trato queda sin efecto.
-        </Callout>
-      </div>
+      <StepHeading title="Transfiere a la cuenta de custodia" subtitle="Tu plata queda retenida: el vendedor no la recibe hasta que te juntes y confirmes que todo esté bien." />
 
       <Card padding="24px 22px" shadow style={{ textAlign: "center" }}>
         <div style={{ fontSize: "12px", fontWeight: "700", letterSpacing: "0.08em", textTransform: "uppercase", color: colors.textFaint, marginBottom: "8px" }}>
@@ -58,7 +50,7 @@ export default function PagarStep({
           <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: colors.textFaint, animation: "dotBlink 2s ease-in-out infinite" }} />
           <span>Esperando tu transferencia</span>
         </div>
-        <div style={{ fontSize: "13px", color: colors.textFaint, marginTop: "10px" }}>Apenas Fintoc detecta el depósito, esto avanza solo.</div>
+        <div style={{ fontSize: "13px", color: colors.textFaint, marginTop: "10px" }}>Apenas Fintoc detecte tu transferencia, esto avanza solo.</div>
       </Card>
 
       {IS_DEV && (
