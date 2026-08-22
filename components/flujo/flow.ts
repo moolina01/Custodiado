@@ -52,8 +52,16 @@ export function screenFor(role: Role, mode: Mode, stepIndex: number, cancelStage
  * either — the panel classifies both as terminal (`categorizeForPanel`)
  * and links to `/panel/[code]` instead. The fallbacks below only matter for
  * someone hand-editing the URL.
+ *
+ * `hasSellerBankDetails`: `funds_held` alone doesn't say whether the seller
+ * already went through "banco" — submitting bank details doesn't change
+ * `status`, only this separate flag. Without checking it, re-entering via
+ * `?code=` (the panel, or the home page's "fondos retenidos" reminder)
+ * after already saving bank details sent the seller straight back to that
+ * form, fields blank and all, instead of "qr" — a real bug found by
+ * actually walking a seller through save → leave → come back.
  */
-export function screenForExistingTrato(status: TratoStatus, role: Role, isCreator: boolean): Screen {
+export function screenForExistingTrato(status: TratoStatus, role: Role, isCreator: boolean, hasSellerBankDetails: boolean): Screen {
   const isBuyer = role === "comprador";
   switch (status) {
     case "awaiting_acceptance":
@@ -63,7 +71,8 @@ export function screenForExistingTrato(status: TratoStatus, role: Role, isCreato
       if (isBuyer) return "pagar";
       return isCreator ? "crear-codigo" : "esperando-pago";
     case "funds_held":
-      return isBuyer ? "retenidos" : "banco";
+      if (isBuyer) return "retenidos";
+      return hasSellerBankDetails ? "qr" : "banco";
     case "release_pending":
       return "qr";
     case "released":

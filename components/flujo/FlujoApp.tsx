@@ -203,7 +203,7 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
     tratoState.lookup(initialCode).then((found) => {
       if (!found) return;
       const mode: Exclude<Mode, null> = found.createdByRole === role ? "crear" : "codigo";
-      wizard.jumpToScreen(mode, screenForExistingTrato(found.status, role, mode === "crear"));
+      wizard.jumpToScreen(mode, screenForExistingTrato(found.status, role, mode === "crear", found.hasSellerBankDetails));
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- tratoState.lookup/wizard.jumpToScreen are stable for a fixed `role`; this should only run once per session-status transition, not on every render of theirs.
   }, [session.status, initialCode, role]);

@@ -495,6 +495,36 @@ describe("FlujoApp", () => {
       expect(screen.getByText("Aceptaste el trato")).toBeInTheDocument();
     });
 
+    // Regression: `funds_held` alone doesn't say whether the seller already
+    // submitted bank details — that's a separate flag (`hasSellerBankDetails`)
+    // that doesn't change `status`. This used to map straight to "banco"
+    // regardless, so re-entering via `?code=` (the panel, or the home page's
+    // "fondos retenidos" reminder) after already saving bank details sent
+    // the seller back to that form instead of "qr" — found by actually
+    // walking a seller through save → leave → come back.
+    it("puts a seller who already saved bank details on 'qr', not back on 'banco'", async () => {
+      seedTrato({ status: "funds_held", createdByRole: "vendedor", hasSellerBankDetails: true });
+
+      await act(async () => {
+        render(<FlujoApp initialRole="vendedor" initialCode="XYZ999" />);
+        await vi.advanceTimersByTimeAsync(0);
+      });
+
+      expect(screen.getByText("Muestra el QR al entregar")).toBeInTheDocument();
+      expect(screen.queryByText("¿Dónde te depositamos?")).not.toBeInTheDocument();
+    });
+
+    it("still puts a seller without bank details on 'banco'", async () => {
+      seedTrato({ status: "funds_held", createdByRole: "vendedor", hasSellerBankDetails: false });
+
+      await act(async () => {
+        render(<FlujoApp initialRole="vendedor" initialCode="XYZ999" />);
+        await vi.advanceTimersByTimeAsync(0);
+      });
+
+      expect(screen.getByText("¿Dónde te depositamos?")).toBeInTheDocument();
+    });
+
     it("falls back to normal 'inicio' behavior when no code is in the URL", async () => {
       render(<FlujoApp initialRole="comprador" />);
       expect(screen.getByText("¿Cómo quieres partir?")).toBeInTheDocument();
