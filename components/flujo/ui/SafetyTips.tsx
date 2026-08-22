@@ -8,6 +8,7 @@ import { colors } from "../theme";
 // sueltas para rotar de a una mientras el usuario no tiene nada más que
 // hacer que esperar.
 const TIPS = [
+  "Prefiere juntarte con la otra persona en un lugar seguro y conocido — puede ser tu casa.",
   "Nunca escanees un QR sin revisar antes el producto en persona.",
   "Escanea solo el QR de la app de la otra persona — nunca una foto o captura.",
   "La plata queda retenida hasta que los dos confirman la entrega, nunca se transfiere directo.",
@@ -24,7 +25,11 @@ const ROTATE_MS = 5000;
  * solo mostraban un punto parpadeando sin nada más que mirar
  * (CrearCodigoStep, EsperandoPagoStep). No reemplaza los tips ya fijos y
  * específicos de QrStep — ahí ya hay un bloque propio, agregar este sería
- * duplicar.
+ * duplicar. `RetenidosStep` ("Coordinen la entrega") no lo usa — esa
+ * pantalla puede quedar abierta horas, y un `setInterval` rotando para
+ * siempre en una pestaña de fondo no aporta nada después de la primera
+ * vuelta; ahí el tip de juntarse en un lugar seguro va como texto simple,
+ * fusionado con el resto de la info de apoyo de esa pantalla.
  */
 export default function SafetyTips() {
   const [index, setIndex] = useState(0);

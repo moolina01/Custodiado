@@ -25,11 +25,7 @@ export default function RetenidosStep({ role, summaryItem, counterpartLabel, cou
 
       <StepHeading
         title="Coordinen la entrega"
-        subtitle={
-          isBuyer
-            ? "La plata ya está retenida. Junta con el vendedor y revisa el producto antes de escanear."
-            : "Ya puedes entregar tranquilo: la plata está retenida a tu nombre."
-        }
+        subtitle={isBuyer ? "Coordina con el vendedor y revisa el producto antes de escanear." : "Ya puedes entregar tranquilo: la plata está retenida a tu nombre."}
       />
 
       <Card shadow>
@@ -55,11 +51,16 @@ export default function RetenidosStep({ role, summaryItem, counterpartLabel, cou
         </a>
       </Card>
 
+      <div style={{ fontSize: "13px", color: colors.textFaint, textAlign: "center", marginTop: "16px", lineHeight: "1.5" }}>
+        Prefiere un lugar seguro y conocido para juntarte, como tu casa. Puedes cerrar esta pestaña sin problemas — te lo
+        recordamos en la home cuando vuelvas.
+      </div>
+
       {isBuyer && (
         <Card style={{ marginTop: "16px" }}>
           <div style={{ fontSize: "15px", fontWeight: "700", marginBottom: "5px" }}>¿No se concretó el trato?</div>
           <div style={{ fontSize: "14px", color: colors.textMuted, marginBottom: "16px" }}>
-            Si no te pareció el producto, no lograron juntarse o el vendedor no responde, cancelas y te devolvemos la plata completa a la misma cuenta desde la que pagaste.
+            Si el trato no se concreta, cancela y te devolvemos la plata completa a la cuenta desde la que pagaste.
           </div>
           <button
             onClick={onCancel}
