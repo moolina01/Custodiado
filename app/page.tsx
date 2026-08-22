@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import ActiveTratoBanner from "@/components/custodio/ActiveTratoBanner";
 import AnnouncementBar from "@/components/custodio/AnnouncementBar";
 import Navbar from "@/components/custodio/Navbar";
 import Hero from "@/components/custodio/Hero";
@@ -28,6 +29,7 @@ export default function Home() {
       <ScrollReveal />
       <AnnouncementBar />
       <Navbar />
+      <ActiveTratoBanner />
 
       <main>
         <Hero />
