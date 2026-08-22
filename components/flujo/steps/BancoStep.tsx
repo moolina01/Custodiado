@@ -31,7 +31,7 @@ export default function BancoStep({ summaryAmount, fields, onFieldChange }: Banc
     <div>
       <FundsHeldBadge summaryAmount={summaryAmount} />
 
-      <StepHeading title="¿Dónde te depositamos?" subtitle="La plata ya está retenida. Deja tu cuenta lista para recibirla al entregar." />
+      <StepHeading title="¿Dónde te depositamos?" subtitle="La plata ya está retenida — necesitamos tu cuenta para poder liberarla apenas se confirme la entrega." />
 
       <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
         <SelectField
