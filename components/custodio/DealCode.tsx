@@ -23,7 +23,7 @@ export default function DealCode() {
             marginBottom: "10px",
           }}
         >
-          Te sirve en
+          Así empiezas
         </Reveal>
         <Reveal
           as="h2"
@@ -37,7 +37,7 @@ export default function DealCode() {
           </span>
         </Reveal>
         <Reveal delay={320} style={{ fontSize: "16.5px", color: colors.textMuted, margin: "0 auto", maxWidth: "440px" }}>
-          Uno crea el trato y le pasa el código al otro. El otro lo ingresa en custodio.cl. No importa dónde se conocieron.
+          Uno crea el trato y le pasa el código al otro. El otro lo ingresa en custodiado.cl y quedan viendo lo mismo.
         </Reveal>
       </div>
 
@@ -50,7 +50,7 @@ export default function DealCode() {
             background: "#ffffff",
             border: `1px solid ${colors.border}`,
             borderRadius: "24px",
-            padding: "40px 32px",
+            padding: "40px clamp(20px, 6vw, 32px)",
             textAlign: "center",
             boxShadow: "0 12px 40px rgba(11,18,32,0.07)",
           }}
@@ -58,7 +58,7 @@ export default function DealCode() {
           <div style={{ fontSize: "12px", fontWeight: "700", letterSpacing: "0.1em", textTransform: "uppercase", color: colors.textFaint, marginBottom: "16px" }}>
             Código del trato
           </div>
-          <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginBottom: "18px", perspective: "500px" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "8px", marginBottom: "18px", perspective: "500px" }}>
             {CODE_LETTERS.map((letter, i) => (
               <span
                 key={i}
@@ -93,9 +93,13 @@ export default function DealCode() {
           </div>
         </Reveal>
 
+        <Reveal delay={140} style={{ fontSize: "13px", fontWeight: "600", color: colors.textFaint, marginTop: "36px" }}>
+          Funciona sin importar dónde se conocieron:
+        </Reveal>
+
         <Reveal
-          delay={160}
-          style={{ display: "flex", flexWrap: "wrap", gap: "8px", justifyContent: "center", marginTop: "36px", maxWidth: "620px" }}
+          delay={200}
+          style={{ display: "flex", flexWrap: "wrap", gap: "8px", justifyContent: "center", marginTop: "12px", maxWidth: "620px" }}
         >
           {DEAL_PLATFORMS.map((name) => (
             <span

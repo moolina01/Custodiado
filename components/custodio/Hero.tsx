@@ -32,7 +32,7 @@ export default function Hero() {
           maxWidth: "1100px",
           margin: "0 auto",
           display: "flex",
-          flexWrap: "wrap-reverse",
+          flexWrap: "wrap",
           alignItems: "center",
           gap: "40px",
         }}
@@ -92,8 +92,8 @@ export default function Hero() {
                 delay={760}
                 style={{ position: "absolute", left: "0", right: "0", bottom: "3px", height: "4px", background: colors.accent, borderRadius: "2px" }}
               />
-            </span>{" "}
-            por Marketplace.
+            </span>
+            , aunque no se conozcan.
           </Reveal>
 
           <Reveal as="p" delay={180} style={{ fontSize: "clamp(16px, 1.8vw, 18px)", color: colors.textMuted, margin: "0 0 28px", maxWidth: "460px" }}>
@@ -153,18 +153,18 @@ export default function Hero() {
           <Reveal as="div" delay={380} style={{ display: "flex", flexWrap: "wrap", gap: "8px 18px", marginTop: "18px", fontSize: "13px", color: colors.textMuted, fontWeight: "500" }}>
             <span>Procesado por Fintoc</span>
             <span style={{ color: "#B9C7C2" }}>·</span>
-            <span>Mandato de recaudación legal</span>
+            <span>Nunca pasa por una cuenta nuestra</span>
             <span style={{ color: "#B9C7C2" }}>·</span>
             <span>Sin apps que descargar</span>
           </Reveal>
 
-          <Reveal as="div" delay={460} style={{ display: "flex", gap: "36px", marginTop: "30px", paddingTop: "26px", borderTop: `1px solid ${colors.border}` }}>
+          <Reveal as="div" delay={460} style={{ display: "flex", flexWrap: "wrap", gap: "12px 36px", marginTop: "30px", paddingTop: "26px", borderTop: `1px solid ${colors.border}` }}>
             <div>
               <div style={{ fontSize: "26px", fontWeight: "700", letterSpacing: "-0.02em", color: colors.brandDeep }}>3%</div>
               <div style={{ fontSize: "13px", color: colors.textMuted, marginTop: "2px" }}>Comisión, la paga el comprador</div>
             </div>
             <div>
-              <div style={{ fontSize: "26px", fontWeight: "700", letterSpacing: "-0.02em", color: colors.brandDeep }}>24h</div>
+              <div style={{ fontSize: "26px", fontWeight: "700", letterSpacing: "-0.02em", color: colors.brandDeep }}>Mismo día</div>
               <div style={{ fontSize: "13px", color: colors.textMuted, marginTop: "2px" }}>Plata liberada el mismo día hábil</div>
             </div>
           </Reveal>

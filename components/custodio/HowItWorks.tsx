@@ -23,9 +23,13 @@ export default function HowItWorks() {
         </Reveal>
       </div>
 
+      <Reveal as="p" style={{ fontSize: "14.5px", fontWeight: "600", color: colors.textMuted, margin: "0 0 14px" }}>
+        Todo arranca con un código que uno crea y le pasa al otro.
+      </Reveal>
+
       <p
         style={{
-          fontSize: "clamp(30px, 5.6vw, 60px)",
+          fontSize: "clamp(22px, 7vw, 60px)",
           fontWeight: "700",
           letterSpacing: "-0.035em",
           lineHeight: "1.14",

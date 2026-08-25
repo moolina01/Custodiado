@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useSession } from "@/components/auth/useSession";
 import { useScrolled } from "./useScrolled";
 import { colors } from "./theme";
@@ -23,6 +24,27 @@ export default function Navbar() {
   // touch, so it visibly registers as "now pinned" instead of just always
   // looking the same. `FlujoHeader` shares this exact behavior via the same hook.
   const scrolled = useScrolled();
+
+  // `.nav-link` (below) only becomes visible from 720px up (`app/globals.css`)
+  // — below that, the section links had no way to be reached at all. This
+  // toggle + dropdown is their mobile stand-in, same "click outside closes
+  // it" pattern `UserMenu` already uses for its own dropdown. The toggle
+  // button itself is the mirror image of `.nav-link`: visible by default,
+  // hidden from 720px up (`.navbar-mobile-toggle` in globals.css) — exactly
+  // where the real nav links take over.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuOpen]);
 
   return (
     <header
@@ -48,28 +70,98 @@ export default function Navbar() {
           padding: "12px 20px",
         }}
       >
-        <nav style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-          {NAV_LINKS.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className="nav-link"
+        <div ref={menuRef} style={{ position: "relative", display: "flex", alignItems: "center" }}>
+          <button
+            onClick={() => setMenuOpen((v) => !v)}
+            className="navbar-mobile-toggle"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "36px",
+              height: "36px",
+              borderRadius: "10px",
+              border: "none",
+              background: "none",
+              color: colors.brandDeep,
+              cursor: "pointer",
+              flexShrink: "0",
+            }}
+          >
+            {menuOpen ? (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 7h16M4 12h16M4 17h16" />
+              </svg>
+            )}
+          </button>
+
+          <nav style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+            {NAV_LINKS.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                className="nav-link"
+                style={{
+                  display: "none",
+                  fontFamily: "var(--font-nav)",
+                  fontSize: "15px",
+                  fontWeight: "600",
+                  letterSpacing: "0",
+                  color: colors.brandDeep,
+                  padding: "8px 12px",
+                  borderRadius: "9999px",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {link.label}
+              </a>
+            ))}
+          </nav>
+
+          {menuOpen && (
+            <div
+              role="menu"
               style={{
-                display: "none",
-                fontFamily: "var(--font-nav)",
-                fontSize: "15px",
-                fontWeight: "600",
-                letterSpacing: "0",
-                color: colors.brandDeep,
-                padding: "8px 12px",
-                borderRadius: "9999px",
-                whiteSpace: "nowrap",
+                position: "absolute",
+                top: "calc(100% + 8px)",
+                left: "0",
+                minWidth: "210px",
+                background: "#ffffff",
+                border: `1px solid ${colors.border}`,
+                borderRadius: "12px",
+                boxShadow: "0 8px 24px rgba(11,18,32,0.14)",
+                overflow: "hidden",
+                zIndex: "60",
               }}
             >
-              {link.label}
-            </a>
-          ))}
-        </nav>
+              {NAV_LINKS.map((link, i) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  role="menuitem"
+                  onClick={() => setMenuOpen(false)}
+                  style={{
+                    display: "block",
+                    padding: "13px 16px",
+                    fontSize: "14.5px",
+                    fontWeight: "600",
+                    color: colors.brandDeep,
+                    borderTop: i === 0 ? undefined : `1px solid ${colors.borderSoft}`,
+                  }}
+                >
+                  {link.label}
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
 
         <span
           className="navbar-logo-scale"

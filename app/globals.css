@@ -127,6 +127,42 @@ body {
     display: inline-block !important;
   }
 }
+/* Navbar's mobile menu toggle (see Navbar.tsx) — the mirror image of
+ * `.nav-link` above: visible by default (mobile, where the real nav links
+ * are hidden), hidden from 720px up (where the real nav links take over). */
+@media (min-width: 720px) {
+  .navbar-mobile-toggle {
+    display: none !important;
+  }
+}
+
+/* Hero's two illustrated panels (`hero/HeroPanels.tsx`) — pedido del
+ * usuario: en mobile eran dos cuadrados apilados enormes (~420px de alto
+ * combinado) antes de llegar a cualquier texto. Por debajo de ~820px
+ * (el mismo ancho donde el propio Hero deja de wrapear sus dos columnas —
+ * ver `Hero.tsx`'s `flex: "1 1 440px"` + `"1 1 300px"` + 40px de gap) se
+ * ven achicados y en fila, lado a lado; de 820px para arriba vuelven a ser
+ * la columna apilada original. */
+.hero-panels {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  height: 150px;
+}
+.hero-panel {
+  padding: 14px;
+}
+@media (min-width: 820px) {
+  .hero-panels {
+    flex-direction: column;
+    gap: 16px;
+    height: 100%;
+    min-height: 420px;
+  }
+  .hero-panel {
+    padding: 22px;
+  }
+}
 /* Navbar shell: flex on mobile (logo stays left, nav links are hidden by
  * `.nav-link` above anyway), 3-column grid from 720px up so the logo sits
  * dead-center regardless of how wide the nav/CTA groups on either side are. */
