@@ -14,7 +14,7 @@ export default function Footer() {
           <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "14px" }}>
             <span style={{ color: "#7EB6F5", fontWeight: "600", fontSize: "12px", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "4px" }}>Contacto</span>
             <a href="mailto:hola@custodiado.cl" style={{ color: "#E6EAF5" }}>hola@custodiado.cl</a>
-            <a href="#" style={{ color: "#E6EAF5" }}>+56 9 0000 0000</a>
+            <a href="tel:+56949378795" style={{ color: "#E6EAF5" }}>+56 9 4937 8795</a>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "14px" }}>
             <span style={{ color: "#7EB6F5", fontWeight: "600", fontSize: "12px", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "4px" }}>Legal</span>
