@@ -66,7 +66,6 @@ export default function Navbar() {
           margin: "0 auto",
           alignItems: "center",
           justifyContent: "space-between",
-          gap: "20px",
           padding: "12px 20px",
         }}
       >

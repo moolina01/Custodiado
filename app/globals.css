@@ -30,6 +30,18 @@ body {
      this — still clips the decorative full-bleed elements (aurora, hero
      beam, etc.) without breaking Navbar's `position: sticky`. */
   overflow-x: hidden;
+  /* Pedido del usuario: en mobile se sentía que "el contenido se puede
+     mover de izquierda a derecha" — el rebote elástico (overscroll) que
+     iOS Safari/Chrome mobile dan de regalo en cualquier borde, incluso sin
+     overflow real que scrollear. `overflow-x: hidden` (arriba) ya evita el
+     overflow real; esto apaga el rebote en el eje horizontal específicamente.
+     A propósito NO en `html` — probado a mano: le agrega `overflow-y: auto`
+     por la regla de CSS que empareja los dos ejes, y eso rompe el sticky
+     del Navbar exactamente como advierte el comentario de arriba. */
+  overscroll-behavior-x: none;
+}
+html {
+  overscroll-behavior-x: none;
 }
 
 /* -----------------------------------------------------------------------
@@ -168,11 +180,26 @@ body {
  * dead-center regardless of how wide the nav/CTA groups on either side are. */
 .nav-shell {
   display: flex;
+  gap: 10px;
 }
 @media (min-width: 720px) {
   .nav-shell {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
+    gap: 20px;
+  }
+}
+/* Navbar's "Empezar" CTA (see Navbar.tsx) — pedido del usuario: en mobile
+ * el logo + el CTA no entraban en el ancho real de un teléfono y el botón
+ * quedaba cortado ("Emp…") contra el borde. Padding más chico por debajo
+ * de 720px le da al CTA el margen que necesita para no empujar el layout
+ * a un scroll horizontal; de 720px para arriba vuelve al padding normal. */
+.nav-shell .nav-cta {
+  padding: 8px 12px !important;
+}
+@media (min-width: 720px) {
+  .nav-shell .nav-cta {
+    padding: 10px 18px !important;
   }
 }
 .navbar-header {

@@ -39,7 +39,12 @@ export default function Logo({ href, size = 20, variant = "light" }: LogoProps) 
         gap: "1px",
         fontFamily: "var(--font-logo)",
         fontWeight: 800,
-        fontSize: `${size}px`,
+        // `size` is the desktop/max value — pedido del usuario: en mobile
+        // el wordmark completo ("Custodiado.cl") a tamaño fijo terminaba
+        // ocupando más de la mitad del header y empujando el CTA fuera de
+        // pantalla. `clamp()` lo achica en viewports angostos y llega al
+        // `size` pedido apenas hay espacio (~330px de ancho para el 4.5vw).
+        fontSize: `clamp(13px, 4.2vw, ${size}px)`,
         letterSpacing: "-0.01em",
       }}
     >
