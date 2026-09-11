@@ -21,7 +21,7 @@ describe("useWizardState", () => {
       item: "",
       amount: "",
       code: "",
-      bankInstitutionId: "",
+      bankName: "",
       account: "",
       accountType: "",
     });

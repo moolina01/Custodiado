@@ -43,7 +43,8 @@ export default function SignupFields({ onSuccess, footer, googleNext }: SignupFi
   const emailLooksValid = /\S+@\S+\.\S+/.test(email);
   const step1Valid = emailLooksValid && password.length >= 8;
 
-  const rutHint = rut && !isValidRut(rut) ? "Ese RUT no parece válido." : undefined;
+  const rutInvalid = rut !== "" && !isValidRut(rut);
+  const rutHint = rutInvalid ? "Ese RUT no parece válido." : "Debe ser tu RUT — el mismo con el que recibes o pagas en cada trato.";
   const step2Valid = name.trim() !== "" && isValidRut(rut);
 
   const handleContinue = (event: FormEvent) => {
@@ -120,7 +121,7 @@ export default function SignupFields({ onSuccess, footer, googleNext }: SignupFi
             placeholder="RUT (12.345.678-9)"
             info="Lo comparamos con la cuenta bancaria que uses en cada trato — así verificamos que la plata solo se mueva entre los dueños reales de las cuentas, nunca a un tercero."
           />
-          {rutHint && <div style={{ fontSize: "13px", color: colors.dangerText, marginTop: "7px" }}>{rutHint}</div>}
+          <div style={{ fontSize: "13px", color: rutInvalid ? colors.dangerText : colors.textFaint, marginTop: "7px" }}>{rutHint}</div>
         </div>
       </div>
 

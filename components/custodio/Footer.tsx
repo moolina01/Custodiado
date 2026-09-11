@@ -24,7 +24,7 @@ export default function Footer() {
         </div>
       </div>
       <div style={{ maxWidth: "1100px", margin: "32px auto 0", paddingTop: "20px", borderTop: "1px solid rgba(255,255,255,0.08)", fontSize: "12px", color: "#7C89A8" }}>
-        © 2026 Custodiado.cl — Procesado con Fintoc.
+        © 2026 Custodiado.cl — Procesado con Mercado Pago.
       </div>
     </footer>
   );

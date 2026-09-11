@@ -7,7 +7,7 @@ import { cancelTratoSchema } from "@/lib/tratos/validation";
 
 export const runtime = "nodejs";
 
-/** The buyer's cancel/refund. Body carries where to send the money back — collected lazily, only when a cancellation actually happens. */
+/** The buyer's cancel/refund. Mercado Pago refunds the payment back to however the buyer originally paid — no destination account to collect. */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
 
@@ -27,8 +27,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // SPEC 04: reemplaza el chequeo de RUT (SPEC 03) — la sesión activa
     // debe ser la cuenta dueña del lado "comprador" de este trato.
     const user = await requireSessionUser();
-    const { reason, ...destination } = parsed.data;
-    const result = await cancelTrato(code, { ...destination, reason }, user.id);
+    const result = await cancelTrato(code, user.id, parsed.data.reason);
 
     switch (result.outcome) {
       case "not_found":

@@ -9,8 +9,8 @@ import type { Role } from "../types";
  *
  * Mirrors the real `release`/`cancel` split: the action itself only moves
  * the trato to a `*_pending` status (like the real route does before the
- * Fintoc webhook resolves it); `getTratoRequest` — i.e. the next poll —
- * is what "delivers" the resolved status, via `pendingStatus` below.
+ * webhook resolves it); `getTratoRequest` — i.e. the next poll — is what
+ * "delivers" the resolved status, via `pendingStatus` below.
  */
 
 export type Trato = PublicTratoDto;
@@ -27,12 +27,20 @@ export class ApiError extends Error {
 }
 
 export type BankDetailsInput = {
-  bankInstitutionId: string;
+  bankName: string;
   accountNumber: string;
   accountType: string;
 };
 
-export type CancelInput = BankDetailsInput & { reason?: string };
+export type PayInput = {
+  token: string;
+  installments: number;
+  paymentMethodId: string;
+  identificationType: string;
+  identificationNumber: string;
+};
+
+export type CancelInput = { reason?: string };
 
 export type TratoWithSellerQrSecret = { trato: Trato; sellerQrSecret?: string };
 
@@ -91,7 +99,6 @@ export const createTratoRequest = vi.fn(
       releasedAt: null,
       cancelledAt: null,
       cancelReason: null,
-      refundReason: null,
       createdAt: now,
       updatedAt: now,
     };
@@ -129,26 +136,21 @@ export const submitBankDetailsRequest = vi.fn(async (_code: string, _input: Bank
   return trato;
 });
 
-export const getPlatformAccountRequest = vi.fn(async (): Promise<{ accountNumber: string }> => ({ accountNumber: "1234567890" }));
-
-export const simulatePaymentRequest = vi.fn(async (_code: string) => {
+// The real Checkout API submission — untestable in jsdom (no MP.js card
+// iframes here), so this just approves synchronously, mirroring what an
+// `approved` response from `POST /pay` does to the trato.
+export const payTratoRequest = vi.fn(async (_code: string, _input: PayInput): Promise<Trato> => {
   const current = requireTrato();
-  pendingStatus = "funds_held"; // delivered on the next poll, not synchronously — see useTrato.ts
-  return { simulated: true as const, transferId: "tr_test", amountClp: current.amountClp };
-});
-
-export const forceAdvancePaymentRequest = vi.fn(async (_code: string): Promise<Trato> => {
-  const current = requireTrato();
-  pendingStatus = null; // this resolves synchronously, unlike simulatePayment — no pending webhook left to deliver
   trato = { ...current, status: "funds_held", paidAt: new Date().toISOString() };
   return trato;
 });
 
-// SPEC 03 dev-only escape hatch — mirrors forceAdvancePaymentRequest's shape (resolves synchronously) but for the opposite outcome.
-export const simulateRutMismatchRequest = vi.fn(async (_code: string): Promise<Trato> => {
+// Dev/test-only escape hatch: resolves synchronously (unlike a real payment
+// left `in_process`, which would need a later poll to pick up).
+export const forceAdvancePaymentRequest = vi.fn(async (_code: string): Promise<Trato> => {
   const current = requireTrato();
-  trato = { ...current, status: "refund_pending", refundReason: "rut_mismatch" };
-  pendingStatus = "refunded";
+  pendingStatus = null;
+  trato = { ...current, status: "funds_held", paidAt: new Date().toISOString() };
   return trato;
 });
 
@@ -167,7 +169,7 @@ export const devQrTokenRequest = vi.fn(async (_code: string): Promise<QrTokenRes
 
 export const cancelTratoRequest = vi.fn(async (_code: string, _input: CancelInput): Promise<Trato> => {
   const current = requireTrato();
-  trato = { ...current, status: "refund_pending", refundReason: "buyer_requested" };
+  trato = { ...current, status: "refund_pending" };
   pendingStatus = "refunded";
   return trato;
 });

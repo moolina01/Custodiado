@@ -12,9 +12,9 @@ const TIPS = [
   "Nunca escanees un QR sin revisar antes el producto en persona.",
   "Escanea solo el QR de la app de la otra persona — nunca una foto o captura.",
   "La plata queda retenida hasta que los dos confirman la entrega, nunca se transfiere directo.",
-  "Tu RUT se compara con la cuenta bancaria que usas — la plata solo se mueve entre los dueños reales.",
+  "El pago se hace con tarjeta a través de Mercado Pago — nunca compartas los datos de tu tarjeta por otro medio.",
   "El código del trato es solo para ustedes dos — no lo compartas con nadie más.",
-  "El dinero lo procesa Fintoc directamente — nunca pasa por una cuenta de Custodiado.",
+  "El dinero lo procesa Mercado Pago directamente — nunca pasa por una cuenta personal de Custodiado.",
 ];
 
 const ROTATE_MS = 5000;

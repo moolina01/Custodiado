@@ -6,13 +6,12 @@ import { forceMarkFundsHeld, getTratoByCode } from "@/lib/tratos/repository";
 export const runtime = "nodejs";
 
 /**
- * Dev/test-only escape hatch, next to `simulate-payment`: that route asks
- * Fintoc's sandbox to fire a real `transfer.inbound.succeeded` webhook, but
- * if the local server isn't actually reachable from Fintoc (no tunnel
- * running, dashboard pointing at a stale URL), the webhook never lands and
- * the trato is stuck in `awaiting_payment` forever. This skips waiting for
- * it entirely and flips the trato to `funds_held` directly. Hard-disabled
- * outside development so this can never be reachable in production.
+ * Dev/test-only escape hatch: skips a real Mercado Pago payment entirely
+ * and flips the trato straight to `funds_held` — for when the local server
+ * isn't reachable from Mercado Pago's webhook (no tunnel running,
+ * dashboard pointing at a stale URL) and `POST /pay`'s synchronous
+ * response isn't being exercised either. Hard-disabled outside development
+ * so this can never be reachable in production.
  */
 export async function POST(_request: NextRequest, { params }: { params: Promise<{ code: string }> }) {
   if (process.env.NODE_ENV === "production") {

@@ -13,7 +13,7 @@ import FlujoFooter from "./ui/FlujoFooter";
 import ProgressBar from "./ui/ProgressBar";
 import StepTransition from "./ui/StepTransition";
 import TransferIdentityModal from "./ui/TransferIdentityModal";
-import { devQrTokenRequest, getPlatformAccountRequest } from "./api";
+import { devQrTokenRequest } from "./api";
 import { logoutRequest } from "@/components/auth/api";
 import { DEFAULT_ITEM_LABEL } from "./data";
 import { calculateFee, money, toAmountNumber } from "./format";
@@ -51,7 +51,7 @@ type FlujoAppProps = { initialRole: Role; initialCode?: string };
  * around: nothing the user clicks moves them forward by itself —
  * `useAdvanceOnTratoStatus` refetches the trato every few seconds and
  * auto-advances the local step once the *other* side's real action — the
- * counterpart accepting, a Fintoc webhook — actually changes its status
+ * counterpart accepting, a Checkout API payment confirming — actually changes its status
  * (`awaiting_payment`/`funds_held` for inbound payment, `released` for
  * outbound release). On `qr`, the buyer's camera (`useQrScanner`) decoding
  * the seller's live QR (`useSellerQrToken`) *does* call the backend
@@ -282,55 +282,58 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
   // separate payment-waiting screen in that flow — so the seller needs the
   // buyer to accept *and* pay (`funds_held`) before moving on.
   const isBuyerAwaitingAcceptance = screen === "crear-codigo" && isBuyer;
-  useAdvanceOnTratoStatus(isBuyerAwaitingAcceptance, tratoState.refresh, trato?.status, "awaiting_payment", wizard.goNext);
+  useAdvanceOnTratoStatus(isBuyerAwaitingAcceptance, tratoState.refresh, trato?.status, { status: "awaiting_payment", advance: wizard.goNext });
 
   const isSellerAwaitingPayment = screen === "crear-codigo" && !isBuyer;
-  useAdvanceOnTratoStatus(isSellerAwaitingPayment, tratoState.refresh, trato?.status, "funds_held", wizard.goNext);
-  // SPEC 03: the same wait can also end in an automatic refund instead of a
-  // payment — the buyer's transfer landed, but its sender RUT didn't match
-  // their declared identity. Same side-branch `wizard.confirmCancel()`
-  // lands on as a manual cancellation (see "cancelar" below), just reached
-  // without ever visiting the cancel form.
-  useAdvanceOnTratoStatus(isSellerAwaitingPayment, tratoState.refresh, trato?.status, "refunded", wizard.confirmCancel);
+  useAdvanceOnTratoStatus(isSellerAwaitingPayment, tratoState.refresh, trato?.status, { status: "funds_held", advance: wizard.goNext });
 
   // "pagar" (buyer) and "esperando-pago" (seller) both just wait for the
-  // same thing — the inbound webhook confirming the buyer's transfer — so
-  // they share one poll + one auto-advance instead of each screen
-  // reimplementing "check every few seconds".
+  // same thing — the buyer's Checkout API payment confirming — so they
+  // share one poll + one auto-advance instead of each screen
+  // reimplementing "check every few seconds". For the buyer this is mostly
+  // a safety net: `handlePay` below already advances synchronously on an
+  // `approved` response; this only matters if the payment came back
+  // `in_process`/`pending` and the webhook resolves it later.
   const isWaitingForPayment = screen === "pagar" || screen === "esperando-pago";
-  useAdvanceOnTratoStatus(isWaitingForPayment, tratoState.refresh, trato?.status, "funds_held", wizard.goNext);
-  // SPEC 03: same automatic-refund case as above, for the "crear" flow's
-  // buyer ("pagar") and the "codigo" flow's seller ("esperando-pago").
-  useAdvanceOnTratoStatus(isWaitingForPayment, tratoState.refresh, trato?.status, "refunded", wizard.confirmCancel);
-
-  const [platformAccountNumber, setPlatformAccountNumber] = useState("");
-  useEffect(() => {
-    if (screen !== "pagar" || platformAccountNumber) return;
-    getPlatformAccountRequest()
-      .then((res) => setPlatformAccountNumber(res.accountNumber))
-      .catch(() => {}); // shown as "Cargando…" in PagarStep if this never resolves; not worth its own error UI
-  }, [screen, platformAccountNumber]);
+  useAdvanceOnTratoStatus(isWaitingForPayment, tratoState.refresh, trato?.status, { status: "funds_held", advance: wizard.goNext });
 
   // "qr" polls for both roles: the seller is always just waiting, and the
   // buyer starts out waiting too (before they've clicked "Escanear") — the
   // poll itself is a harmless no-op either way, so there's no need to gate
-  // it on `trato?.status` as well.
+  // it on `trato?.status` as well. Two targets, not one: `released` is the
+  // happy path (either side scans successfully), but the buyer can also
+  // cancel from a *different* tab/device while the seller is sitting here
+  // waiting for a scan that will now never come — without watching for
+  // `refunded` too, the seller's screen just sat frozen on "qr" with no
+  // indication the trato was ever cancelled, until they manually reloaded.
   const isOnQrScreen = screen === "qr";
-  useAdvanceOnTratoStatus(isOnQrScreen, tratoState.refresh, trato?.status, "released", wizard.goNext);
+  useAdvanceOnTratoStatus(isOnQrScreen, tratoState.refresh, trato?.status, [
+    { status: "released", advance: wizard.goNext },
+    { status: "refunded", advance: wizard.confirmCancel },
+  ]);
+
+  // "banco" (seller submitting bank details, post-`funds_held`): had no
+  // polling at all before this — same gap as "qr" above, just earlier in
+  // the seller's flow. A buyer cancelling while the seller is filling this
+  // form out left them submitting bank details for a trato that no longer
+  // existed, with no feedback until they tried to move past this screen.
+  const isSellerOnBancoScreen = screen === "banco" && !isBuyer;
+  useAdvanceOnTratoStatus(isSellerOnBancoScreen, tratoState.refresh, trato?.status, { status: "refunded", advance: wizard.confirmCancel });
 
   // "cancelar" (buyer confirms cancellation): same wait-for-webhook shape,
   // but the final step is `wizard.confirmCancel()` — the cancel side-branch
   // (see useWizardState) rather than a plain `goNext()` — to land on
   // `cancelado`.
   const isOnCancelScreen = screen === "cancelar";
-  useAdvanceOnTratoStatus(isOnCancelScreen, tratoState.refresh, trato?.status, "refunded", wizard.confirmCancel);
+  useAdvanceOnTratoStatus(isOnCancelScreen, tratoState.refresh, trato?.status, { status: "refunded", advance: wizard.confirmCancel });
 
   const amountNumber = trato?.amountClp ?? toAmountNumber(fields.amount);
   const fee = trato?.feeClp ?? calculateFee(amountNumber);
   const summaryItem = trato?.item ?? (fields.item || DEFAULT_ITEM_LABEL);
   const summaryAmount = money(amountNumber);
   const feeDisplay = money(fee);
-  const totalAmount = isBuyer ? money(amountNumber + fee) : summaryAmount;
+  const totalAmountClp = amountNumber + fee;
+  const totalAmount = isBuyer ? money(totalAmountClp) : summaryAmount;
   const feeLineValue = totalAmount;
   const listoAmount = totalAmount;
   const counterpartName = (trato ? (isBuyer ? trato.sellerName : trato.buyerName) : null) ?? "—";
@@ -371,17 +374,33 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
 
   const handleBancoSubmit = async () => {
     const missing: string[] = [];
-    if (!fields.bankInstitutionId) missing.push("el banco");
+    if (!fields.bankName) missing.push("el banco");
     if (!fields.accountType) missing.push("el tipo de cuenta");
     if (!fields.account.trim()) missing.push("el número de cuenta");
     if (missing.length > 0) return setValidationError(missingFieldsMessage(missing, "guardar tus datos bancarios"));
 
     const saved = await tratoState.saveBankDetails({
-      bankInstitutionId: fields.bankInstitutionId,
+      bankName: fields.bankName,
       accountNumber: fields.account,
       accountType: fields.accountType,
     });
     if (saved) wizard.goNext();
+  };
+
+  // The buyer's card form submission (PagarStep, via MP.js) — resolves
+  // synchronously (approved/rejected) most of the time; `useAdvanceOnTratoStatus`
+  // above picks up the resulting `trato.status` change and advances the
+  // wizard, same as `forceAdvancePayment` already did, so there's nothing
+  // else to do here on success. A decline just leaves `tratoState.error`
+  // set, shown the same way any other action's failure would be.
+  const handlePay = (input: {
+    token: string;
+    installments: number;
+    paymentMethodId: string;
+    identificationType: string;
+    identificationNumber: string;
+  }) => {
+    tratoState.pay(input);
   };
 
   // Dev/test-only "Simular escaneo (dev)" button — pulls the seller's
@@ -395,13 +414,12 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
     tratoState.verifyQr(token);
   };
 
-  // Buyer's "Confirmar cancelación" — same idempotency story as the release, in lib/tratos/cancel.ts.
+  // Buyer's "Confirmar cancelación" — same idempotency story as the release,
+  // in lib/tratos/cancel.ts. No destination account to send along: a
+  // Mercado Pago refund goes back to whatever the buyer originally paid
+  // with.
   const handleCancelarConfirm = () => {
-    tratoState.cancel({
-      bankInstitutionId: fields.bankInstitutionId,
-      accountNumber: fields.account,
-      accountType: fields.accountType,
-    });
+    tratoState.cancel({});
   };
 
   const handleNext =
@@ -476,18 +494,16 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
             summaryAmount={summaryAmount}
             feeDisplay={feeDisplay}
             totalAmount={totalAmount}
+            totalAmountClp={totalAmountClp}
             feeLineValue={feeLineValue}
             listoAmount={listoAmount}
             counterpartName={counterpartName}
             whatsappHref={whatsappHref}
-            platformAccountNumber={platformAccountNumber}
-            onSimulatePayment={() => tratoState.simulatePayment()}
+            onPay={handlePay}
             onForceAdvancePayment={() => tratoState.forceAdvancePayment()}
-            onSimulateRutMismatch={() => tratoState.simulateRutMismatch()}
             isSubmitting={tratoState.isSubmitting}
             isRefundPending={trato?.status === "refund_pending"}
             isReleasePending={isBuyer && trato?.status === "release_pending"}
-            refundReason={trato?.refundReason ?? null}
             onCancelarConfirm={handleCancelarConfirm}
             qrImageDataUrl={sellerQr.qrImageDataUrl}
             qrCountdownLabel={sellerQr.countdownLabel}

@@ -1,9 +1,10 @@
 /**
- * Types mirroring `supabase/migrations/0001_create_tratos.sql`. Kept
- * separate from `components/flujo/types.ts`, which models the *frontend's*
- * UI-only concepts (Role, Screen, wizard form fields) — this file models
- * the actual database row and the server-side lifecycle, independent of
- * how any particular screen chooses to present it.
+ * Types mirroring `supabase/migrations/0001_create_tratos.sql` (as amended
+ * by later migrations, most recently `0007_migrate_fintoc_to_mercadopago.sql`).
+ * Kept separate from `components/flujo/types.ts`, which models the
+ * *frontend's* UI-only concepts (Role, Screen, wizard form fields) — this
+ * file models the actual database row and the server-side lifecycle,
+ * independent of how any particular screen chooses to present it.
  */
 
 export type TratoStatus =
@@ -17,7 +18,7 @@ export type TratoStatus =
   | "refunded"
   | "refund_failed";
 
-export type FintocAccountType = "checking_account" | "sight_account";
+export type BankAccountType = "checking_account" | "sight_account";
 
 export type CreatedByRole = "comprador" | "vendedor";
 
@@ -44,30 +45,38 @@ export interface TratoRow {
   seller_user_id: string | null;
 
   seller_rut: string | null;
-  seller_bank_institution_id: string | null;
+  seller_bank_name: string | null;
   seller_account_number: string | null;
-  seller_account_type: FintocAccountType | null;
+  seller_account_type: BankAccountType | null;
 
   // Opaque, once-issued secret held by whoever is `vendedor` — required to
   // request a QR token (GET /qr-token). Never sent in PublicTratoDto.
   seller_qr_secret: string | null;
 
-  fintoc_inbound_transfer_id: string | null;
+  // The buyer's Checkout API order (Orders API, `POST /v1/orders`) — set
+  // once it's approved (see `lib/tratos/repository.ts`'s
+  // `resolvePaymentApproved`, which replaced Fintoc's amount+time-window
+  // matching: Mercado Pago hands back the trato's code as
+  // `external_reference` on both the synchronous response and the
+  // webhook, so this is an exact match, not a best-effort one). Also the
+  // id a refund is issued against (`lib/mercadopago/refunds.ts`) — Orders
+  // API refunds by order id, not by a separate payment id.
+  mercadopago_order_id: string | null;
   paid_at: string | null;
 
   outbound_idempotency_key: string | null;
-  fintoc_outbound_transfer_id: string | null;
+  mercadopago_payout_id: string | null;
   released_at: string | null;
 
+  // Identity RUT only (SPEC 04) — there's no buyer bank-destination data
+  // anymore: a refund goes back to whatever the buyer originally paid
+  // with (`lib/mercadopago/refunds.ts`), not a separately collected
+  // account.
   buyer_rut: string | null;
-  buyer_bank_institution_id: string | null;
-  buyer_account_number: string | null;
-  buyer_account_type: FintocAccountType | null;
   refund_idempotency_key: string | null;
-  fintoc_refund_transfer_id: string | null;
+  mercadopago_refund_id: string | null;
   cancel_reason: string | null;
   cancelled_at: string | null;
-  refund_reason: RefundReason | null; // SPEC 03: null unless the trato ever entered a refund flow
 
   created_at: string;
   updated_at: string;
@@ -87,8 +96,3 @@ export interface CreateTratoInput {
   item: string;
   amountClp: number;
 }
-
-// SPEC 03: por qué un trato terminó en refund_pending/refunded — distingue
-// la cancelación manual del comprador (CancelarStep) de la devolución
-// automática por RUT del remitente no coincidente.
-export type RefundReason = "buyer_requested" | "rut_mismatch";

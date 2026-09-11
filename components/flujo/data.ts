@@ -31,7 +31,7 @@ export const QA_BUYER: [question: string, answer: string][] = [
   ],
   [
     "¿Pueden quedarse con mi plata?",
-    "No. El dinero se procesa vía Fintoc con mandato de recaudación legal. Solo tiene dos destinos: el vendedor o de vuelta a ti.",
+    "No. El dinero se procesa vía Mercado Pago, nunca pasa por una cuenta personal nuestra. Solo tiene dos destinos: el vendedor o de vuelta a ti.",
   ],
   [
     "¿Puedo cancelar el trato?",

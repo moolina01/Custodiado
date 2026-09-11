@@ -9,12 +9,12 @@ import {
   forceAdvancePaymentRequest,
   friendlyErrorMessage,
   getTratoRequest,
-  simulatePaymentRequest,
-  simulateRutMismatchRequest,
+  payTratoRequest,
   submitBankDetailsRequest,
   verifyQrRequest,
   type BankDetailsInput,
   type CancelInput,
+  type PayInput,
   type Trato,
 } from "./api";
 import { clearTratoCode, saveTratoCode } from "./persistence";
@@ -75,22 +75,25 @@ export function useTrato(role: Role) {
     }
   }, []);
 
-  const accept = useCallback(async (role: Role) => {
-    if (!trato) return null;
-    setIsSubmitting(true);
-    setError(null);
-    try {
-      const accepted = await acceptTratoRequest(trato.code, role);
-      setTrato(accepted.trato);
-      if (accepted.sellerQrSecret) setSellerQrSecret(accepted.sellerQrSecret);
-      return accepted.trato;
-    } catch (err) {
-      setError(friendlyErrorMessage(err, "No se pudo aceptar el trato."));
-      return null;
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [trato]);
+  const accept = useCallback(
+    async (role: Role) => {
+      if (!trato) return null;
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        const accepted = await acceptTratoRequest(trato.code, role);
+        setTrato(accepted.trato);
+        if (accepted.sellerQrSecret) setSellerQrSecret(accepted.sellerQrSecret);
+        return accepted.trato;
+      } catch (err) {
+        setError(friendlyErrorMessage(err, "No se pudo aceptar el trato."));
+        return null;
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [trato]
+  );
 
   const saveBankDetails = useCallback(
     async (input: BankDetailsInput) => {
@@ -111,34 +114,44 @@ export function useTrato(role: Role) {
     [trato]
   );
 
-  // Dev/test-only: pretends the buyer's transfer landed, so the real
-  // webhook loop can be exercised without an actual bank transfer. Doesn't
-  // touch `trato` itself — the webhook (via polling) is what moves it to
-  // `funds_held`, same as it would for a real payment.
-  const simulatePayment = useCallback(async () => {
-    if (!trato) return false;
-    setIsSubmitting(true);
-    setError(null);
-    try {
-      await simulatePaymentRequest(trato.code);
-      return true;
-    } catch (err) {
-      setError(friendlyErrorMessage(err, "No se pudo simular el pago."));
-      return false;
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [trato]);
+  // The buyer's Checkout API submission — unlike the old Fintoc flow (just
+  // "wait for a webhook", nothing to submit), this is a real request that
+  // resolves synchronously: `approved` moves the trato to `funds_held`
+  // right here (no polling needed for the happy path, though it's still
+  // running as a safety net — see `FlujoApp`), a decline surfaces
+  // `tratoState.error` so the buyer can retry with another card, and a
+  // rare `in_process` leaves the trato as `awaiting_payment` for the
+  // webhook to resolve later.
+  const pay = useCallback(
+    async (input: PayInput) => {
+      console.log("[useTrato] pay() called. trato:", trato?.code ?? null, "input:", input);
+      if (!trato) {
+        console.log("[useTrato] pay() aborted: trato is null.");
+        return null;
+      }
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        const updated = await payTratoRequest(trato.code, input);
+        console.log("[useTrato] payTratoRequest succeeded:", updated);
+        setTrato(updated);
+        return updated;
+      } catch (err) {
+        // Logged raw — `friendlyErrorMessage` may flatten away detail
+        // (status code, server message) needed to actually debug this.
+        console.error("[useTrato] payTratoRequest threw:", err);
+        setError(friendlyErrorMessage(err, "No se pudo procesar el pago."));
+        return null;
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [trato]
+  );
 
-  // The buyer's "Escanear el QR" click. Money doesn't move synchronously —
-  // this just puts the trato into `release_pending`; `released` only
-  // arrives once the outbound webhook resolves it (poll-driven, like
-  // `simulatePayment`/`refresh`). Safe to call again if it's already in
-  // flight — the backend treats a retry as a no-op or a safe resubmit.
-  // Dev/test-only escape hatch: for when the webhook the real payment
-  // (`simulatePayment`) is waiting on never lands locally — no tunnel
-  // running, dashboard pointing at a stale URL, etc. Unlike
-  // `simulatePayment`, this resolves synchronously to the already-updated
+  // Dev/test-only escape hatch: for when the webhook the real payment is
+  // waiting on never lands locally — no tunnel running, dashboard pointing
+  // at a stale URL, etc. Resolves synchronously to the already-updated
   // trato, so it doesn't need `refresh`/polling to pick up the change.
   const forceAdvancePayment = useCallback(async () => {
     if (!trato) return null;
@@ -150,29 +163,6 @@ export function useTrato(role: Role) {
       return updated;
     } catch (err) {
       setError(friendlyErrorMessage(err, "No se pudo forzar el avance del pago."));
-      return null;
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [trato]);
-
-  // Dev/test-only (SPEC 03): stands in for an inbound transfer whose sender
-  // RUT doesn't match the buyer's declared identity — same "doesn't resolve
-  // synchronously to the final state" shape as `simulatePayment`, since the
-  // route only submits the refund; `refunded` arrives on the next poll once
-  // the outbound webhook confirms it. Unlike `simulatePayment`, this one
-  // *does* update `trato` synchronously to `refund_pending`, matching what
-  // the route actually returns.
-  const simulateRutMismatch = useCallback(async () => {
-    if (!trato) return null;
-    setIsSubmitting(true);
-    setError(null);
-    try {
-      const updated = await simulateRutMismatchRequest(trato.code);
-      setTrato(updated);
-      return updated;
-    } catch (err) {
-      setError(friendlyErrorMessage(err, "No se pudo simular el RUT no coincidente."));
       return null;
     } finally {
       setIsSubmitting(false);
@@ -203,7 +193,8 @@ export function useTrato(role: Role) {
 
   // The buyer's "Confirmar cancelación". Same shape as `release`: doesn't
   // resolve synchronously — puts the trato into `refund_pending`, and
-  // `refunded` only arrives once the outbound webhook confirms it.
+  // `refunded` only arrives once the underlying payment's status confirms
+  // it (poll-driven, or the webhook).
   const cancel = useCallback(
     async (input: CancelInput) => {
       if (!trato) return null;
@@ -248,16 +239,19 @@ export function useTrato(role: Role) {
   // cualquier catch, así que un error de red pasajero al reabrir la
   // pestaña dejaba a la cuenta sin forma de recuperar el trato: la próxima
   // carga ya no tenía qué reintentar.
-  const restore = useCallback(async (code: string) => {
-    try {
-      const found = await getTratoRequest(code);
-      setTrato(found);
-      return found;
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 404) clearTratoCode(role);
-      return null;
-    }
-  }, [role]);
+  const restore = useCallback(
+    async (code: string) => {
+      try {
+        const found = await getTratoRequest(code);
+        setTrato(found);
+        return found;
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 404) clearTratoCode(role);
+        return null;
+      }
+    },
+    [role]
+  );
 
   // Clears the in-memory trato and its persisted code together — called
   // once the wizard's back to a blank "inicio" (see FlujoApp), so a
@@ -277,9 +271,8 @@ export function useTrato(role: Role) {
     lookup,
     accept,
     saveBankDetails,
-    simulatePayment,
+    pay,
     forceAdvancePayment,
-    simulateRutMismatch,
     verifyQr,
     cancel,
     refresh,

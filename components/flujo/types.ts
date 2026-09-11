@@ -35,7 +35,7 @@ export type WizardFields = {
   item: string;
   amount: string; // thousands-formatted as the user types it, e.g. "180.000"
   code: string;
-  bankInstitutionId: string; // Fintoc institution id, e.g. "cl_banco_estado" — see lib/fintoc/banks.ts
+  bankName: string; // e.g. "Banco Estado" — see lib/mercadopago/banks.ts
   account: string;
   accountType: string; // "checking_account" | "sight_account" | "" (not chosen yet)
 };

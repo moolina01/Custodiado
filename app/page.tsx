@@ -17,7 +17,7 @@ import ScrollReveal from "@/components/custodio/ScrollReveal";
 export const metadata: Metadata = {
   title: "Custodiado.cl — Vende y compra sin miedo por Marketplace",
   description:
-    "Custodiamos tu dinero hasta que veas el producto. Pago seguro entre particulares, procesado por Fintoc.",
+    "Custodiamos tu dinero hasta que veas el producto. Pago seguro entre particulares, procesado por Mercado Pago.",
 };
 
 // This page is just composition: each section is its own small component
