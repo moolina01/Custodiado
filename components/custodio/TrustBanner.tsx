@@ -55,7 +55,7 @@ export default function TrustBanner() {
             color: "#9BB0AB",
           }}
         >
-          <span>Procesada por Fintoc, entidad regulada</span>
+          <span>Procesada por Mercado Pago, entidad regulada</span>
           <span style={{ color: "#3F615A" }}>·</span>
           <span>Nunca pasa por una cuenta nuestra</span>
           <span style={{ color: "#3F615A" }}>·</span>

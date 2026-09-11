@@ -53,7 +53,7 @@ export default function HelpChat({ role, summaryLabel, isOpen, onOpen, onClose, 
               </div>
               <div>
                 <div style={{ fontSize: "15px", fontWeight: "700", lineHeight: "1.2" }}>Asistente Custodiado</div>
-                <div style={{ fontSize: "12.5px", color: colors.successAlt, fontWeight: "600" }}>En línea · responde al tiro</div>
+                <div style={{ fontSize: "12.5px", color: colors.successAlt, fontWeight: "600" }}>En línea · responde de inmediato</div>
               </div>
             </div>
             <button

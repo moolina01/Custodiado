@@ -31,7 +31,6 @@ function baseTrato(overrides: Partial<PanelTrato> = {}): PanelTrato {
     releasedAt: "2026-08-03T00:00:00.000Z",
     cancelledAt: null,
     cancelReason: null,
-    refundReason: null,
     createdAt: "2026-08-01T00:00:00.000Z",
     updatedAt: "2026-08-03T00:00:00.000Z",
     myRole: "comprador",

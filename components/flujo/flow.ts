@@ -67,10 +67,17 @@ export function screenForExistingTrato(status: TratoStatus, role: Role, isCreato
     case "awaiting_acceptance":
       return isCreator ? "crear-codigo" : "detalle";
     case "awaiting_payment":
-    case "refund_pending": // SPEC 03: the RUT-mismatch auto-refund starts from this same wait screen
       if (isBuyer) return "pagar";
       return isCreator ? "crear-codigo" : "esperando-pago";
     case "funds_held":
+    // A Mercado Pago refund only ever starts from `funds_held` (the
+    // buyer's own cancel — there's no Fintoc-era "sender RUT didn't
+    // match" case anymore, that could only ever happen pre-payment). So a
+    // refresh mid-`refund_pending` lands wherever `funds_held` itself
+    // would: "cancelar" isn't a real step `jumpToScreen` can target (it's
+    // reached via `cancelStage`, not `stepsFor` — see `useWizardState`),
+    // but this is the honest fallback either way.
+    case "refund_pending":
       if (isBuyer) return "retenidos";
       return hasSellerBankDetails ? "qr" : "banco";
     case "release_pending":
@@ -144,6 +151,7 @@ const ERROR_HEADING: Partial<Record<Screen, string>> = {
   "crear-datos": "No pudimos crear el trato",
   "codigo-ingresar": "No encontramos ese trato",
   detalle: "No pudimos aceptar el trato",
+  pagar: "No pudimos procesar el pago",
   banco: "No pudimos guardar tus datos",
   cancelar: "No pudimos cancelar el trato",
   qr: "No pudimos liberar el pago",

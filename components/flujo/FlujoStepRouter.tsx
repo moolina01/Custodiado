@@ -1,6 +1,5 @@
 import type { ReactNode, RefObject } from "react";
 import { COUNTERPART_LABEL } from "./data";
-import type { RefundReason } from "@/lib/tratos/types";
 import type { Role, Screen, WizardFields } from "./types";
 
 import InicioStep from "./steps/InicioStep";
@@ -40,18 +39,22 @@ export type FlujoStepContext = {
   summaryAmount: string;
   feeDisplay: string;
   totalAmount: string;
+  totalAmountClp: number;
   feeLineValue: string;
   listoAmount: string;
   counterpartName: string;
   whatsappHref: string;
-  platformAccountNumber: string;
-  onSimulatePayment: () => void;
+  onPay: (input: {
+    token: string;
+    installments: number;
+    paymentMethodId: string;
+    identificationType: string;
+    identificationNumber: string;
+  }) => void;
   onForceAdvancePayment: () => void;
-  onSimulateRutMismatch: () => void;
   isSubmitting: boolean;
   isRefundPending: boolean;
   isReleasePending: boolean;
-  refundReason: RefundReason | null;
   onCancelarConfirm: () => void;
   // Seller side of "qr" — from `useSellerQrToken`, gated behind an explicit
   // "Ya llegó el comprador" confirmation (see FlujoApp).
@@ -115,13 +118,12 @@ const STEP_RENDERERS: Record<Screen, StepRenderer> = {
   pagar: (ctx) => (
     <PagarStep
       totalAmount={ctx.totalAmount}
+      totalAmountClp={ctx.totalAmountClp}
       summaryAmount={ctx.summaryAmount}
       feeDisplay={ctx.feeDisplay}
-      accountNumber={ctx.platformAccountNumber}
-      onSimulatePayment={ctx.onSimulatePayment}
+      onPay={ctx.onPay}
       onForceAdvancePayment={ctx.onForceAdvancePayment}
-      onSimulateRutMismatch={ctx.onSimulateRutMismatch}
-      isSimulating={ctx.isSubmitting}
+      isSubmitting={ctx.isSubmitting}
     />
   ),
 
@@ -139,26 +141,10 @@ const STEP_RENDERERS: Record<Screen, StepRenderer> = {
   ),
 
   cancelar: (ctx) => (
-    <CancelarStep
-      summaryItem={ctx.summaryItem}
-      totalAmount={ctx.totalAmount}
-      fields={ctx.fields}
-      onFieldChange={ctx.onFieldChange}
-      isRefundPending={ctx.isRefundPending}
-      isSubmitting={ctx.isSubmitting}
-      onConfirm={ctx.onCancelarConfirm}
-    />
+    <CancelarStep summaryItem={ctx.summaryItem} totalAmount={ctx.totalAmount} isRefundPending={ctx.isRefundPending} isSubmitting={ctx.isSubmitting} onConfirm={ctx.onCancelarConfirm} />
   ),
 
-  cancelado: (ctx) => (
-    <CanceladoStep
-      role={ctx.role}
-      refundReason={ctx.refundReason}
-      summaryItem={ctx.summaryItem}
-      summaryAmount={ctx.summaryAmount}
-      totalAmount={ctx.totalAmount}
-    />
-  ),
+  cancelado: (ctx) => <CanceladoStep role={ctx.role} summaryItem={ctx.summaryItem} summaryAmount={ctx.summaryAmount} totalAmount={ctx.totalAmount} />,
 
   qr: (ctx) => (
     <QrStep

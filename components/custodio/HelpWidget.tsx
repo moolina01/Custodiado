@@ -35,7 +35,7 @@ const cardButtonStyle: React.CSSProperties = {
 /**
  * Floating help button that opens a small help-center shell — an "Inicio"
  * summary screen, a "Mensajes" thread and an "Ayuda" FAQ list — modeled
- * after always-on support widgets (Intercom/Fintoc-style).
+ * after always-on support widgets (Intercom-style).
  *
  * Everything here still runs scripted client-side (no backend, no real
  * agent on the other end): this pass is only the visual shell. Wiring it to
@@ -150,7 +150,7 @@ export default function HelpWidget() {
                 <button onClick={() => setTab("mensajes")} style={{ ...cardButtonStyle, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" }}>
                   <div>
                     <div style={{ fontSize: "15px", fontWeight: "700", color: colors.brandDeep }}>Hablar con nosotros</div>
-                    <div style={{ fontSize: "13px", color: colors.textMuted }}>Te respondemos al tiro</div>
+                    <div style={{ fontSize: "13px", color: colors.textMuted }}>Te respondemos de inmediato</div>
                   </div>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill={colors.accent}>
                     <path d="M7 4.5v15l13-7.5z" />
@@ -251,7 +251,7 @@ export default function HelpWidget() {
             )}
           </div>
 
-          {/* Bottom tab bar — Inicio / Mensajes / Ayuda, Fintoc-style. */}
+          {/* Bottom tab bar — Inicio / Mensajes / Ayuda. */}
           <div style={{ flexShrink: 0, display: "flex", borderTop: `1px solid ${colors.borderSoft}`, background: "#ffffff" }}>
             {TABS.map(({ id, label, icon }) => {
               const active = tab === id;

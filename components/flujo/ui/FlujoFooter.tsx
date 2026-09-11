@@ -5,9 +5,9 @@ import { WHATSAPP_SUPPORT_URL } from "../data";
 export default function FlujoFooter() {
   return (
     <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "8px 18px", marginTop: "28px", fontSize: "12.5px", color: colors.textFaint }}>
-      <span>Procesado por Fintoc</span>
+      <span>Procesado por Mercado Pago</span>
       <span style={{ color: colors.border }}>·</span>
-      <span>Mandato de recaudación legal</span>
+      <span>Pago con tarjeta, 100% seguro</span>
       <span style={{ color: colors.border }}>·</span>
       <a href={WHATSAPP_SUPPORT_URL} style={{ color: colors.textFaint }}>
         ¿Necesitas ayuda?

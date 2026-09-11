@@ -86,7 +86,7 @@ export const TESTIMONIALS: Testimonial[] = [
   },
   {
     quote:
-      '"Escaneamos el QR al momento de la entrega y me llegó la plata al tiro. No tuve que confiar en la palabra de nadie."',
+      '"Escaneamos el QR al momento de la entrega y me llegó la plata al instante. No tuve que confiar en la palabra de nadie."',
     initials: "PA",
     name: "Paula A.",
     role: "Vendedora · Concepción",
@@ -115,7 +115,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: "¿Pueden quedarse con mi plata?",
     answer:
-      "No. El dinero se procesa vía Fintoc bajo un mandato de recaudación legal — nunca pasa por una cuenta personal nuestra. Solo tiene dos destinos posibles: el vendedor o de vuelta al comprador.",
+      "No. El dinero se procesa vía Mercado Pago — nunca pasa por una cuenta personal nuestra. Solo tiene dos destinos posibles: el vendedor o de vuelta al comprador.",
   },
   {
     question: "¿Necesito descargar una app?",
@@ -140,7 +140,7 @@ export const QUICK_QUESTIONS: [question: string, answer: string][] = [
   ],
   [
     "¿Pueden quedarse con mi plata?",
-    "No. Se procesa vía Fintoc con mandato de recaudación legal: solo puede ir al vendedor o de vuelta al comprador.",
+    "No. Se procesa vía Mercado Pago: solo puede ir al vendedor o de vuelta al comprador.",
   ],
   [
     "¿Necesito descargar algo?",

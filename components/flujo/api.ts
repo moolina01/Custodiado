@@ -66,7 +66,7 @@ export function acceptTratoRequest(code: string, role: Role): Promise<TratoWithS
 // perfil al crear/aceptar; el servidor lo usa directo, no hace falta
 // reenviarlo acá.
 export type BankDetailsInput = {
-  bankInstitutionId: string;
+  bankName: string;
   accountNumber: string;
   accountType: string;
 };
@@ -78,23 +78,25 @@ export function submitBankDetailsRequest(code: string, input: BankDetailsInput):
   });
 }
 
-export function getPlatformAccountRequest(): Promise<{ accountNumber: string }> {
-  return request<{ accountNumber: string }>("/api/platform-account");
+/** The buyer's Checkout API submission — `token` is a single-use card token minted client-side by MP.js, never a raw card number. See the route handler. */
+export type PayInput = {
+  token: string;
+  installments: number;
+  paymentMethodId: string;
+  identificationType: string;
+  identificationNumber: string;
+};
+
+export function payTratoRequest(code: string, input: PayInput): Promise<Trato> {
+  return request<Trato>(`/api/tratos/${encodeURIComponent(code)}/pay`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
 }
 
-/** Dev/test-only: stands in for the buyer's real bank transfer — see the route handler. */
-export function simulatePaymentRequest(code: string): Promise<{ simulated: true; transferId: string; amountClp: number }> {
-  return request(`/api/tratos/${encodeURIComponent(code)}/simulate-payment`, { method: "POST" });
-}
-
-/** Dev/test-only escape hatch: skips waiting for the real webhook and flips the trato to `funds_held` directly — for when the local server has no reachable webhook endpoint. See the route handler. */
+/** Dev/test-only escape hatch: skips a real Mercado Pago payment and flips the trato to `funds_held` directly — for when the local server has no reachable webhook endpoint. See the route handler. */
 export function forceAdvancePaymentRequest(code: string): Promise<Trato> {
   return request<Trato>(`/api/tratos/${encodeURIComponent(code)}/force-advance-payment`, { method: "POST" });
-}
-
-/** Dev/test-only escape hatch (SPEC 03): simulates an inbound transfer whose sender RUT doesn't match the buyer's declared identity — the trato goes straight to `refund_pending`/`refunded` instead of `funds_held`. See the route handler. */
-export function simulateRutMismatchRequest(code: string): Promise<Trato> {
-  return request<Trato>(`/api/tratos/${encodeURIComponent(code)}/simulate-rut-mismatch`, { method: "POST" });
 }
 
 /** The buyer's camera decoding a valid QR — verifies the token and, if it checks out, triggers the real (test-mode) escrow release. Safe to call more than once. */
@@ -112,9 +114,9 @@ export function devQrTokenRequest(code: string): Promise<QrTokenResponse> {
   return request<QrTokenResponse>(`/api/tratos/${encodeURIComponent(code)}/dev-qr-token`);
 }
 
-export type CancelInput = BankDetailsInput & { reason?: string };
+export type CancelInput = { reason?: string };
 
-/** The buyer's "Confirmar cancelación" — triggers a real (test-mode) refund. Safe to call more than once. */
+/** The buyer's "Confirmar cancelación" — triggers a real (test-mode) refund, back to whatever the buyer originally paid with. Safe to call more than once. */
 export function cancelTratoRequest(code: string, input: CancelInput): Promise<Trato> {
   return request<Trato>(`/api/tratos/${encodeURIComponent(code)}/cancel`, { method: "POST", body: JSON.stringify(input) });
 }

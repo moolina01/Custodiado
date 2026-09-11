@@ -151,7 +151,7 @@ export default function Hero() {
           </Reveal>
 
           <Reveal as="div" delay={380} style={{ display: "flex", flexWrap: "wrap", gap: "8px 18px", marginTop: "18px", fontSize: "13px", color: colors.textMuted, fontWeight: "500" }}>
-            <span>Procesado por Fintoc</span>
+            <span>Procesado por Mercado Pago</span>
             <span style={{ color: "#B9C7C2" }}>·</span>
             <span>Nunca pasa por una cuenta nuestra</span>
             <span style={{ color: "#B9C7C2" }}>·</span>

@@ -3,11 +3,9 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { calculateFee } from "@/lib/pricing";
 import { generateTratoCode, normalizeTratoCode } from "@/lib/codes";
-import { sameRut } from "@/lib/rut";
 import { getProfileByUserId } from "@/lib/profiles/repository";
-import type { InboundCounterparty } from "@/lib/fintoc/webhookParsing";
 import type { BankDetailsPayload } from "./validation";
-import type { CreateTratoInput, CreatedByRole, FintocAccountType, TratoRow } from "./types";
+import type { CreateTratoInput, CreatedByRole, TratoRow } from "./types";
 
 // The trato's status when bank details may still be submitted/updated —
 // any time before the money has actually moved.
@@ -56,8 +54,8 @@ export async function createTrato(input: CreateTratoInput, userId: string): Prom
         seller_user_id: isBuyer ? null : userId,
         // SPEC 03: RUT de identidad, guardado de inmediato en la misma
         // columna que el RUT de la cuenta bancaria usa más tarde (seller_rut
-        // en bank-details, buyer_rut en cancel) — ahora viene del perfil, no
-        // de lo que el cliente haya tipeado.
+        // en bank-details) — ahora viene del perfil, no de lo que el
+        // cliente haya tipeado.
         buyer_rut: isBuyer ? profile.rut : null,
         seller_rut: isBuyer ? null : profile.rut,
         seller_qr_secret: isBuyer ? null : generateSellerQrSecret(),
@@ -180,9 +178,9 @@ export type BankDetailsResult =
 
 /**
  * The seller submits (or edits) their payout details — allowed any time
- * before the release/refund transfer has actually been submitted to
- * Fintoc, so a typo can still be fixed. No status change: this fills in
- * fields the release step (M6) will read from later.
+ * before the release has actually been submitted to Mercado Pago Payouts,
+ * so a typo can still be fixed. No status change: this fills in fields the
+ * release step (`lib/tratos/release.ts`) will read from later.
  *
  * SPEC 04: replaces SPEC 03's RUT-comparison check with an ownership
  * check — the session calling this must be the same account whose
@@ -202,7 +200,7 @@ export async function submitSellerBankDetails(rawCode: string, input: BankDetail
   const { data, error } = await db
     .from(TABLE)
     .update({
-      seller_bank_institution_id: input.bankInstitutionId,
+      seller_bank_name: input.bankName,
       seller_account_number: input.accountNumber,
       seller_account_type: input.accountType,
     })
@@ -214,131 +212,79 @@ export async function submitSellerBankDetails(rawCode: string, input: BankDetail
   return { outcome: "saved", trato: data as TratoRow };
 }
 
-// How far back to look for a trato waiting on the exact amount an inbound
-// transfer just brought in — see `matchInboundPayment` for why this exists.
-const INBOUND_MATCH_WINDOW_MINUTES = 30;
-
-export type InboundMatchResult =
-  | { outcome: "matched"; trato: TratoRow }
-  | { outcome: "rut_mismatch"; trato: TratoRow }
-  | { outcome: "already_processed"; trato: TratoRow }
-  | { outcome: "no_match" };
-
-// SPEC 03: the sender's counterparty data is only usable to auto-refund if
-// it's complete enough for `createOutboundTransfer` — a `holder_id` alone
-// isn't a bank account. If Fintoc reports a RUT but not the rest, there's
-// nowhere to safely send the money back to, so this is treated the same as
-// "no counterparty reported" (proceed to `funds_held`, same as before this
-// spec) rather than stranding the trato in `refund_pending` forever.
-function hasRefundableCounterparty(
-  counterparty: InboundCounterparty | undefined
-): counterparty is InboundCounterparty & { accountNumber: string; accountType: FintocAccountType; institutionId: string } {
-  return Boolean(counterparty?.accountNumber && counterparty.accountType && counterparty.institutionId);
-}
-
-const RUT_MISMATCH_CANCEL_REASON = "La transferencia no vino de una cuenta a tu nombre. El dinero se devolvió automáticamente.";
+export type PaymentResolution =
+  | { outcome: "not_found" }
+  | { outcome: "matched"; trato: TratoRow } // just transitioned
+  | { outcome: "already_settled"; trato: TratoRow }; // idempotent replay, or a status this event no longer applies to
 
 /**
- * MVP matching for `transfer.inbound.succeeded`: Fintoc's webhook payload
- * doesn't expose a reference we can tie back to one specific trato (open
- * question in the escrow plan — all inbound transfers land in the same
- * shared account), so this matches by exact pending amount among tratos
- * `awaiting_payment` within a short window. Ambiguous or zero matches are
- * left in `fintoc_webhook_events` (`matched_trato_id` null) for manual
- * reconciliation — there's no admin UI for that yet.
+ * Flips `awaiting_payment -> funds_held` once a Checkout API payment comes
+ * back `approved` — called both synchronously right after
+ * `createCardPayment` (`app/api/tratos/[code]/pay/route.ts`) and from the
+ * webhook (`app/api/webhooks/mercadopago/route.ts`), whichever lands
+ * first; the other is then just an idempotent replay via the atomic status
+ * guard below.
  *
- * SPEC 03: `senderCounterparty` is whatever Fintoc reported about who sent
- * the transfer (may be absent — see `hasRefundableCounterparty` above). If
- * it's present, complete, and its RUT doesn't match the candidate's
- * `buyer_rut`, the trato never becomes `funds_held` — it goes straight to
- * `refund_pending`, with the sender's own reported account as the refund
- * destination (nothing the buyer has to fill in).
+ * Replaces Fintoc's `matchInboundPayment`: that matched inbound transfers
+ * by exact pending amount within a time window because Fintoc's webhook
+ * payload had no reference back to one specific trato. Mercado Pago hands
+ * the trato's own code back as `external_reference` on every payment, so
+ * this matches by `code` directly — exact, not best-effort — and there's
+ * no RUT-mismatch branch to speak of: a Checkout API payment is inherently
+ * "from the buyer who submitted the form", not a bank transfer whose
+ * sender could be anyone.
  */
-export async function matchInboundPayment(
-  transferId: string,
-  amountClp: number,
-  senderCounterparty?: InboundCounterparty
-): Promise<InboundMatchResult> {
+export async function resolvePaymentApproved(rawCode: string, orderId: string): Promise<PaymentResolution> {
   const db = getSupabaseAdmin();
-
-  // A retried webhook for a transfer we already matched (or already
-  // auto-refunded — see below) — idempotent no-op.
-  const { data: already } = await db.from(TABLE).select().eq("fintoc_inbound_transfer_id", transferId).maybeSingle();
-  if (already) return { outcome: "already_processed", trato: already as TratoRow };
-
-  const since = new Date(Date.now() - INBOUND_MATCH_WINDOW_MINUTES * 60_000).toISOString();
-  const { data: candidates, error } = await db
+  const code = normalizeTratoCode(rawCode);
+  const { data, error } = await db
     .from(TABLE)
-    .select()
-    .eq("status", "awaiting_payment")
-    .gte("created_at", since)
-    .order("created_at", { ascending: true });
-
-  if (error) throw new Error(`No se pudo buscar coincidencias de pago: ${error.message}`);
-
-  const match = (candidates as TratoRow[] | null)?.find((t) => t.amount_clp + t.fee_clp === amountClp);
-  if (!match) return { outcome: "no_match" };
-
-  if (hasRefundableCounterparty(senderCounterparty) && !sameRut(senderCounterparty.holderId, match.buyer_rut ?? "")) {
-    const { data: refunded, error: refundError } = await db
-      .from(TABLE)
-      .update({
-        status: "refund_pending",
-        refund_idempotency_key: randomUUID(),
-        // Dedupe key for a retried delivery of this same webhook event —
-        // same column `funds_held` would have used, just a different
-        // outcome this time.
-        fintoc_inbound_transfer_id: transferId,
-        // Overwrites the buyer's declared identity name/RUT/account with the
-        // sender's actual ones — fine, this trato is headed to a terminal
-        // state and these fields aren't read for anything else afterward.
-        // `buyer_name` matters here: `submitRefundToFintoc` (lib/tratos/
-        // cancel.ts) sends it to Fintoc as the outbound transfer's
-        // `holder_name`, which must match the account it's actually going
-        // to — the sender's, not the buyer's declared one.
-        buyer_name: senderCounterparty.holderName ?? match.buyer_name,
-        buyer_rut: senderCounterparty.holderId,
-        buyer_bank_institution_id: senderCounterparty.institutionId,
-        buyer_account_number: senderCounterparty.accountNumber,
-        buyer_account_type: senderCounterparty.accountType,
-        refund_reason: "rut_mismatch",
-        cancel_reason: RUT_MISMATCH_CANCEL_REASON,
-        cancelled_at: new Date().toISOString(),
-      })
-      .eq("id", match.id)
-      .eq("status", "awaiting_payment") // atomic guard against a concurrent match
-      .select()
-      .maybeSingle();
-
-    if (refundError) throw new Error(`No se pudo iniciar la devolución automática: ${refundError.message}`);
-    if (!refunded) return { outcome: "no_match" }; // lost a race — another delivery matched it first
-    return { outcome: "rut_mismatch", trato: refunded as TratoRow };
-  }
-
-  const { data: updated, error: updateError } = await db
-    .from(TABLE)
-    .update({ status: "funds_held", fintoc_inbound_transfer_id: transferId, paid_at: new Date().toISOString() })
-    .eq("id", match.id)
-    .eq("status", "awaiting_payment") // atomic guard against a concurrent match
+    .update({ status: "funds_held", mercadopago_order_id: orderId, paid_at: new Date().toISOString() })
+    .eq("code", code)
+    .eq("status", "awaiting_payment") // atomic guard against a concurrent/duplicate resolution
     .select()
     .maybeSingle();
 
-  if (updateError) throw new Error(`No se pudo marcar el trato como pagado: ${updateError.message}`);
-  if (!updated) return { outcome: "no_match" }; // lost a race — another delivery matched it first
-  return { outcome: "matched", trato: updated as TratoRow };
+  if (error) throw new Error(`No se pudo marcar el trato como pagado: ${error.message}`);
+  if (data) return { outcome: "matched", trato: data as TratoRow };
+
+  const existing = await getTratoByCode(code);
+  return existing ? { outcome: "already_settled", trato: existing } : { outcome: "not_found" };
+}
+
+/**
+ * Flips `refund_pending -> refunded` once the underlying order's status
+ * (re-fetched via `getOrder`) comes back `refunded` — a Mercado Pago
+ * refund doesn't need a separate transfer to a destination account (there
+ * is none, see `lib/mercadopago/refunds.ts`), just confirmation that the
+ * original order itself now reads as refunded.
+ */
+export async function resolvePaymentRefunded(rawCode: string): Promise<PaymentResolution> {
+  const db = getSupabaseAdmin();
+  const code = normalizeTratoCode(rawCode);
+  const { data, error } = await db
+    .from(TABLE)
+    .update({ status: "refunded" })
+    .eq("code", code)
+    .eq("status", "refund_pending") // atomic guard against a concurrent/duplicate resolution
+    .select()
+    .maybeSingle();
+
+  if (error) throw new Error(`No se pudo confirmar el reembolso: ${error.message}`);
+  if (data) return { outcome: "matched", trato: data as TratoRow };
+
+  const existing = await getTratoByCode(code);
+  return existing ? { outcome: "already_settled", trato: existing } : { outcome: "not_found" };
 }
 
 /**
  * Dev/test-only escape hatch: flips `awaiting_payment -> funds_held`
- * directly, without a matching Fintoc transfer at all. Exists for local
+ * directly, without a real Mercado Pago payment at all. Exists for local
  * development when the webhook endpoint isn't actually reachable from
- * Fintoc (no tunnel running, dashboard still pointing at a stale URL,
- * etc.) — `simulate-payment` asks Fintoc's sandbox to fire the real
- * `transfer.inbound.succeeded` webhook, but if that webhook never lands,
- * the trato is stuck. Marked with a `dev_forced_` transfer id so it's
- * obviously not a real Fintoc transfer if inspected later; harmless if a
- * delayed real webhook shows up afterwards — `matchInboundPayment` only
- * looks at tratos still `awaiting_payment`, so it just finds no match.
+ * Mercado Pago (no tunnel running, dashboard still pointing at a stale
+ * URL) and the synchronous response from `createCardPayment` isn't being
+ * exercised either. Marked with a `dev_forced_` payment id so it's
+ * obviously not a real one if inspected later.
  */
 export async function forceMarkFundsHeld(rawCode: string): Promise<TratoRow | null> {
   const db = getSupabaseAdmin();
@@ -347,7 +293,7 @@ export async function forceMarkFundsHeld(rawCode: string): Promise<TratoRow | nu
     .from(TABLE)
     .update({
       status: "funds_held",
-      fintoc_inbound_transfer_id: `dev_forced_${randomUUID()}`,
+      mercadopago_order_id: `dev_forced_${randomUUID()}`,
       paid_at: new Date().toISOString(),
     })
     .eq("code", code)
@@ -358,97 +304,54 @@ export async function forceMarkFundsHeld(rawCode: string): Promise<TratoRow | nu
   return (data as TratoRow | null) ?? null;
 }
 
-/**
- * SPEC 03, dev/test-only escape hatch, mirrors `forceMarkFundsHeld` above
- * but for the opposite outcome: flips `awaiting_payment -> refund_pending`
- * directly, as `matchInboundPayment`'s mismatch branch would, using a fixed
- * dummy sender instead of a real one — Fintoc's sandbox
- * (`simulate.receiveTransfer`) doesn't let a simulated transfer report its
- * own `counterparty`, so there's no way to make a real mismatch happen in
- * dev. The caller is expected to call `resumeRefund` (lib/tratos/cancel.ts)
- * right after, same as the webhook route does for a real mismatch.
- */
-export async function forceRutMismatchRefund(
-  rawCode: string,
-  senderCounterparty: { holderId: string; holderName: string; accountNumber: string; accountType: FintocAccountType; institutionId: string }
-): Promise<TratoRow | null> {
-  const db = getSupabaseAdmin();
-  const code = normalizeTratoCode(rawCode);
-  const { data, error } = await db
-    .from(TABLE)
-    .update({
-      status: "refund_pending",
-      refund_idempotency_key: randomUUID(),
-      fintoc_inbound_transfer_id: `dev_forced_${randomUUID()}`,
-      buyer_name: senderCounterparty.holderName,
-      buyer_rut: senderCounterparty.holderId,
-      buyer_bank_institution_id: senderCounterparty.institutionId,
-      buyer_account_number: senderCounterparty.accountNumber,
-      buyer_account_type: senderCounterparty.accountType,
-      refund_reason: "rut_mismatch",
-      cancel_reason: RUT_MISMATCH_CANCEL_REASON,
-      cancelled_at: new Date().toISOString(),
-    })
-    .eq("code", code)
-    .eq("status", "awaiting_payment") // atomic guard, same shape as the other transitions
-    .select()
-    .maybeSingle();
-  if (error) throw new Error(`No se pudo simular el RUT no coincidente: ${error.message}`);
-  return (data as TratoRow | null) ?? null;
+// ⚠️ See the warning atop lib/mercadopago/payouts.ts: Payouts' real status
+// vocabulary wasn't confirmed against live docs while this was built.
+// Unrecognized statuses deliberately fall through to "pending" (no change,
+// logged by the caller) instead of guessing wrong and marking a trato
+// released_at/release_failed incorrectly — fix this mapping once a real
+// Payouts webhook payload has actually been seen.
+export type PayoutOutcome = "succeeded" | "failed" | "pending";
+
+export function mapPayoutStatusToOutcome(status: string | undefined): PayoutOutcome {
+  const s = (status ?? "").toLowerCase();
+  if (["processed", "success", "succeeded", "paid", "completed"].includes(s)) return "succeeded";
+  if (["error", "rejected", "returned", "failed", "cancelled"].includes(s)) return "failed";
+  return "pending";
 }
 
-// "returned" = the destination bank rejected the transfer (Fintoc's actual
-// Chile event name — plan-escrow.md called this "rejected", which isn't a
-// real Fintoc event; verified against docs.fintoc.com's live event list).
-export type OutboundOutcome = "succeeded" | "returned" | "failed";
-
 /**
- * Resolves `transfer.outbound.*` webhooks — could be either the seller
- * release (M6) or a buyer refund (M7), whichever `fintoc_*_transfer_id`
- * column matches. Returns `null` if no trato references this transfer id
- * (nothing for us to do; not an error).
+ * Resolves a Payouts webhook for the seller release — flips
+ * `release_pending -> released`/`release_failed` depending on
+ * `mapPayoutStatusToOutcome`'s reading of the payout's status. Returns
+ * `null` if no trato references this payout id (nothing for us to do; not
+ * an error).
  */
-export async function resolveOutboundTransfer(transferId: string, outcome: OutboundOutcome): Promise<TratoRow | null> {
+export async function resolveOutboundPayout(payoutId: string, outcome: PayoutOutcome): Promise<TratoRow | null> {
+  if (outcome === "pending") return null; // nothing resolved yet — wait for a later notification
   const db = getSupabaseAdmin();
 
-  const { data: releaseMatch } = await db.from(TABLE).select().eq("fintoc_outbound_transfer_id", transferId).maybeSingle();
-  if (releaseMatch) {
-    const nextStatus = outcome === "succeeded" ? "released" : "release_failed";
-    const { data, error } = await db
-      .from(TABLE)
-      .update({ status: nextStatus, ...(outcome === "succeeded" ? { released_at: new Date().toISOString() } : {}) })
-      .eq("id", releaseMatch.id)
-      .eq("status", "release_pending") // atomic guard; already-resolved deliveries just no-op below
-      .select()
-      .maybeSingle();
-    if (error) throw new Error(`No se pudo actualizar la liberación: ${error.message}`);
-    return (data as TratoRow | null) ?? (releaseMatch as TratoRow);
-  }
+  const { data: match } = await db.from(TABLE).select().eq("mercadopago_payout_id", payoutId).maybeSingle();
+  if (!match) return null;
 
-  const { data: refundMatch } = await db.from(TABLE).select().eq("fintoc_refund_transfer_id", transferId).maybeSingle();
-  if (refundMatch) {
-    const nextStatus = outcome === "succeeded" ? "refunded" : "refund_failed";
-    const { data, error } = await db
-      .from(TABLE)
-      .update({ status: nextStatus })
-      .eq("id", refundMatch.id)
-      .eq("status", "refund_pending")
-      .select()
-      .maybeSingle();
-    if (error) throw new Error(`No se pudo actualizar el reembolso: ${error.message}`);
-    return (data as TratoRow | null) ?? (refundMatch as TratoRow);
-  }
-
-  return null;
+  const nextStatus = outcome === "succeeded" ? "released" : "release_failed";
+  const { data, error } = await db
+    .from(TABLE)
+    .update({ status: nextStatus, ...(outcome === "succeeded" ? { released_at: new Date().toISOString() } : {}) })
+    .eq("id", match.id)
+    .eq("status", "release_pending") // atomic guard; already-resolved deliveries just no-op below
+    .select()
+    .maybeSingle();
+  if (error) throw new Error(`No se pudo actualizar la liberación: ${error.message}`);
+  return (data as TratoRow | null) ?? (match as TratoRow);
 }
 
 /**
  * Atomically flips `funds_held -> release_pending` and mints the
- * idempotency key that (a) makes the upcoming Fintoc call safe to retry and
- * (b) is what the "already in progress, don't call Fintoc again" check in
- * `lib/tratos/release.ts` relies on. Returns `null` if the trato wasn't in
- * `funds_held` (lost a race, or the caller's state was stale) — the caller
- * re-reads the row to decide what to do next.
+ * idempotency key that (a) makes the upcoming Payouts call safe to retry
+ * and (b) is what the "already in progress, don't call Mercado Pago again"
+ * check in `lib/tratos/release.ts` relies on. Returns `null` if the trato
+ * wasn't in `funds_held` (lost a race, or the caller's state was stale) —
+ * the caller re-reads the row to decide what to do next.
  */
 export async function beginRelease(rawCode: string): Promise<TratoRow | null> {
   const db = getSupabaseAdmin();
@@ -464,32 +367,22 @@ export async function beginRelease(rawCode: string): Promise<TratoRow | null> {
   return (data as TratoRow | null) ?? null;
 }
 
-/** Records which Fintoc transfer a release attempt actually produced — the webhook later resolves the trato by this id. */
-export async function attachOutboundTransfer(tratoId: string, transferId: string): Promise<TratoRow> {
+/** Records which Payouts id a release attempt actually produced — the webhook later resolves the trato by this id. */
+export async function attachPayout(tratoId: string, payoutId: string): Promise<TratoRow> {
   const db = getSupabaseAdmin();
-  const { data, error } = await db.from(TABLE).update({ fintoc_outbound_transfer_id: transferId }).eq("id", tratoId).select().single();
-  if (error) throw new Error(`No se pudo registrar la transferencia: ${error.message}`);
+  const { data, error } = await db.from(TABLE).update({ mercadopago_payout_id: payoutId }).eq("id", tratoId).select().single();
+  if (error) throw new Error(`No se pudo registrar la liberación: ${error.message}`);
   return data as TratoRow;
 }
 
-// SPEC 04: ya no lleva `rut` — el RUT de destino del reembolso es
-// `existing.buyer_rut`, ya guardado al crear/aceptar desde el perfil de la
-// cuenta, y este update no lo toca (queda como estaba).
-export type RefundDestination = {
-  bankInstitutionId: string;
-  accountNumber: string;
-  accountType: TratoRow["seller_account_type"];
-  reason?: string;
-};
-
 /**
- * Atomically flips `funds_held -> refund_pending`, saves where to send the
- * buyer's money back (collected lazily — there's no "reverse this specific
- * inbound transfer" primitive, see the escrow plan's open questions), and
- * mints the refund's idempotency key in the same update. Mirrors
- * `beginRelease` — same retry-safety story via `lib/tratos/cancel.ts`.
+ * Atomically flips `funds_held -> refund_pending` and mints the refund's
+ * idempotency key in the same update. Mirrors `beginRelease` — same
+ * retry-safety story via `lib/tratos/cancel.ts`. Unlike the Fintoc-era
+ * version, doesn't collect a destination account: a Mercado Pago refund
+ * goes back to the payment's own original payment method.
  */
-export async function beginRefund(rawCode: string, destination: RefundDestination): Promise<TratoRow | null> {
+export async function beginRefund(rawCode: string, reason?: string): Promise<TratoRow | null> {
   const db = getSupabaseAdmin();
   const code = normalizeTratoCode(rawCode);
   const { data, error } = await db
@@ -497,10 +390,7 @@ export async function beginRefund(rawCode: string, destination: RefundDestinatio
     .update({
       status: "refund_pending",
       refund_idempotency_key: randomUUID(),
-      buyer_bank_institution_id: destination.bankInstitutionId,
-      buyer_account_number: destination.accountNumber,
-      buyer_account_type: destination.accountType,
-      cancel_reason: destination.reason ?? null,
+      cancel_reason: reason ?? null,
       cancelled_at: new Date().toISOString(),
     })
     .eq("code", code)
@@ -511,10 +401,10 @@ export async function beginRefund(rawCode: string, destination: RefundDestinatio
   return (data as TratoRow | null) ?? null;
 }
 
-/** Records which Fintoc transfer a refund attempt actually produced — the webhook later resolves the trato by this id. */
-export async function attachRefundTransfer(tratoId: string, transferId: string): Promise<TratoRow> {
+/** Records which Mercado Pago refund id a refund attempt actually produced — resolved to `refunded` once the underlying payment's status confirms it (`resolvePaymentRefunded`). */
+export async function attachRefund(tratoId: string, refundId: string): Promise<TratoRow> {
   const db = getSupabaseAdmin();
-  const { data, error } = await db.from(TABLE).update({ fintoc_refund_transfer_id: transferId }).eq("id", tratoId).select().single();
-  if (error) throw new Error(`No se pudo registrar la transferencia de reembolso: ${error.message}`);
+  const { data, error } = await db.from(TABLE).update({ mercadopago_refund_id: refundId }).eq("id", tratoId).select().single();
+  if (error) throw new Error(`No se pudo registrar el reembolso: ${error.message}`);
   return data as TratoRow;
 }

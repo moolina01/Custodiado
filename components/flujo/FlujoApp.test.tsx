@@ -30,7 +30,7 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/flujo",
 }));
 
-const { __resetMockApi, __setMockTrato, acceptTratoRequest, verifyQrRequest, simulatePaymentRequest, getTratoRequest, ApiError } = await import(
+const { __resetMockApi, __setMockTrato, acceptTratoRequest, verifyQrRequest, forceAdvancePaymentRequest, getTratoRequest, ApiError } = await import(
   "./__mocks__/api"
 );
 
@@ -54,7 +54,6 @@ function seedTrato(overrides: Partial<Trato> = {}) {
     releasedAt: null,
     cancelledAt: null,
     cancelReason: null,
-    refundReason: null,
     createdAt: now,
     updatedAt: now,
     ...overrides,
@@ -70,9 +69,9 @@ async function advancePoll() {
   });
 }
 
-function fillBankFields(bankInstitutionId: string, accountType: string, accountNumber: string) {
+function fillBankFields(bankName: string, accountType: string, accountNumber: string) {
   const [bankSelect, accountTypeSelect] = screen.getAllByRole("combobox");
-  fireEvent.change(bankSelect, { target: { value: bankInstitutionId } });
+  fireEvent.change(bankSelect, { target: { value: bankName } });
   fireEvent.change(accountTypeSelect, { target: { value: accountType } });
   fireEvent.change(screen.getByPlaceholderText("000123456789"), { target: { value: accountNumber } });
 }
@@ -116,12 +115,16 @@ describe("FlujoApp", () => {
       await acceptTratoRequest("ABC123", "vendedor");
     });
     await advancePoll();
-    expect(screen.getByText("Transfiere a la cuenta de custodia")).toBeInTheDocument();
+    expect(screen.getByText("Paga con tarjeta")).toBeInTheDocument();
 
+    // The real path is a Checkout API card form (MP.js) — untestable in
+    // jsdom (no real card-tokenizing iframes here, same class of gap as
+    // the QR camera scan below). The dev-only "Forzar avance" button drives
+    // the exact same `funds_held` transition a real approved payment would.
     await act(async () => {
-      fireEvent.click(screen.getByText("Simular transferencia (Fintoc test)"));
+      fireEvent.click(screen.getByText("Forzar avance (sin tarjeta, sin esperar el webhook)"));
     });
-    await advancePoll(); // inbound webhook, delivered on the next poll
+    await advancePoll();
     expect(screen.getByText("Coordinen la entrega")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Ya nos juntamos"));
@@ -157,12 +160,12 @@ describe("FlujoApp", () => {
     // seller's own poll pick it up.
     await act(async () => {
       await acceptTratoRequest("ABC123", "comprador");
-      await simulatePaymentRequest("ABC123");
+      await forceAdvancePaymentRequest("ABC123");
     });
     await advancePoll();
     expect(screen.getByText("¿Dónde te depositamos?")).toBeInTheDocument();
 
-    fillBankFields("cl_banco_estado", "checking_account", "000123456789");
+    fillBankFields("Banco Estado", "checking_account", "000123456789");
     await act(async () => {
       fireEvent.click(screen.getByText("Guardar y continuar")); // calls submitBankDetailsRequest
     });
@@ -192,7 +195,7 @@ describe("FlujoApp", () => {
     });
     await advancePoll();
     await act(async () => {
-      fireEvent.click(screen.getByText("Simular transferencia (Fintoc test)"));
+      fireEvent.click(screen.getByText("Forzar avance (sin tarjeta, sin esperar el webhook)"));
     });
     await advancePoll();
     expect(screen.getByText("Coordinen la entrega")).toBeInTheDocument();
@@ -200,10 +203,9 @@ describe("FlujoApp", () => {
     fireEvent.click(screen.getByText("Cancelar el trato y recuperar mi plata"));
     expect(screen.getByText("Cancelar el trato")).toBeInTheDocument();
 
+    // No form to fill anymore — a Mercado Pago refund goes back to
+    // whatever the buyer originally paid with, nothing to choose here.
     const confirmButton = screen.getByText("Confirmar cancelación");
-    expect(confirmButton).toBeDisabled();
-
-    fillBankFields("cl_banco_estado", "checking_account", "000123456789");
     expect(confirmButton).toBeEnabled();
 
     await act(async () => {
@@ -211,7 +213,7 @@ describe("FlujoApp", () => {
     });
     expect(screen.getByText("Procesando la devolución…")).toBeInTheDocument();
 
-    await advancePoll(); // refund webhook, delivered on the next poll
+    await advancePoll(); // refund confirmation, delivered on the next poll
     expect(screen.getByText("Trato cancelado")).toBeInTheDocument();
 
     // "cancelado" is terminal but not a dead end: with the wizard persisted
@@ -219,34 +221,6 @@ describe("FlujoApp", () => {
     // resets it for free, so it needs its own explicit way back to "inicio".
     fireEvent.click(screen.getByText("Volver al inicio"));
     expect(screen.getByText("Crear el trato")).toBeInTheDocument();
-  });
-
-  it("SPEC 03: auto-refunds the buyer when the sender RUT doesn't match, from 'pagar' straight to 'cancelado'", async () => {
-    render(<FlujoApp initialRole="comprador" />);
-
-    fireEvent.click(screen.getByText("Crear el trato"));
-    fireEvent.change(screen.getByPlaceholderText("Bicicleta aro 29, poco uso"), { target: { value: "Bicicleta" } });
-    fireEvent.change(screen.getByPlaceholderText("180.000"), { target: { value: "100000" } });
-    await act(async () => {
-      fireEvent.click(screen.getByText("Generar el código"));
-    });
-    await act(async () => {
-      await acceptTratoRequest("ABC123", "vendedor");
-    });
-    await advancePoll();
-    expect(screen.getByText("Transfiere a la cuenta de custodia")).toBeInTheDocument();
-
-    // Real path is Fintoc's webhook reporting a `counterparty.holder_id`
-    // that doesn't match the buyer's declared RUT (see
-    // lib/tratos/repository.ts's matchInboundPayment) — untestable here
-    // without a real webhook, so the dev-only "Simular RUT no coincidente"
-    // button drives the exact same repository path (SPEC 02's precedent for
-    // untestable-in-jsdom real integrations).
-    await act(async () => {
-      fireEvent.click(screen.getByText("Simular RUT no coincidente (dev)"));
-    });
-    await advancePoll(); // refund webhook, delivered on the next poll
-    expect(screen.getByText("No pudimos confirmar tu pago")).toBeInTheDocument();
   });
 
   it("resumes on the same screen, with the same trato, after an accidental exit (unmount + remount)", async () => {
@@ -384,7 +358,7 @@ describe("FlujoApp", () => {
     });
     await advancePoll();
     await act(async () => {
-      fireEvent.click(screen.getByText("Simular transferencia (Fintoc test)"));
+      fireEvent.click(screen.getByText("Forzar avance (sin tarjeta, sin esperar el webhook)"));
     });
     await advancePoll();
     fireEvent.click(screen.getByText("Ya nos juntamos"));
@@ -422,7 +396,7 @@ describe("FlujoApp", () => {
       await acceptTratoRequest("ABC123", "vendedor");
     });
     await advancePoll();
-    expect(screen.getByText("Transfiere a la cuenta de custodia")).toBeInTheDocument();
+    expect(screen.getByText("Paga con tarjeta")).toBeInTheDocument();
     // Still no "Atrás" — rewinding into "detalle" here would let the buyer
     // hit "Aceptar y pagar" again against a trato that's already accepted.
     expect(screen.queryByText("Atrás")).not.toBeInTheDocument();
@@ -442,7 +416,7 @@ describe("FlujoApp", () => {
     });
     await advancePoll();
     await act(async () => {
-      fireEvent.click(screen.getByText("Simular transferencia (Fintoc test)"));
+      fireEvent.click(screen.getByText("Forzar avance (sin tarjeta, sin esperar el webhook)"));
     });
     await advancePoll();
     expect(screen.getByText("Coordinen la entrega")).toBeInTheDocument();

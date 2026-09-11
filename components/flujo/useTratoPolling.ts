@@ -6,8 +6,8 @@ const POLL_INTERVAL_MS = 3000;
 
 /**
  * Polls `refresh` every ~3s while `isActive` — used on screens where the
- * trato's next state change comes from the *other* side (or from a Fintoc
- * webhook) rather than this user's own click, e.g. "esperando-pago" or
+ * trato's next state change comes from the *other* side (or from a Mercado
+ * Pago webhook) rather than this user's own click, e.g. "esperando-pago" or
  * "pagar" waiting for `funds_held`. Stops automatically when `isActive`
  * turns false or the component unmounts.
  */

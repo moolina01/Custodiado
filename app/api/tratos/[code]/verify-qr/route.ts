@@ -50,6 +50,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         return jsonOk(toPublicDto(result.trato));
     }
   } catch (error) {
+    // Logged server-side (not just returned to the client) — the release
+    // path hits the newly-rewritten Money Out call in
+    // lib/mercadopago/payouts.ts, unverified against a live test until now.
+    console.error(`[verify-qr] releaseTrato(${code}) threw:`, error);
     return jsonError(500, error instanceof Error ? error.message : "No se pudo liberar el pago.");
   }
 }

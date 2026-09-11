@@ -56,7 +56,7 @@ function remove(key: string) {
 
 const CANCEL_STAGES: CancelStage[] = ["none", "form", "done"];
 const MODES: Mode[] = ["crear", "codigo", null];
-const FIELD_NAMES: (keyof WizardFields)[] = ["item", "amount", "code", "bankInstitutionId", "account", "accountType"];
+const FIELD_NAMES: (keyof WizardFields)[] = ["item", "amount", "code", "bankName", "account", "accountType"];
 
 /** Defensive against a shape from an older deploy — a malformed entry is treated as "nothing saved" rather than crashing the reducer's lazy init. */
 function isValidPersistedWizard(value: unknown): value is PersistedWizard {

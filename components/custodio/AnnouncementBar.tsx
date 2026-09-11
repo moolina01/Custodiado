@@ -14,8 +14,8 @@ export default function AnnouncementBar() {
         letterSpacing: "-0.005em",
       }}
     >
-      Tu plata protegida hasta la entrega ·{" "}
-      <span style={{ color: "#7EB6F5", fontWeight: "600" }}>Procesado por Fintoc</span>
+      Compra y vende seguro en Yapo, Marketplace y WhatsApp ·{" "}
+      <span style={{ color: "#7EB6F5", fontWeight: "600" }}>Procesado por Mercado Pago</span>
     </div>
   );
 }

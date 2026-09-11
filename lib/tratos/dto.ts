@@ -1,11 +1,12 @@
 import { categorizeForPanel, type PanelCategory } from "./status";
-import type { CreatedByRole, RefundReason, TratoRow } from "./types";
+import type { CreatedByRole, TratoRow } from "./types";
 
 /**
  * What `GET /api/tratos/[code]` (and every other trato route) sends back to
- * the client. Deliberately redacted: no RUT, bank account, Fintoc transfer
- * ids, or idempotency keys — anyone holding the trato's code can read this,
- * so it only carries what the wizard UI needs to render a screen.
+ * the client. Deliberately redacted: no RUT, bank account, Mercado Pago
+ * payment/payout/refund ids, or idempotency keys — anyone holding the
+ * trato's code can read this, so it only carries what the wizard UI needs
+ * to render a screen.
  */
 export interface PublicTratoDto {
   id: string;
@@ -23,7 +24,6 @@ export interface PublicTratoDto {
   releasedAt: string | null;
   cancelledAt: string | null;
   cancelReason: string | null;
-  refundReason: RefundReason | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -45,7 +45,6 @@ export function toPublicDto(row: TratoRow): PublicTratoDto {
     releasedAt: row.released_at,
     cancelledAt: row.cancelled_at,
     cancelReason: row.cancel_reason,
-    refundReason: row.refund_reason,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

@@ -1,9 +1,9 @@
 import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
-const TABLE = "fintoc_webhook_events";
+const TABLE = "mercadopago_webhook_events";
 
-/** Fintoc retries webhook deliveries on any non-2xx — this is what makes reprocessing a no-op. */
+/** Mercado Pago retries webhook deliveries on any non-2xx — this is what makes reprocessing a no-op. */
 export async function hasProcessedWebhookEvent(eventId: string): Promise<boolean> {
   const db = getSupabaseAdmin();
   const { data, error } = await db.from(TABLE).select("id").eq("id", eventId).maybeSingle();
