@@ -100,7 +100,7 @@ export default function ShaderShowcase() {
         speed={0.2}
       />
 
-      <main className="absolute bottom-12 left-8 right-8 z-20 max-w-2xl">
+      <main className="absolute bottom-20 left-8 right-8 z-20 max-w-2xl">
         <div className="text-left">
           <motion.h1
             className="text-6xl md:text-7xl lg:text-8xl font-bold text-white mb-6 leading-none tracking-tight"
