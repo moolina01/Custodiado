@@ -34,7 +34,7 @@ export default function Navbar() {
   // allá del Hero pasa a blanco. `overHero` es la señal para ese swap;
   // `scrolled` (abajo) solo gradúa la opacidad/sombra del blanco una vez
   // que ya se salió del Hero.
-  const overHero = useSectionOverlap("hero", headerRef);
+  const overHero = useSectionOverlap("hero", headerRef, true);
 
   // `.nav-link` (below) only becomes visible from 720px up (`app/globals.css`)
   // — below that, the section links had no way to be reached at all. This

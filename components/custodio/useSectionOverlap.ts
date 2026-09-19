@@ -18,9 +18,19 @@ import { useEffect, useState, type RefObject } from "react";
  * further down. A fixed-height comparison read that as "not over the
  * section" on first load even though the header visually was — verified
  * live (`Navbar` opened white instead of transparent over the Hero).
+ *
+ * `initialOver` matters for the same reason: this starts `false` and only
+ * flips after the effect below runs (post-mount), so a section that IS
+ * overlapped on load — the Hero, always the page's first section — would
+ * render wrong for a beat, then visibly animate into place through the
+ * 0.35s CSS transition `Navbar` puts on `background`. Verified live: that
+ * showed up as a hazy light-gray film fading over the Hero on every load.
+ * Passing `true` for a section known to start overlapped skips that beat
+ * entirely — both the server-rendered HTML and the first client paint
+ * already read as `true`, nothing to correct after mount.
  */
-export function useSectionOverlap(id: string, headerRef: RefObject<HTMLElement | null>): boolean {
-  const [over, setOver] = useState(false);
+export function useSectionOverlap(id: string, headerRef: RefObject<HTMLElement | null>, initialOver = false): boolean {
+  const [over, setOver] = useState(initialOver);
 
   useEffect(() => {
     function check() {
