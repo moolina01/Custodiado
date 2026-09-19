@@ -12,7 +12,12 @@ const BRAND = {
   brandDark: "#0F1830",
   brandDeep: "#0B1220",
   accent: "#3B82F6",
-  accentSoft: "#DBEAFE",
+  // Azul medio (no el `accentSoft` casi-blanco del theme) — el shader
+  // pasa por este tono en vez de por blanco puro, así nunca "se lava" a
+  // un frame casi blanco (pasaba con `accentSoft`/`#ffffff` acá: en
+  // ciertos momentos de la animación el navbar transparente de encima
+  // se veía blanco entero — reportado y confirmado con capturas).
+  accentLight: "#60A5FA",
 }
 
 /**
@@ -71,15 +76,16 @@ export default function ShaderShowcase() {
         </defs>
       </svg>
 
-      {/* Navy → azul Custodiado (antes negro/cian/naranja) */}
+      {/* Navy → azul Custodiado (antes negro/cian/naranja) — sin blanco
+          puro en ninguna capa, a propósito (ver comentario de `BRAND`). */}
       <MeshGradient
         className="absolute inset-0 w-full h-full"
-        colors={[BRAND.brandDeep, BRAND.brand, BRAND.accent, BRAND.brandDark, BRAND.accentSoft]}
+        colors={[BRAND.brandDeep, BRAND.brand, BRAND.accent, BRAND.brandDark, BRAND.accentLight]}
         speed={isActive ? 0.6 : 0.3}
       />
       <MeshGradient
-        className="absolute inset-0 w-full h-full opacity-60"
-        colors={[BRAND.brandDeep, "#ffffff", BRAND.accent, BRAND.brand]}
+        className="absolute inset-0 w-full h-full opacity-50"
+        colors={[BRAND.brandDeep, BRAND.accentLight, BRAND.accent, BRAND.brand]}
         speed={0.2}
       />
 
@@ -151,7 +157,7 @@ export default function ShaderShowcase() {
         <div className="relative w-20 h-20 flex items-center justify-center">
           {/* Azules Custodiado (antes arcoíris cian/naranja/verde/dorado) */}
           <PulsingBorder
-            colors={[BRAND.accent, BRAND.brand, BRAND.accentSoft, "#ffffff", BRAND.brandDeep]}
+            colors={[BRAND.accent, BRAND.brand, BRAND.accentLight, "#ffffff", BRAND.brandDeep]}
             colorBack="#00000000"
             speed={1.5}
             roundness={1}
