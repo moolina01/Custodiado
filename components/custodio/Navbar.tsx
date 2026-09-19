@@ -29,12 +29,42 @@ export default function Navbar() {
   const headerRef = useRef<HTMLElement>(null);
 
   // Pedido del usuario: mientras el navbar está sobre el Hero (fondo de
-  // shader animado, ver `components/ui/hero.tsx`) debe leerse "transparente"
-  // — mismo fondo que el Hero, no un color propio — y recién al bajar más
-  // allá del Hero pasa a blanco. `overHero` es la señal para ese swap;
-  // `scrolled` (abajo) solo gradúa la opacidad/sombra del blanco una vez
-  // que ya se salió del Hero.
+  // shader animado, ver `components/ui/hero.tsx`) debe leerse como parte
+  // del Hero — el shader real de fondo, no una aproximación estática — y
+  // recién al bajar más allá del Hero pasa a blanco. `overHero` es la señal
+  // para ese swap; `scrolled` (abajo) solo gradúa la opacidad/sombra del
+  // blanco una vez que ya se salió del Hero.
+  //
+  // Para que `background: transparent` (abajo) realmente muestre el shader
+  // y no el fondo claro de la página, tiene que haber overlap real desde el
+  // primer frame — no solo una vez que ya se scrolleó. `Navbar` vive en el
+  // flujo normal del documento justo *antes* del Hero, así que por sí solo
+  // nunca se superpone a nada en el instante de carga (scroll 0): esto se
+  // probó, se vio el navbar blanco/lavado en vez de azul, y un gradiente
+  // propio como parche tampoco sirvió — no matchea el frame real del shader
+  // animado y se nota la costura. El fix real está del lado del Hero: le
+  // aplica un `margin-top` negativo igual a la altura de este header (ver
+  // `--navbar-h` más abajo y `components/ui/hero.tsx`), corriéndolo hacia
+  // arriba para que arranque *debajo* del navbar en vez de después — ahí
+  // sí hay overlap genuino desde el pixel 0.
   const overHero = useSectionOverlap("hero", headerRef, true);
+
+  // Altura real del header, publicada como variable CSS para que el Hero
+  // (`components/ui/hero.tsx`) sepa cuánto "meterse" debajo con su
+  // `margin-top` negativo. Medida con `ResizeObserver` en vez de un valor
+  // fijo porque el layout de `.nav-shell` cambia en el breakpoint de 720px
+  // (`app/globals.css`) y una constante se hubiera desincronizado ahí.
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+    const setVar = () => {
+      document.documentElement.style.setProperty("--navbar-h", `${header.offsetHeight}px`);
+    };
+    setVar();
+    const observer = new ResizeObserver(setVar);
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, []);
 
   // `.nav-link` (below) only becomes visible from 720px up (`app/globals.css`)
   // — below that, the section links had no way to be reached at all. This

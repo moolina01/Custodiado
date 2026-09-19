@@ -62,7 +62,18 @@ export default function ShaderShowcase() {
       ref={containerRef}
       id="hero"
       className="min-h-screen relative overflow-hidden"
-      style={{ background: BRAND.brandDeep }}
+      style={{
+        background: BRAND.brandDeep,
+        // Se mete debajo de `Navbar` (`components/custodio/Navbar.tsx`) en
+        // vez de arrancar después: `Navbar` es `position: sticky` y vive
+        // *antes* del Hero en el flujo normal, así que sin este ajuste no
+        // hay overlap real en el primer frame (scroll 0) y el navbar
+        // "transparente" de encima deja ver el fondo claro de la página en
+        // vez de este shader. `--navbar-h` la publica `Navbar` (altura real,
+        // vía `ResizeObserver`); el fallback de 60px cubre el primer paint
+        // antes de que ese efecto corra, para no mostrar un salto de layout.
+        marginTop: "calc(-1 * var(--navbar-h, 60px))",
+      }}
     >
       <svg className="absolute inset-0 w-0 h-0">
         <defs>
