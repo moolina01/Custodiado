@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "@/components/auth/useSession";
 import { useScrolled } from "./useScrolled";
+import { useSectionOverlap } from "./useSectionOverlap";
 import { colors } from "./theme";
 import { NAV_LINKS } from "./data";
 import UserMenu from "./UserMenu";
@@ -24,6 +25,16 @@ export default function Navbar() {
   // touch, so it visibly registers as "now pinned" instead of just always
   // looking the same. `FlujoHeader` shares this exact behavior via the same hook.
   const scrolled = useScrolled();
+
+  const headerRef = useRef<HTMLElement>(null);
+
+  // Pedido del usuario: mientras el navbar está sobre el Hero (fondo de
+  // shader animado, ver `components/ui/hero.tsx`) debe leerse "transparente"
+  // — mismo fondo que el Hero, no un color propio — y recién al bajar más
+  // allá del Hero pasa a blanco. `overHero` es la señal para ese swap;
+  // `scrolled` (abajo) solo gradúa la opacidad/sombra del blanco una vez
+  // que ya se salió del Hero.
+  const overHero = useSectionOverlap("hero", headerRef);
 
   // `.nav-link` (below) only becomes visible from 720px up (`app/globals.css`)
   // — below that, the section links had no way to be reached at all. This
@@ -48,15 +59,21 @@ export default function Navbar() {
 
   return (
     <header
+      ref={headerRef}
       className="navbar-header"
       style={{
         position: "sticky",
         top: "0",
         zIndex: "50",
-        background: scrolled ? "rgba(245,247,251,0.97)" : "rgba(245,247,251,0.82)",
-        backdropFilter: "blur(20px)",
-        boxShadow: scrolled ? "0 4px 20px rgba(11,18,32,0.08)" : "none",
-        borderBottom: `1px solid ${colors.border}`,
+        background: overHero
+          ? "transparent"
+          : scrolled
+            ? "rgba(245,247,251,0.97)"
+            : "rgba(245,247,251,0.82)",
+        backdropFilter: overHero ? "none" : "blur(20px)",
+        boxShadow: !overHero && scrolled ? "0 4px 20px rgba(11,18,32,0.08)" : "none",
+        borderBottom: `1px solid ${overHero ? "transparent" : colors.border}`,
+        transition: "background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease",
       }}
     >
       <div
@@ -85,9 +102,10 @@ export default function Navbar() {
               borderRadius: "10px",
               border: "none",
               background: "none",
-              color: colors.brandDeep,
+              color: overHero ? "#ffffff" : colors.brandDeep,
               cursor: "pointer",
               flexShrink: "0",
+              transition: "color 0.35s ease",
             }}
           >
             {menuOpen ? (
@@ -113,10 +131,11 @@ export default function Navbar() {
                   fontSize: "15px",
                   fontWeight: "600",
                   letterSpacing: "0",
-                  color: colors.brandDeep,
+                  color: overHero ? "#ffffff" : colors.brandDeep,
                   padding: "8px 12px",
                   borderRadius: "9999px",
                   whiteSpace: "nowrap",
+                  transition: "color 0.35s ease",
                 }}
               >
                 {link.label}
@@ -166,12 +185,12 @@ export default function Navbar() {
           className="navbar-logo-scale"
           style={{ display: "inline-flex", transform: scrolled ? "scale(1.06)" : "scale(1)" }}
         >
-          <Logo href="/" size={25} />
+          <Logo href="/" size={25} variant={overHero ? "dark" : "light"} />
         </span>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "10px" }}>
           {session.status === "authenticated" ? (
-            <UserMenu name={session.name} onLoggedOut={session.refresh} />
+            <UserMenu name={session.name} onLoggedOut={session.refresh} onDark={overHero} />
           ) : (
             // SPEC 05 (ajuste): con sesión, el ícono de cuenta reemplaza a
             // esta CTA por completo — ya no hace falta invitar a "empezar" a
@@ -196,13 +215,18 @@ export default function Navbar() {
                 display: "flex",
                 alignItems: "center",
                 gap: "7px",
-                background: colors.brandDeep,
-                color: colors.background,
+                // Sobre el Hero (fondo navy) un botón navy-sobre-navy se
+                // pierde — mismo blanco sólido que "Soy comprador"/"Soy
+                // vendedor" usan ahí (`components/ui/hero.tsx`) en vez de
+                // quedar sin contraste.
+                background: overHero ? "#ffffff" : colors.brandDeep,
+                color: overHero ? colors.brandDeep : colors.background,
                 fontWeight: "600",
                 fontSize: "14px",
                 padding: "10px 18px",
                 borderRadius: "9999px",
                 whiteSpace: "nowrap",
+                transition: "background 0.35s ease, color 0.35s ease",
               }}
             >
               Empezar

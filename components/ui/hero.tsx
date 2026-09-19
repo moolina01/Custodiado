@@ -53,21 +53,14 @@ export default function ShaderShowcase() {
   }, [])
 
   return (
-    <div ref={containerRef} className="min-h-screen relative overflow-hidden" style={{ background: BRAND.brandDeep }}>
+    <div
+      ref={containerRef}
+      id="hero"
+      className="min-h-screen relative overflow-hidden"
+      style={{ background: BRAND.brandDeep }}
+    >
       <svg className="absolute inset-0 w-0 h-0">
         <defs>
-          <filter id="glass-effect" x="-50%" y="-50%" width="200%" height="200%">
-            <feTurbulence baseFrequency="0.005" numOctaves="1" result="noise" />
-            <feDisplacementMap in="SourceGraphic" in2="noise" scale="0.3" />
-            <feColorMatrix
-              type="matrix"
-              values="1 0 0 0 0.02
-                      0 1 0 0 0.02
-                      0 0 1 0 0.05
-                      0 0 0 0.9 0"
-              result="tint"
-            />
-          </filter>
           <filter id="text-glow" x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur stdDeviation="2" result="coloredBlur" />
             <feMerge>
@@ -92,24 +85,11 @@ export default function ShaderShowcase() {
 
       <main className="absolute bottom-8 left-8 right-8 z-20 max-w-2xl">
         <div className="text-left">
-          <motion.div
-            className="inline-flex items-center px-4 py-2 rounded-full bg-white/5 backdrop-blur-sm mb-6 relative border border-white/10"
-            style={{ filter: "url(#glass-effect)" }}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-          >
-            <div className="absolute top-0 left-1 right-1 h-px bg-gradient-to-r from-transparent via-blue-400/30 to-transparent rounded-full" />
-            <span className="text-white/90 text-sm font-medium relative z-10 tracking-wide">
-              🔒 Tu plata protegida hasta la entrega
-            </span>
-          </motion.div>
-
           <motion.h1
             className="text-6xl md:text-7xl lg:text-8xl font-bold text-white mb-6 leading-none tracking-tight"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
+            transition={{ duration: 0.8, delay: 0.1 }}
           >
             <motion.span
               className="block font-light text-white/90 text-4xl md:text-5xl lg:text-6xl mb-2 tracking-wider"
@@ -133,7 +113,7 @@ export default function ShaderShowcase() {
             className="text-lg font-light text-white/70 mb-8 leading-relaxed max-w-xl"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.8 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
           >
             Custodiamos tu dinero hasta que veas el producto. Recién ahí se libera el pago — procesado por Mercado
             Pago, nunca por una cuenta nuestra.
@@ -143,7 +123,7 @@ export default function ShaderShowcase() {
             className="flex items-center gap-4 flex-wrap"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 1.0 }}
+            transition={{ duration: 0.6, delay: 0.7 }}
           >
             <motion.a
               href="/flujo?role=comprador"
@@ -156,7 +136,8 @@ export default function ShaderShowcase() {
             </motion.a>
             <motion.a
               href="/flujo?role=vendedor"
-              className="px-10 py-4 rounded-full bg-transparent border-2 border-white/30 text-white font-medium text-sm transition-all duration-300 hover:bg-white/10 hover:border-white/60 cursor-pointer backdrop-blur-sm"
+              className="px-10 py-4 rounded-full font-semibold text-sm transition-shadow duration-300 cursor-pointer shadow-lg hover:shadow-xl"
+              style={{ background: "#ffffff", color: BRAND.brandDeep }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
