@@ -49,6 +49,24 @@ export default function Navbar() {
   // sí hay overlap genuino desde el pixel 0.
   const overHero = useSectionOverlap("hero", headerRef, true);
 
+  // Same idea for the two dark navy sections further down the page
+  // ("Confianza" / `TrustBanner` and "Preguntas" / `Faq`, both
+  // `colors.brand` — see `components/custodio/theme.ts`): a light navbar
+  // sliding over either one reads as a seam, not a continuation of the
+  // section. `overDarkSection` covers both ids at once since they share
+  // the exact same background color, so the navbar can just solidify to
+  // that color instead of staying light.
+  const overConfianza = useSectionOverlap("confianza", headerRef);
+  const overFaq = useSectionOverlap("faq", headerRef);
+  const overDarkSection = overConfianza || overFaq;
+
+  // Everything that only cares about "is the navbar currently sitting on a
+  // dark background" (text/logo/CTA colors) — the Hero's shader and these
+  // solid navy sections both count, they just differ in *how* the navbar's
+  // own background responds (transparent to reveal the shader vs. a solid
+  // fill matching the section).
+  const overDark = overHero || overDarkSection;
+
   // Altura real del header, publicada como variable CSS para que el Hero
   // (`components/ui/hero.tsx`) sepa cuánto "meterse" debajo con su
   // `margin-top` negativo. Medida con `ResizeObserver` en vez de un valor
@@ -97,12 +115,14 @@ export default function Navbar() {
         zIndex: "50",
         background: overHero
           ? "transparent"
-          : scrolled
-            ? "rgba(245,247,251,0.97)"
-            : "rgba(245,247,251,0.82)",
-        backdropFilter: overHero ? "none" : "blur(20px)",
-        boxShadow: !overHero && scrolled ? "0 4px 20px rgba(11,18,32,0.08)" : "none",
-        borderBottom: `1px solid ${overHero ? "transparent" : colors.border}`,
+          : overDarkSection
+            ? colors.brand
+            : scrolled
+              ? "rgba(245,247,251,0.97)"
+              : "rgba(245,247,251,0.82)",
+        backdropFilter: overDark ? "none" : "blur(20px)",
+        boxShadow: !overDark && scrolled ? "0 4px 20px rgba(11,18,32,0.08)" : "none",
+        borderBottom: `1px solid ${overDark ? "transparent" : colors.border}`,
         transition: "background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease",
       }}
     >
@@ -137,7 +157,7 @@ export default function Navbar() {
               borderRadius: "10px",
               border: "none",
               background: "none",
-              color: overHero ? "#ffffff" : colors.brandDeep,
+              color: overDark ? "#ffffff" : colors.brandDeep,
               cursor: "pointer",
               flexShrink: "0",
               transition: "color 0.35s ease",
@@ -166,7 +186,7 @@ export default function Navbar() {
                   fontSize: "15px",
                   fontWeight: "600",
                   letterSpacing: "0",
-                  color: overHero ? "#ffffff" : colors.brandDeep,
+                  color: overDark ? "#ffffff" : colors.brandDeep,
                   padding: "8px 12px",
                   borderRadius: "9999px",
                   whiteSpace: "nowrap",
@@ -220,12 +240,12 @@ export default function Navbar() {
           className="navbar-logo-scale"
           style={{ display: "inline-flex", transform: scrolled ? "scale(1.06)" : "scale(1)" }}
         >
-          <Logo href="/" size={25} variant={overHero ? "dark" : "light"} />
+          <Logo href="/" size={25} variant={overDark ? "dark" : "light"} />
         </span>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "10px" }}>
           {session.status === "authenticated" ? (
-            <UserMenu name={session.name} onLoggedOut={session.refresh} onDark={overHero} />
+            <UserMenu name={session.name} onLoggedOut={session.refresh} onDark={overDark} />
           ) : (
             // SPEC 05 (ajuste): con sesión, el ícono de cuenta reemplaza a
             // esta CTA por completo — ya no hace falta invitar a "empezar" a
@@ -254,8 +274,8 @@ export default function Navbar() {
                 // pierde — mismo blanco sólido que "Soy comprador"/"Soy
                 // vendedor" usan ahí (`components/ui/hero.tsx`) en vez de
                 // quedar sin contraste.
-                background: overHero ? "#ffffff" : colors.brandDeep,
-                color: overHero ? colors.brandDeep : colors.background,
+                background: overDark ? "#ffffff" : colors.brandDeep,
+                color: overDark ? colors.brandDeep : colors.background,
                 fontWeight: "600",
                 fontSize: "14px",
                 padding: "10px 18px",
