@@ -109,7 +109,12 @@ export default function Navbar() {
       <div
         className="nav-shell"
         style={{
-          maxWidth: "1100px",
+          // Un poco más ancho que el resto de las secciones (`1100px`, ver
+          // `Footer`/`Testimonials`/`BlogPreview`) a propósito: pedido del
+          // usuario para que los links queden más hacia la izquierda y
+          // "Empezar" más hacia la derecha en pantallas anchas, en vez de
+          // todo apretado hacia el centro.
+          maxWidth: "1320px",
           margin: "0 auto",
           alignItems: "center",
           justifyContent: "space-between",
