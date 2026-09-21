@@ -44,7 +44,7 @@ const BUYER_TIPS = [
     Escanea <strong>solo el QR de la app del vendedor</strong>, nunca una foto o captura.
   </>,
   <>
-    Al escanear el pago se libera y <strong>no se puede revertir</strong>. Si algo no cuadra, no escanees.
+    Al escanear el pago se libera y <strong>no se puede revertir</strong>, si algo no cuadra, no escanees.
   </>,
 ];
 
@@ -90,7 +90,7 @@ export default function QrStep({
         title={isBuyer ? "Escanea al recibir" : "Muestra el QR al entregar"}
         subtitle={
           isBuyer
-            ? "Revisa el producto. Si está todo bien, escanea el QR del vendedor."
+            ? "Revisa el producto, si está todo bien, escanea el QR del vendedor."
             : isSellerWaiting
               ? "Confirmá cuando el comprador esté ahí para mostrarle el código."
               : "El comprador escanea este código y el pago se libera al instante."

@@ -60,6 +60,18 @@ const TRANSACTION_INTENTS_URL = "https://api.mercadopago.com/v1/transaction-inte
  * endpoint guessed from docs, a country-mismatched contract, etc.) — wait
  * for Mercado Pago's actual guidance.
  *
+ * 2026-09-19 update: ticket WCS-50128 got a follow-up reply claiming
+ * "Ya solucionamos el error técnico" and asking to retry the flow.
+ * Retried the exact same test-mode call this file makes (fresh idempotency
+ * key, `X-Test-Token: true`, fixture destination) directly against
+ * `https://api.mercadopago.com/v1/transaction-intents/process` — still
+ * `403 PolicyAgent / PA_UNAUTHORIZED_RESULT_FROM_POLICIES`, byte-for-byte
+ * the same error as before. Whatever got "solved" on their end did not
+ * change this account's PolicyAgent block. Don't treat that reply as
+ * resolution; the commercial-approval blocker above still applies. If
+ * following up with support again, point out the ticket was closed without
+ * the behavior actually changing.
+ *
  * Everything below is preserved best-effort from before this was known —
  * the original implementation notes, for whenever the real contract shows
  * up:

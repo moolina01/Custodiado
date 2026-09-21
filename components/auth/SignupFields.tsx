@@ -81,7 +81,7 @@ export default function SignupFields({ onSuccess, footer, googleNext }: SignupFi
             value={email}
             onChange={setEmail}
             placeholder="Email"
-            info="La usamos para que puedas volver a entrar a tu cuenta y avisarte sobre tus tratos. Nunca la compartimos con nadie."
+            info="La usamos para que puedas volver a entrar a tu cuenta y avisarte sobre tus tratos, nunca la compartimos con nadie."
           />
           <FormField label="Contraseña" hideLabel type="password" value={password} onChange={setPassword} placeholder="Contraseña (mínimo 8 caracteres)" />
         </div>

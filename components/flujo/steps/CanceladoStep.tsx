@@ -17,8 +17,8 @@ type CanceladoStepProps = {
 // the form", so there's no separate sender to mismatch against. Every
 // refund reaching this screen now is the buyer's own manual cancellation.
 const COPY: Record<Role, { title: string; subtitle: string }> = {
-  comprador: { title: "Trato cancelado", subtitle: "Tu plata va de vuelta a tu medio de pago. Llega en 1 a 2 días hábiles." },
-  vendedor: { title: "El comprador canceló", subtitle: "El comprador canceló el trato antes de la entrega. La venta no se completó." },
+  comprador: { title: "Trato cancelado", subtitle: "Tu plata va de vuelta a tu medio de pago, llega en 1 a 2 días hábiles." },
+  vendedor: { title: "El comprador canceló", subtitle: "El comprador canceló el trato antes de la entrega, la venta no se completó." },
 };
 
 /** Terminal screen after a trato ends in a refund — no further actions. Copy varies by role only (see COPY above). */

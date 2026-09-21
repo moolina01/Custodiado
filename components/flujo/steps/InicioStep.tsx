@@ -17,13 +17,13 @@ const CHECK_ICON = (
 );
 
 const BUYER_REMINDERS = [
-  "Tu plata queda retenida. El vendedor no recibe nada hasta que confirmes la entrega.",
+  "Tu plata queda retenida, el vendedor no recibe nada hasta que confirmes la entrega.",
   "Si el producto no está como esperabas, no escaneas y reclamas.",
-  "Comisión 3% (mínimo $990). No hay costos escondidos.",
+  "Comisión 3% (mínimo $990), no hay costos escondidos.",
 ];
 
 const SELLER_REMINDERS = [
-  "Recibes el 100% del precio acordado. La comisión la paga el comprador.",
+  "Recibes el 100% del precio acordado, la comisión la paga el comprador.",
   'No entregas nada hasta ver el aviso de "fondos retenidos".',
   "Tus datos bancarios se piden recién cuando la plata ya está retenida.",
 ];

@@ -22,7 +22,7 @@ export default function ListoStep({ role, summaryItem, listoAmount }: ListoStepP
       </OutcomeCircle>
       <StepHeading
         title="Trato cerrado"
-        subtitle={isBuyer ? "El pago se liberó al vendedor. Guarda este comprobante." : "El pago va en camino a tu cuenta. Llega el mismo día hábil."}
+        subtitle={isBuyer ? "El pago se liberó al vendedor, guarda este comprobante." : "El pago va en camino a tu cuenta, llega el mismo día hábil."}
         align="center"
       />
 

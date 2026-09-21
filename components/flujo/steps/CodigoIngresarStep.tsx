@@ -36,7 +36,7 @@ export default function CodigoIngresarStep({ role, code, onCodeChange }: CodigoI
         }}
       />
       <div style={{ fontSize: "13.5px", color: colors.textFaint, marginTop: "10px", textAlign: "center" }}>
-        Te lo pasaron por WhatsApp. Son 6 caracteres.
+        Te lo pasaron por WhatsApp, son 6 caracteres.
       </div>
     </div>
   );

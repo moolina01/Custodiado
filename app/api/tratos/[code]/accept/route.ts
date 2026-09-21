@@ -17,7 +17,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const { code } = await params;
 
   const allowed = await checkRateLimit(`accept:${getClientIp(request)}`, ACCEPT_LIMIT, ACCEPT_WINDOW_SECONDS);
-  if (!allowed) return jsonError(429, "Demasiadas solicitudes. Intenta de nuevo en un momento.");
+  if (!allowed) return jsonError(429, "Demasiadas solicitudes, intenta de nuevo en un momento.");
 
   let body: unknown;
   try {
@@ -37,16 +37,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     switch (result.outcome) {
       case "not_found":
-        return jsonError(404, "Trato no encontrado. Revisa el código.");
+        return jsonError(404, "Trato no encontrado, revisa el código.");
       case "wrong_role":
         return jsonError(
           400,
           parsed.data.role === "comprador"
-            ? "Este trato ya lo creaste vos como comprador. Compartí el código con el vendedor."
-            : "Este trato ya lo creaste vos como vendedor. Compartí el código con el comprador."
+            ? "Este trato ya lo creaste vos como comprador, compartí el código con el vendedor."
+            : "Este trato ya lo creaste vos como vendedor, compartí el código con el comprador."
         );
       case "cannot_accept_own_trato":
-        return jsonError(400, "No podés aceptar un trato que vos mismo creaste. Compartí el código con la otra persona.");
+        return jsonError(400, "No podés aceptar un trato que vos mismo creaste, compartí el código con la otra persona.");
       case "accepted":
       case "already_accepted":
         return jsonOk(toCreateOrAcceptResponse(result.trato, parsed.data.role));

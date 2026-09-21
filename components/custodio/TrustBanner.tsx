@@ -4,7 +4,7 @@ import { colors } from "./theme";
 /** Dark "Confianza" band reassuring users the money is never held by Custodio. */
 export default function TrustBanner() {
   return (
-    <section id="confianza" style={{ background: colors.brand, padding: "72px 20px", margin: "8px 0" }}>
+    <section id="confianza" className="section-viewport" style={{ background: colors.brand, padding: "72px 20px" }}>
       <div style={{ maxWidth: "900px", margin: "0 auto" }}>
         <Reveal
           style={{
@@ -31,14 +31,14 @@ export default function TrustBanner() {
           }}
         >
           <Reveal as="span" style={{ display: "inline-block", color: "#ffffff" }}>
-            Tu plata no la tocamos.
+            Nadie mueve la plata
           </Reveal>{" "}
           <Reveal as="span" delay={130} style={{ display: "inline-block", position: "relative", color: "#ffffff" }}>
-            Nadie la mueve
+            hasta que ambos confirman
             <Reveal as="span" line delay={620} style={{ position: "absolute", left: "0", right: "0", bottom: "6px", height: "3px", background: colors.accent, borderRadius: "2px" }} />
           </Reveal>{" "}
           <Reveal as="span" delay={260} style={{ display: "inline-block", color: "#ffffff" }}>
-            hasta que tú digas que sí.
+            el trato.
           </Reveal>
         </p>
 

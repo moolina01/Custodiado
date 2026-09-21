@@ -13,7 +13,7 @@ type EsperandoPagoStepProps = {
 export default function EsperandoPagoStep({ summaryAmount, summaryItem }: EsperandoPagoStepProps) {
   return (
     <div>
-      <StepHeading title="Aceptaste el trato" subtitle="Ahora le toca al comprador transferir. No entregues nada todavía." />
+      <StepHeading title="Aceptaste el trato" subtitle="Ahora le toca al comprador transferir, no entregues nada todavía." />
 
       <Card padding="22px" shadow style={{ textAlign: "center" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "9px", justifyContent: "center", fontSize: "14px", fontWeight: "700", color: colors.textFaint, marginBottom: "16px" }}>

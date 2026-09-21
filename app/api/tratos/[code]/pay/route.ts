@@ -23,17 +23,17 @@ function paymentIdempotencyKey(tratoId: string, token: string): string {
 // next; anything else falls back to a generic message rather than showing
 // a raw provider code.
 const REJECTION_MESSAGES: Record<string, string> = {
-  cc_rejected_insufficient_amount: "Fondos insuficientes. Probá con otra tarjeta.",
+  cc_rejected_insufficient_amount: "Fondos insuficientes, probá con otra tarjeta.",
   cc_rejected_bad_filled_card_number: "Revisá el número de la tarjeta.",
   cc_rejected_bad_filled_date: "Revisá la fecha de vencimiento.",
   cc_rejected_bad_filled_security_code: "Revisá el código de seguridad.",
-  cc_rejected_call_for_authorize: "Tu banco rechazó el pago. Contactalo o probá con otra tarjeta.",
-  cc_rejected_card_disabled: "Esa tarjeta está deshabilitada para pagos online. Probá con otra.",
-  cc_rejected_high_risk: "El pago fue rechazado por seguridad. Probá con otra tarjeta.",
+  cc_rejected_call_for_authorize: "Tu banco rechazó el pago, contactalo o probá con otra tarjeta.",
+  cc_rejected_card_disabled: "Esa tarjeta está deshabilitada para pagos online, probá con otra.",
+  cc_rejected_high_risk: "El pago fue rechazado por seguridad, probá con otra tarjeta.",
 };
 
 function rejectionMessage(statusDetail: string | undefined): string {
-  return (statusDetail && REJECTION_MESSAGES[statusDetail]) || "El pago fue rechazado. Probá con otra tarjeta.";
+  return (statusDetail && REJECTION_MESSAGES[statusDetail]) || "El pago fue rechazado, probá con otra tarjeta.";
 }
 
 /** The buyer's Checkout API card payment — charges the trato's own amount, never one the client sends. */
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const user = await requireSessionUser();
 
     const trato = await getTratoByCode(code);
-    if (!trato) return jsonError(404, "Trato no encontrado. Revisa el código.");
+    if (!trato) return jsonError(404, "Trato no encontrado, revisa el código.");
     if (trato.buyer_user_id !== user.id) return jsonError(403, "Esta cuenta no es la que aceptó este trato como comprador.");
     if (trato.status !== "awaiting_payment") {
       return jsonError(409, "Este trato no está esperando un pago en este momento.");
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     if (order.status === "processed") {
       const result = await resolvePaymentApproved(trato.code, order.id);
-      if (result.outcome === "not_found") return jsonError(404, "Trato no encontrado. Revisa el código.");
+      if (result.outcome === "not_found") return jsonError(404, "Trato no encontrado, revisa el código.");
       return jsonOk(toPublicDto(result.trato));
     }
 

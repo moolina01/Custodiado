@@ -182,13 +182,13 @@ export default function Navbar() {
                 className="nav-link"
                 style={{
                   display: "none",
+                  position: "relative",
                   fontFamily: "var(--font-nav)",
                   fontSize: "15px",
                   fontWeight: "600",
                   letterSpacing: "0",
                   color: overDark ? "#ffffff" : colors.brandDeep,
                   padding: "8px 12px",
-                  borderRadius: "9999px",
                   whiteSpace: "nowrap",
                   transition: "color 0.35s ease",
                 }}
@@ -281,7 +281,7 @@ export default function Navbar() {
                 padding: "10px 18px",
                 borderRadius: "9999px",
                 whiteSpace: "nowrap",
-                transition: "background 0.35s ease, color 0.35s ease",
+                transition: "background 0.35s ease, color 0.35s ease, transform 0.2s ease",
               }}
             >
               Empezar

@@ -29,7 +29,7 @@ const sora = Sora({
 });
 
 export const metadata: Metadata = {
-  title: "Custodiado.cl",
+  title: "Custodiado",
   description: "Vende y compra sin miedo por Marketplace",
 };
 

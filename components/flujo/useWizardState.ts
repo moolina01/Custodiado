@@ -96,22 +96,7 @@ function createReducer(role: Role) {
   };
 }
 
-/**
- * Drives the wizard's step machine: which screen is showing, the form
- * fields collected along the way, and the cancel side-branch. `role` is
- * fixed for the life of the page (chosen on the landing page), so it's
- * captured once via the reducer factory rather than threaded through state.
- *
- * Persisted to `localStorage` (see `./persistence`) so an accidental exit —
- * closed tab, refresh, browser back — doesn't lose the user's place: always
- * starts from `initialState` (matches what the server rendered, so
- * hydration never disagrees with it — see `useIsomorphicLayoutEffect`
- * above), then a post-mount layout effect restores whatever was last saved
- * for this `role`. A second effect saves after every change. Landing back
- * on a blank "inicio" (nothing started, or the wizard just reset after
- * "listo") clears the saved entry instead of writing a no-op blank one, so
- * a stale entry never lingers past its own flow finishing.
- */
+
 export function useWizardState(role: Role) {
   const reducer = useMemo(() => createReducer(role), [role]);
   const [state, dispatch] = useReducer(reducer, initialState);

@@ -35,7 +35,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const { code } = await params;
 
   const allowed = await checkRateLimit(`qr-token:${getClientIp(request)}`, QR_TOKEN_LIMIT, QR_TOKEN_WINDOW_SECONDS);
-  if (!allowed) return jsonError(429, "Demasiadas solicitudes. Intenta de nuevo en un momento.");
+  if (!allowed) return jsonError(429, "Demasiadas solicitudes, intenta de nuevo en un momento.");
 
   const providedSecret = request.headers.get("x-seller-qr-secret");
   if (!providedSecret) return jsonError(401, "Falta el header x-seller-qr-secret.");
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const trato = await getTratoByCode(code);
-    if (!trato) return jsonError(404, "Trato no encontrado. Revisa el código.");
+    if (!trato) return jsonError(404, "Trato no encontrado, revisa el código.");
     if (QR_BLOCKED_STATUSES.includes(trato.status)) {
       return jsonError(400, "Este trato ya no admite generar un QR.");
     }

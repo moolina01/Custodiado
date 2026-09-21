@@ -343,7 +343,7 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
   const whatsappHref = useMemo(() => {
     if (!trato) return "https://wa.me/";
     const displayCode = formatTratoCodeForDisplay(trato.code);
-    return `https://wa.me/?text=${encodeURIComponent(`Hagamos el trato por Custodiado. Entra a custodiado.cl y pon el código ${displayCode}`)}`;
+    return `https://wa.me/?text=${encodeURIComponent(`Hagamos el trato por Custodiado, entra a custodiado.cl y pon el código ${displayCode}`)}`;
   }, [trato]);
 
   // The only three actions that talk to the backend in this milestone.

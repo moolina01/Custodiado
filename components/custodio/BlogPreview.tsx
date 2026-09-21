@@ -37,7 +37,7 @@ function BlogCard({ post, delay }: { post: BlogPost; delay: number }) {
 /** "Del blog": teaser cards linking out to the blog. */
 export default function BlogPreview() {
   return (
-    <section style={{ background: "#ffffff", borderTop: `1px solid ${colors.border}`, padding: "72px 20px" }}>
+    <section className="section-viewport" style={{ background: "#ffffff", borderTop: `1px solid ${colors.border}`, padding: "72px 20px" }}>
       <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", alignItems: "flex-end", justifyContent: "space-between", marginBottom: "32px" }}>
           <div>

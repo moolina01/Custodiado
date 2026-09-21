@@ -26,7 +26,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
   try {
     const trato = await getTratoByCode(code);
-    if (!trato) return jsonError(404, "Trato no encontrado. Revisa el código.");
+    if (!trato) return jsonError(404, "Trato no encontrado, revisa el código.");
     if (QR_BLOCKED_STATUSES.includes(trato.status)) {
       return jsonError(400, "Este trato ya no admite generar un QR.");
     }

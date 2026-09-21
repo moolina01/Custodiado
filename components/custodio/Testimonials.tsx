@@ -39,7 +39,7 @@ function TestimonialCard({ testimonial, delay }: { testimonial: Testimonial; del
 /** "Quiénes lo usan": social proof from buyers and sellers. */
 export default function Testimonials() {
   return (
-    <section style={{ background: "#ffffff", borderTop: `1px solid ${colors.border}`, borderBottom: `1px solid ${colors.border}`, padding: "72px 20px" }}>
+    <section className="section-viewport" style={{ background: "#ffffff", borderTop: `1px solid ${colors.border}`, borderBottom: `1px solid ${colors.border}`, padding: "72px 20px" }}>
       <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
         <div style={{ marginBottom: "36px" }}>
           <Reveal as="span" line style={{ height: "1px", background: colors.border }} />

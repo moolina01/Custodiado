@@ -17,7 +17,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const { code } = await params;
 
   const allowed = await checkRateLimit(`lookup:${getClientIp(request)}`, LOOKUP_LIMIT, LOOKUP_WINDOW_SECONDS);
-  if (!allowed) return jsonError(429, "Demasiadas solicitudes. Intenta de nuevo en un momento.");
+  if (!allowed) return jsonError(429, "Demasiadas solicitudes, intenta de nuevo en un momento.");
 
   try {
     // SPEC 04: "toda la app requiere login" — cualquier cuenta logueada
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     await requireSessionUser();
 
     const trato = await getTratoByCode(code);
-    if (!trato) return jsonError(404, "Trato no encontrado. Revisa el código.");
+    if (!trato) return jsonError(404, "Trato no encontrado, revisa el código.");
     return jsonOk(toPublicDto(trato));
   } catch (error) {
     if (error instanceof UnauthorizedError) return jsonError(401, error.message);

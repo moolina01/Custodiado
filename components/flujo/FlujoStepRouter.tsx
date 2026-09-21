@@ -2,6 +2,7 @@ import type { ReactNode, RefObject } from "react";
 import { COUNTERPART_LABEL } from "./data";
 import type { Role, Screen, WizardFields } from "./types";
 
+
 import InicioStep from "./steps/InicioStep";
 import CrearDatosStep from "./steps/CrearDatosStep";
 import CrearCodigoStep from "./steps/CrearCodigoStep";
@@ -15,6 +16,7 @@ import CancelarStep from "./steps/CancelarStep";
 import CanceladoStep from "./steps/CanceladoStep";
 import QrStep from "./steps/QrStep";
 import ListoStep from "./steps/ListoStep";
+type FlujoStepRouterProps = FlujoStepContext & { screen: Screen };
 
 /**
  * Every value a step might need to render itself — computed once in
@@ -75,7 +77,8 @@ type StepRenderer = (ctx: FlujoStepContext) => ReactNode;
 
 /** Maps each wizard screen to the step it renders — the single place that answers "which component is this screen?". */
 const STEP_RENDERERS: Record<Screen, StepRenderer> = {
-  inicio: (ctx) => <InicioStep role={ctx.role} onCrear={ctx.onStartCrear} onCodigo={ctx.onStartCodigo} />,
+  inicio: (ctx) =>
+   <InicioStep role={ctx.role} onCrear={ctx.onStartCrear} onCodigo={ctx.onStartCodigo} />,
 
   "crear-datos": (ctx) => (
     <CrearDatosStep
@@ -168,9 +171,7 @@ const STEP_RENDERERS: Record<Screen, StepRenderer> = {
   listo: (ctx) => <ListoStep role={ctx.role} summaryItem={ctx.summaryItem} listoAmount={ctx.listoAmount} />,
 };
 
-type FlujoStepRouterProps = FlujoStepContext & { screen: Screen };
 
-/** Looks up `screen` in the table above and renders that step with its slice of `ctx`. */
 export default function FlujoStepRouter({ screen, ...ctx }: FlujoStepRouterProps) {
   return <>{STEP_RENDERERS[screen](ctx)}</>;
 }

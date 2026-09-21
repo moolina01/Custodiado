@@ -1,7 +1,8 @@
 "use client"
-import { useEffect, useRef, useState } from "react"
-import { MeshGradient, PulsingBorder } from "@paper-design/shaders-react"
+import { PulsingBorder } from "@paper-design/shaders-react"
 import { motion } from "framer-motion"
+import FloatingMarketIcons from "@/components/custodio/hero/FloatingMarketIcons"
+import { MeshBackground } from "./mesh-background"
 
 // Custodiado brand palette (`components/custodio/theme.ts`) — this file
 // lives under shadcn's `/components/ui`, not `/components/custodio`, so
@@ -33,33 +34,8 @@ const BRAND = {
  * apuntando a nada real).
  */
 export default function ShaderShowcase() {
-  const containerRef = useRef<HTMLDivElement>(null)
-  // Pasa a "activo" mientras el mouse está sobre el hero — solo acelera
-  // un poco el shader de fondo (`speed` más abajo), gesto sutil de que
-  // la sección reacciona.
-  const [isActive, setIsActive] = useState(false)
-
-  useEffect(() => {
-    const handleMouseEnter = () => setIsActive(true)
-    const handleMouseLeave = () => setIsActive(false)
-
-    const container = containerRef.current
-    if (container) {
-      container.addEventListener("mouseenter", handleMouseEnter)
-      container.addEventListener("mouseleave", handleMouseLeave)
-    }
-
-    return () => {
-      if (container) {
-        container.removeEventListener("mouseenter", handleMouseEnter)
-        container.removeEventListener("mouseleave", handleMouseLeave)
-      }
-    }
-  }, [])
-
   return (
     <div
-      ref={containerRef}
       id="hero"
       className="min-h-screen relative overflow-hidden"
       style={{
@@ -72,7 +48,14 @@ export default function ShaderShowcase() {
         // vez de este shader. `--navbar-h` la publica `Navbar` (altura real,
         // vía `ResizeObserver`); el fallback de 60px cubre el primer paint
         // antes de que ese efecto corra, para no mostrar un salto de layout.
-        marginTop: "calc(-1 * var(--navbar-h, 60px))",
+        //
+        // `--trato-banner-h` cubre lo mismo para `ActiveTratoBanner`
+        // (también entre `Navbar` y este Hero en el DOM, ver `app/page.tsx`):
+        // 0px cuando no hay trato activo, o su altura real si la hay — en
+        // mobile ese banner puede envolver a 2 líneas (mismo texto, menos
+        // ancho) y sin restarla acá el Hero queda empujado más abajo de lo
+        // que el navbar transparente compensa.
+        marginTop: "calc(-1 * (var(--navbar-h, 60px) + var(--trato-banner-h, 0px)))",
       }}
     >
       <svg className="absolute inset-0 w-0 h-0">
@@ -88,17 +71,17 @@ export default function ShaderShowcase() {
       </svg>
 
       {/* Navy → azul Custodiado (antes negro/cian/naranja) — sin blanco
-          puro en ninguna capa, a propósito (ver comentario de `BRAND`). */}
-      <MeshGradient
-        className="absolute inset-0 w-full h-full"
-        colors={[BRAND.brandDeep, BRAND.brand, BRAND.accent, BRAND.brandDark, BRAND.accentLight]}
-        speed={isActive ? 0.6 : 0.3}
-      />
-      <MeshGradient
-        className="absolute inset-0 w-full h-full opacity-50"
-        colors={[BRAND.brandDeep, BRAND.accentLight, BRAND.accent, BRAND.brand]}
-        speed={0.2}
-      />
+          puro en ninguna capa, a propósito (ver comentario de `BRAND`).
+          Extracted to `MeshBackground` so `Footer` can render the exact
+          same shader instead of approximating it. */}
+      <MeshBackground />
+
+      {/* Yapo, Facebook Marketplace, WhatsApp, Instagram, Mercado Libre —
+          los canales donde hoy se compra/vende a ciegas, flotando detrás
+          del texto. Puramente decorativo (z-10, pointer-events-none). */}
+      <div className="absolute inset-0 z-10">
+        <FloatingMarketIcons />
+      </div>
 
       <main className="absolute bottom-20 left-8 right-8 z-20 max-w-2xl">
         <div className="text-left">
@@ -132,8 +115,8 @@ export default function ShaderShowcase() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.5 }}
           >
-            Custodiamos tu dinero hasta que veas el producto. Recién ahí se libera el pago — procesado por Mercado
-            Pago, nunca por una cuenta nuestra.
+            Compra y vende tus productos de forma segura, sin importar dónde, Custodiado retiene el pago y lo libera
+            recién cuando confirmás que todo está bien.
           </motion.p>
 
           <motion.div
@@ -144,7 +127,7 @@ export default function ShaderShowcase() {
           >
             <motion.a
               href="/flujo?role=comprador"
-              className="px-10 py-4 rounded-full text-white font-semibold text-sm transition-shadow duration-300 cursor-pointer shadow-lg hover:shadow-xl"
+              className="hero-cta-buyer px-10 py-4 rounded-full text-white font-semibold text-sm transition-shadow duration-300 cursor-pointer shadow-lg hover:shadow-xl"
               style={{ background: BRAND.accent }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -153,7 +136,7 @@ export default function ShaderShowcase() {
             </motion.a>
             <motion.a
               href="/flujo?role=vendedor"
-              className="px-10 py-4 rounded-full font-semibold text-sm transition-shadow duration-300 cursor-pointer shadow-lg hover:shadow-xl"
+              className="hero-cta-seller px-10 py-4 rounded-full font-semibold text-sm transition-shadow duration-300 cursor-pointer shadow-lg hover:shadow-xl"
               style={{ background: "#ffffff", color: BRAND.brandDeep }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
