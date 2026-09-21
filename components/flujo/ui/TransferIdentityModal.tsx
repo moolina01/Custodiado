@@ -75,7 +75,7 @@ export default function TransferIdentityModal({ onClose }: TransferIdentityModal
 
         <div style={{ fontSize: "17px", fontWeight: "700", color: colors.brandDeep, marginBottom: "8px" }}>Importante</div>
         <div style={{ fontSize: "14.5px", color: colors.textMuted, lineHeight: "1.5", marginBottom: "24px" }}>
-          Transfiere desde una cuenta bancaria a tu nombre — el mismo RUT con el que te registraste. Es nuestro mecanismo de
+          Transfiere desde una cuenta bancaria a tu nombre — el mismo RUT con el que te registraste, es nuestro mecanismo de
           seguridad: si la plata llega desde otra cuenta, te la devolvemos automáticamente y cancelamos el trato.
         </div>
 

@@ -22,7 +22,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
 
   try {
     const trato = await getTratoByCode(code);
-    if (!trato) return jsonError(404, "Trato no encontrado. Revisa el código.");
+    if (!trato) return jsonError(404, "Trato no encontrado, revisa el código.");
     if (trato.status !== "awaiting_payment") {
       return jsonError(409, "Este trato no está esperando un pago en este momento.");
     }
@@ -31,7 +31,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     if (!updated) {
       // Lost a race (e.g. the real webhook landed a moment earlier) — re-read and report the current state.
       const refetched = await getTratoByCode(code);
-      if (!refetched) return jsonError(404, "Trato no encontrado. Revisa el código.");
+      if (!refetched) return jsonError(404, "Trato no encontrado, revisa el código.");
       return jsonOk(toPublicDto(refetched));
     }
     return jsonOk(toPublicDto(updated));

@@ -31,7 +31,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     switch (result.outcome) {
       case "not_found":
-        return jsonError(404, "Trato no encontrado. Revisa el código.");
+        return jsonError(404, "Trato no encontrado, revisa el código.");
       case "wrong_status":
         return jsonError(409, "Este trato ya no se puede cancelar.");
       case "not_owner":

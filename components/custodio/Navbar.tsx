@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "@/components/auth/useSession";
 import { useScrolled } from "./useScrolled";
+import { useSectionOverlap } from "./useSectionOverlap";
 import { colors } from "./theme";
 import { NAV_LINKS } from "./data";
 import UserMenu from "./UserMenu";
@@ -24,6 +25,64 @@ export default function Navbar() {
   // touch, so it visibly registers as "now pinned" instead of just always
   // looking the same. `FlujoHeader` shares this exact behavior via the same hook.
   const scrolled = useScrolled();
+
+  const headerRef = useRef<HTMLElement>(null);
+
+  // Pedido del usuario: mientras el navbar está sobre el Hero (fondo de
+  // shader animado, ver `components/ui/hero.tsx`) debe leerse como parte
+  // del Hero — el shader real de fondo, no una aproximación estática — y
+  // recién al bajar más allá del Hero pasa a blanco. `overHero` es la señal
+  // para ese swap; `scrolled` (abajo) solo gradúa la opacidad/sombra del
+  // blanco una vez que ya se salió del Hero.
+  //
+  // Para que `background: transparent` (abajo) realmente muestre el shader
+  // y no el fondo claro de la página, tiene que haber overlap real desde el
+  // primer frame — no solo una vez que ya se scrolleó. `Navbar` vive en el
+  // flujo normal del documento justo *antes* del Hero, así que por sí solo
+  // nunca se superpone a nada en el instante de carga (scroll 0): esto se
+  // probó, se vio el navbar blanco/lavado en vez de azul, y un gradiente
+  // propio como parche tampoco sirvió — no matchea el frame real del shader
+  // animado y se nota la costura. El fix real está del lado del Hero: le
+  // aplica un `margin-top` negativo igual a la altura de este header (ver
+  // `--navbar-h` más abajo y `components/ui/hero.tsx`), corriéndolo hacia
+  // arriba para que arranque *debajo* del navbar en vez de después — ahí
+  // sí hay overlap genuino desde el pixel 0.
+  const overHero = useSectionOverlap("hero", headerRef, true);
+
+  // Same idea for the two dark navy sections further down the page
+  // ("Confianza" / `TrustBanner` and "Preguntas" / `Faq`, both
+  // `colors.brand` — see `components/custodio/theme.ts`): a light navbar
+  // sliding over either one reads as a seam, not a continuation of the
+  // section. `overDarkSection` covers both ids at once since they share
+  // the exact same background color, so the navbar can just solidify to
+  // that color instead of staying light.
+  const overConfianza = useSectionOverlap("confianza", headerRef);
+  const overFaq = useSectionOverlap("faq", headerRef);
+  const overDarkSection = overConfianza || overFaq;
+
+  // Everything that only cares about "is the navbar currently sitting on a
+  // dark background" (text/logo/CTA colors) — the Hero's shader and these
+  // solid navy sections both count, they just differ in *how* the navbar's
+  // own background responds (transparent to reveal the shader vs. a solid
+  // fill matching the section).
+  const overDark = overHero || overDarkSection;
+
+  // Altura real del header, publicada como variable CSS para que el Hero
+  // (`components/ui/hero.tsx`) sepa cuánto "meterse" debajo con su
+  // `margin-top` negativo. Medida con `ResizeObserver` en vez de un valor
+  // fijo porque el layout de `.nav-shell` cambia en el breakpoint de 720px
+  // (`app/globals.css`) y una constante se hubiera desincronizado ahí.
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+    const setVar = () => {
+      document.documentElement.style.setProperty("--navbar-h", `${header.offsetHeight}px`);
+    };
+    setVar();
+    const observer = new ResizeObserver(setVar);
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, []);
 
   // `.nav-link` (below) only becomes visible from 720px up (`app/globals.css`)
   // — below that, the section links had no way to be reached at all. This
@@ -48,21 +107,34 @@ export default function Navbar() {
 
   return (
     <header
+      ref={headerRef}
       className="navbar-header"
       style={{
         position: "sticky",
         top: "0",
         zIndex: "50",
-        background: scrolled ? "rgba(245,247,251,0.97)" : "rgba(245,247,251,0.82)",
-        backdropFilter: "blur(20px)",
-        boxShadow: scrolled ? "0 4px 20px rgba(11,18,32,0.08)" : "none",
-        borderBottom: `1px solid ${colors.border}`,
+        background: overHero
+          ? "transparent"
+          : overDarkSection
+            ? colors.brand
+            : scrolled
+              ? "rgba(245,247,251,0.97)"
+              : "rgba(245,247,251,0.82)",
+        backdropFilter: overDark ? "none" : "blur(20px)",
+        boxShadow: !overDark && scrolled ? "0 4px 20px rgba(11,18,32,0.08)" : "none",
+        borderBottom: `1px solid ${overDark ? "transparent" : colors.border}`,
+        transition: "background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease",
       }}
     >
       <div
         className="nav-shell"
         style={{
-          maxWidth: "1100px",
+          // Un poco más ancho que el resto de las secciones (`1100px`, ver
+          // `Footer`/`Testimonials`/`BlogPreview`) a propósito: pedido del
+          // usuario para que los links queden más hacia la izquierda y
+          // "Empezar" más hacia la derecha en pantallas anchas, en vez de
+          // todo apretado hacia el centro.
+          maxWidth: "1320px",
           margin: "0 auto",
           alignItems: "center",
           justifyContent: "space-between",
@@ -85,9 +157,10 @@ export default function Navbar() {
               borderRadius: "10px",
               border: "none",
               background: "none",
-              color: colors.brandDeep,
+              color: overDark ? "#ffffff" : colors.brandDeep,
               cursor: "pointer",
               flexShrink: "0",
+              transition: "color 0.35s ease",
             }}
           >
             {menuOpen ? (
@@ -109,14 +182,15 @@ export default function Navbar() {
                 className="nav-link"
                 style={{
                   display: "none",
+                  position: "relative",
                   fontFamily: "var(--font-nav)",
                   fontSize: "15px",
                   fontWeight: "600",
                   letterSpacing: "0",
-                  color: colors.brandDeep,
+                  color: overDark ? "#ffffff" : colors.brandDeep,
                   padding: "8px 12px",
-                  borderRadius: "9999px",
                   whiteSpace: "nowrap",
+                  transition: "color 0.35s ease",
                 }}
               >
                 {link.label}
@@ -166,12 +240,12 @@ export default function Navbar() {
           className="navbar-logo-scale"
           style={{ display: "inline-flex", transform: scrolled ? "scale(1.06)" : "scale(1)" }}
         >
-          <Logo href="/" size={25} />
+          <Logo href="/" size={25} variant={overDark ? "dark" : "light"} />
         </span>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "10px" }}>
           {session.status === "authenticated" ? (
-            <UserMenu name={session.name} onLoggedOut={session.refresh} />
+            <UserMenu name={session.name} onLoggedOut={session.refresh} onDark={overDark} />
           ) : (
             // SPEC 05 (ajuste): con sesión, el ícono de cuenta reemplaza a
             // esta CTA por completo — ya no hace falta invitar a "empezar" a
@@ -196,13 +270,18 @@ export default function Navbar() {
                 display: "flex",
                 alignItems: "center",
                 gap: "7px",
-                background: colors.brandDeep,
-                color: colors.background,
+                // Sobre el Hero (fondo navy) un botón navy-sobre-navy se
+                // pierde — mismo blanco sólido que "Soy comprador"/"Soy
+                // vendedor" usan ahí (`components/ui/hero.tsx`) en vez de
+                // quedar sin contraste.
+                background: overDark ? "#ffffff" : colors.brandDeep,
+                color: overDark ? colors.brandDeep : colors.background,
                 fontWeight: "600",
                 fontSize: "14px",
                 padding: "10px 18px",
                 borderRadius: "9999px",
                 whiteSpace: "nowrap",
+                transition: "background 0.35s ease, color 0.35s ease, transform 0.2s ease",
               }}
             >
               Empezar

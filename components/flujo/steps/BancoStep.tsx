@@ -49,7 +49,7 @@ export default function BancoStep({ summaryAmount, fields, onFieldChange }: Banc
           onChange={(v) => onFieldChange("account", v)}
           placeholder="000123456789"
           inputMode="numeric"
-          hint={`Recibes ${summaryAmount} completos. La comisión ya la pagó el comprador.`}
+          hint={`Recibes ${summaryAmount} completos, la comisión ya la pagó el comprador.`}
         />
       </div>
     </div>

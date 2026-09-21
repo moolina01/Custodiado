@@ -19,6 +19,8 @@ type UserMenuProps = {
    * default `logoutRequest()` + navigate/refresh flow entirely.
    */
   onLogout?: () => void | Promise<void>;
+  /** True when rendered over a dark background (e.g. `Navbar` over the Hero's shader) — the avatar circle is `colors.brand` itself, so without a ring it visually merges into a same-tone header instead of reading as a button. */
+  onDark?: boolean;
 };
 
 /**
@@ -30,7 +32,7 @@ type UserMenuProps = {
  * lugares que lo usan — este componente no vuelve a consultar la sesión,
  * recibe `name` ya resuelto para no duplicar la llamada a `GET /api/auth/me`.
  */
-export default function UserMenu({ name, onLoggedOut, onLogout }: UserMenuProps) {
+export default function UserMenu({ name, onLoggedOut, onLogout, onDark }: UserMenuProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -90,12 +92,14 @@ export default function UserMenu({ name, onLoggedOut, onLogout }: UserMenuProps)
           fontWeight: "700",
           fontSize: "14px",
           border: "none",
+          boxShadow: onDark ? "0 0 0 2px rgba(255,255,255,0.35)" : "none",
           cursor: "pointer",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           fontFamily: "inherit",
           flexShrink: "0",
+          transition: "box-shadow 0.35s ease",
         }}
       >
         {initial}

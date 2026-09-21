@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession } from "@/components/auth/useSession";
 import { myTratosRequest, type PanelTrato } from "@/components/panel/api";
 import { money } from "@/lib/pricing";
@@ -22,6 +22,7 @@ import { colors } from "./theme";
 export default function ActiveTratoBanner() {
   const session = useSession();
   const [trato, setTrato] = useState<PanelTrato | null>(null);
+  const bannerRef = useRef<HTMLAnchorElement>(null);
 
   useEffect(() => {
     if (session.status !== "authenticated") return;
@@ -37,10 +38,38 @@ export default function ActiveTratoBanner() {
     };
   }, [session.status]);
 
+  // Publica la propia altura como `--trato-banner-h`, igual que `Navbar`
+  // publica `--navbar-h` — el Hero (`components/ui/hero.tsx`) resta ambas
+  // de su `margin-top` negativo. Sin esto, cuando el mensaje envuelve a 2
+  // líneas (pasa en mobile: mismo texto, menos ancho) el Hero queda
+  // empujado más abajo de lo que el navbar transparente compensa, y el
+  // navbar deja de mostrar el shader — se veía blanco/opaco en mobile con
+  // un trato activo, bien en desktop. Se resetea a "0px" al desmontar (el
+  // trato se cierra, o nunca hubo uno) para no dejar un hueco fantasma.
+  useEffect(() => {
+    if (!trato) {
+      document.documentElement.style.setProperty("--trato-banner-h", "0px");
+      return;
+    }
+    const el = bannerRef.current;
+    if (!el) return;
+    const setVar = () => {
+      document.documentElement.style.setProperty("--trato-banner-h", `${el.offsetHeight}px`);
+    };
+    setVar();
+    const observer = new ResizeObserver(setVar);
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      document.documentElement.style.setProperty("--trato-banner-h", "0px");
+    };
+  }, [trato]);
+
   if (!trato) return null;
 
   return (
     <a
+      ref={bannerRef}
       href={`/flujo?role=${trato.myRole}&code=${trato.code}`}
       style={{
         display: "flex",

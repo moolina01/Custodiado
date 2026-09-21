@@ -8,7 +8,7 @@ const CODE_LETTERS = ["K", "7", "M", "2", "Q", "X"];
 /** Mock "deal code" card: how buyer and seller land on the same deal. */
 export default function DealCode() {
   return (
-    <section style={{ padding: "72px 20px", maxWidth: "1100px", margin: "0 auto" }}>
+    <section className="section-viewport" style={{ padding: "72px 20px", maxWidth: "1100px", margin: "0 auto" }}>
       <div style={{ marginBottom: "48px", textAlign: "center" }}>
         <Reveal as="span" line style={{ height: "1px", background: colors.border }} />
         <Reveal
@@ -37,7 +37,7 @@ export default function DealCode() {
           </span>
         </Reveal>
         <Reveal delay={320} style={{ fontSize: "16.5px", color: colors.textMuted, margin: "0 auto", maxWidth: "440px" }}>
-          Uno crea el trato y le pasa el código al otro. El otro lo ingresa en custodiado.cl y quedan viendo lo mismo.
+          Uno crea el trato y le pasa el código al otro, el otro lo ingresa en custodiado.cl y quedan viendo lo mismo.
         </Reveal>
       </div>
 

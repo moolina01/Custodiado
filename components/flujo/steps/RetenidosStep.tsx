@@ -52,7 +52,7 @@ export default function RetenidosStep({ role, summaryItem, counterpartLabel, cou
       </Card>
 
       <div style={{ fontSize: "13px", color: colors.textFaint, textAlign: "center", marginTop: "16px", lineHeight: "1.5" }}>
-        Prefiere un lugar seguro y conocido para juntarte, como tu casa. Puedes cerrar esta pestaña sin problemas — te lo
+        Prefiere un lugar seguro y conocido para juntarte, como tu casa, puedes cerrar esta pestaña sin problemas — te lo
         recordamos en la home cuando vuelvas.
       </div>
 

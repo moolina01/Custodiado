@@ -63,7 +63,7 @@ export default function DetalleStep({
       <div style={{ marginTop: "16px" }}>
         <Callout tone="info">
           {isBuyer
-            ? "Tu plata queda retenida en custodia. El vendedor no recibe nada hasta que confirmes la entrega."
+            ? "Tu plata queda retenida en custodia, el vendedor no recibe nada hasta que confirmes la entrega."
             : "Aceptar no te compromete a entregar todavía — eso se coordina después, con la plata ya retenida."}
         </Callout>
       </div>

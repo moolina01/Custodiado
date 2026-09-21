@@ -23,17 +23,17 @@ type CancelarStepProps = {
 export default function CancelarStep({ summaryItem, totalAmount, isRefundPending, isSubmitting, onConfirm }: CancelarStepProps) {
   return (
     <div>
-      <StepHeading title="Cancelar el trato" subtitle="Te devolvemos el total al medio de pago con el que pagaste. El vendedor no recibe nada." />
+      <StepHeading title="Cancelar el trato" subtitle="Te devolvemos el total al medio de pago con el que pagaste, el vendedor no recibe nada." />
 
       <Card>
         <SummaryRow label="Producto" value={summaryItem} last />
         <SummaryRow label="Te devolvemos" value={totalAmount} strong valueColor={colors.successAlt} divider />
-        <div style={{ fontSize: "13.5px", color: colors.textFaint, marginTop: "12px" }}>Incluye la comisión. Llega en 1 a 2 días hábiles.</div>
+        <div style={{ fontSize: "13.5px", color: colors.textFaint, marginTop: "12px" }}>Incluye la comisión, llega en 1 a 2 días hábiles.</div>
       </Card>
 
       <div style={{ marginTop: "16px" }}>
         <Callout tone="warning">
-          Si ya te juntaste y recibiste el producto, no canceles: escanea el QR. Cancelar un trato ya cumplido puede dejarte fuera de Custodiado.
+          Si ya te juntaste y recibiste el producto, no canceles: escanea el QR, cancelar un trato ya cumplido puede dejarte fuera de Custodiado.
         </Callout>
       </div>
 

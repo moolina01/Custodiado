@@ -70,7 +70,7 @@ export default function HelpChat({ role, summaryLabel, isOpen, onOpen, onClose, 
             </div>
 
             <div style={{ alignSelf: "flex-start", maxWidth: "84%", background: "#ffffff", border: `1px solid ${colors.border}`, color: colors.brandDeep, fontSize: "14.5px", padding: "12px 14px", borderRadius: "14px 14px 14px 4px" }}>
-              Hola 👋 Soy el asistente de Custodiado. Te puedo resolver las dudas más comunes al toque.
+              Hola 👋 soy el asistente de Custodiado, te puedo resolver las dudas más comunes al toque.
             </div>
 
             {messages.map((msg, i) => (

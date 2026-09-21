@@ -178,7 +178,7 @@ export default function PagarStep({ totalAmount, totalAmountClp, summaryAmount, 
       script.src = SDK_SRC;
       script.async = true;
       script.onload = mountForm;
-      script.onerror = () => !cancelled && setSdkError("No pudimos cargar Mercado Pago. Revisa tu conexión.");
+      script.onerror = () => !cancelled && setSdkError("No pudimos cargar Mercado Pago, revisa tu conexión.");
       document.body.appendChild(script);
     }
 
@@ -190,7 +190,7 @@ export default function PagarStep({ totalAmount, totalAmountClp, summaryAmount, 
     const timeoutId = window.setTimeout(() => {
       if (!cancelled) {
         setFormReady((ready) => {
-          if (!ready) setSdkError("El formulario de pago no cargó. Revisa la consola del navegador o recarga la página.");
+          if (!ready) setSdkError("El formulario de pago no cargó, revisa la consola del navegador o recarga la página.");
           return ready;
         });
       }

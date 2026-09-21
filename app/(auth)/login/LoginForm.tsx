@@ -22,8 +22,8 @@ export default function LoginForm() {
       }}
       googleNext={next}
       banner={
-        (callbackFailed && <Callout tone="warning">El link no es válido o ya venció. Pedí uno nuevo desde &quot;Olvidé mi contraseña&quot;.</Callout>) ||
-        (googleUnavailable && <Callout tone="warning">El login con Google no está disponible todavía. Entra con tu email y contraseña.</Callout>)
+        (callbackFailed && <Callout tone="warning">El link no es válido o ya venció, pedí uno nuevo desde &quot;Olvidé mi contraseña&quot;.</Callout>) ||
+        (googleUnavailable && <Callout tone="warning">El login con Google no está disponible todavía, entra con tu email y contraseña.</Callout>)
       }
       footer={
         <div style={{ marginTop: "18px", fontSize: "14px", textAlign: "center" }}>

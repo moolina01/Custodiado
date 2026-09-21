@@ -68,7 +68,7 @@ export default function Faq() {
   const [openIndex, setOpenIndex] = useState(0);
 
   return (
-    <section id="faq" style={{ background: colors.brand, padding: "72px 20px" }}>
+    <section id="faq" className="section-viewport" style={{ background: colors.brand, padding: "72px 20px" }}>
       <div style={{ maxWidth: "720px", margin: "0 auto" }}>
         <div style={{ marginBottom: "32px" }}>
           <Reveal as="span" line style={{ height: "1px", background: "rgba(255,255,255,0.14)" }} />
