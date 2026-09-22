@@ -16,7 +16,8 @@ export type TratoStatus =
   | "release_failed"
   | "refund_pending"
   | "refunded"
-  | "refund_failed";
+  | "refund_failed"
+  | "cancelled";
 
 export type BankAccountType = "checking_account" | "sight_account";
 
@@ -68,6 +69,15 @@ export interface TratoRow {
   mercadopago_payout_id: string | null;
   released_at: string | null;
 
+  // Manual release (Money Out is blocked, see lib/mercadopago/payouts.ts) —
+  // set when the trato enters release_pending: the admin has this long to
+  // pay the seller by hand before the deadline passes, and either side can
+  // flag a problem in the meantime via dispute_reported_*.
+  release_deadline_at: string | null;
+  dispute_reported_at: string | null;
+  dispute_reported_by: CreatedByRole | null;
+  dispute_note: string | null;
+
   // Identity RUT only (SPEC 04) — there's no buyer bank-destination data
   // anymore: a refund goes back to whatever the buyer originally paid
   // with (`lib/mercadopago/refunds.ts`), not a separately collected
@@ -77,6 +87,10 @@ export interface TratoRow {
   mercadopago_refund_id: string | null;
   cancel_reason: string | null;
   cancelled_at: string | null;
+  // Who initiated a cancellation, either the pre-payment cancelled path or
+  // the funds_held->refund path — lets notification content vary by role
+  // and identifies the counterparty to notify (see lib/tratos/cancel.ts).
+  cancelled_by_role: CreatedByRole | null;
 
   created_at: string;
   updated_at: string;

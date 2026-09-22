@@ -7,7 +7,7 @@ import { cancelTratoSchema } from "@/lib/tratos/validation";
 
 export const runtime = "nodejs";
 
-/** The buyer's cancel/refund. Mercado Pago refunds the payment back to however the buyer originally paid — no destination account to collect. */
+/** Either side's cancel. Before funds_held it's a plain close; once funds are held, Mercado Pago refunds the buyer's original payment method automatically. */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
 
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   try {
     // SPEC 04: reemplaza el chequeo de RUT (SPEC 03) — la sesión activa
-    // debe ser la cuenta dueña del lado "comprador" de este trato.
+    // debe ser una de las dos cuentas dueñas de este trato.
     const user = await requireSessionUser();
     const result = await cancelTrato(code, user.id, parsed.data.reason);
 
@@ -34,8 +34,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         return jsonError(404, "Trato no encontrado, revisa el código.");
       case "wrong_status":
         return jsonError(409, "Este trato ya no se puede cancelar.");
-      case "not_owner":
-        return jsonError(403, "Esta cuenta no es la que aceptó este trato como comprador.");
+      case "not_party":
+        return jsonError(403, "Esta cuenta no es parte de este trato.");
       case "already_refunded":
       case "submitted":
         return jsonOk(toPublicDto(result.trato));

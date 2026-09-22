@@ -12,6 +12,7 @@ import {
   payTratoRequest,
   submitBankDetailsRequest,
   verifyQrRequest,
+  verifyReleaseCodeRequest,
   type BankDetailsInput,
   type CancelInput,
   type PayInput,
@@ -191,6 +192,28 @@ export function useTrato(role: Role) {
     [trato]
   );
 
+  // The seller submitting the code the buyer told them in person — the
+  // code-based alternative to `verifyQr` (see ./releaseMethod). Same shape:
+  // verifies server-side before running the same release logic.
+  const verifyReleaseCode = useCallback(
+    async (submittedCode: string) => {
+      if (!trato) return null;
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        const updated = await verifyReleaseCodeRequest(trato.code, submittedCode);
+        setTrato(updated);
+        return updated;
+      } catch (err) {
+        setError(friendlyErrorMessage(err, "No se pudo liberar el pago."));
+        return null;
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [trato]
+  );
+
   // The buyer's "Confirmar cancelación". Same shape as `release`: doesn't
   // resolve synchronously — puts the trato into `refund_pending`, and
   // `refunded` only arrives once the underlying payment's status confirms
@@ -274,6 +297,7 @@ export function useTrato(role: Role) {
     pay,
     forceAdvancePayment,
     verifyQr,
+    verifyReleaseCode,
     cancel,
     refresh,
     restore,

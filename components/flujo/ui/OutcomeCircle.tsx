@@ -30,6 +30,15 @@ export function CheckIcon() {
   );
 }
 
+export function ClockIcon() {
+  return (
+    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke={colors.successAlt} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="8" pathLength={1} className="flujo-outcome-icon-path" />
+      <path d="M12 8v4l3 2" pathLength={1} className="flujo-outcome-icon-path flujo-outcome-icon-path-delay" />
+    </svg>
+  );
+}
+
 export function UndoIcon() {
   return (
     <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke={colors.successAlt} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">

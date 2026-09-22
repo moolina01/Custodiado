@@ -1,12 +1,8 @@
 import { colors } from "./theme";
 
 /**
- * Hand-built inline SVG illustrations shared across the site — originally
- * built for the Hero's two gradient panels (`hero/HeroPanels.tsx`), reused
- * as-is by `flujo/steps/InicioStep.tsx` for the "Crear el trato"/"Tengo un
- * código" choice panels so the wizard's first screen opens with the same
- * illustrated, colorful language as the landing page instead of introducing
- * a third visual style. No image-generation tool is available in this
+ * Hand-built inline SVG illustrations for the Hero's two gradient panels
+ * (`hero/HeroPanels.tsx`). No image-generation tool is available in this
  * environment, so these are simple, bold, geometric shapes with soft
  * gradients/shadows for depth, built entirely from Custodio's own palette
  * (`colors`) plus a couple of mint/gold tints scoped to this file.

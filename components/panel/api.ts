@@ -38,3 +38,11 @@ export function myTratosRequest(): Promise<PanelTrato[]> {
 export function myTratoDetailRequest(code: string): Promise<PanelTrato> {
   return request<PanelTrato>(`/api/tratos/mine/${encodeURIComponent(code)}`);
 }
+
+/** "Reportar un problema" during the 24h manual-release window — see lib/tratos/repository.ts's reportDispute. */
+export function reportProblemRequest(code: string, note: string): Promise<PanelTrato> {
+  return request<PanelTrato>(`/api/tratos/${encodeURIComponent(code)}/report-problem`, {
+    method: "POST",
+    body: JSON.stringify({ note: note || undefined }),
+  });
+}

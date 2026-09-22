@@ -13,7 +13,7 @@ import FlujoFooter from "./ui/FlujoFooter";
 import ProgressBar from "./ui/ProgressBar";
 import StepTransition from "./ui/StepTransition";
 import TransferIdentityModal from "./ui/TransferIdentityModal";
-import { devQrTokenRequest } from "./api";
+import { devQrTokenRequest, devReleaseCodeRequest } from "./api";
 import { logoutRequest } from "@/components/auth/api";
 import { DEFAULT_ITEM_LABEL } from "./data";
 import { calculateFee, money, toAmountNumber } from "./format";
@@ -24,6 +24,8 @@ import { useAdvanceOnTratoStatus } from "./useAdvanceOnTratoStatus";
 import { useHelpChat } from "./useHelpChat";
 import { useQrScanner } from "./useQrScanner";
 import { useSellerQrToken } from "./useSellerQrToken";
+import { useBuyerReleaseCode } from "./useBuyerReleaseCode";
+import { RELEASE_METHOD } from "./releaseMethod";
 import { useSession } from "@/components/auth/useSession";
 import { useTrato } from "./useTrato";
 import { useWizardState } from "./useWizardState";
@@ -53,13 +55,18 @@ type FlujoAppProps = { initialRole: Role; initialCode?: string };
  * auto-advances the local step once the *other* side's real action — the
  * counterpart accepting, a Checkout API payment confirming — actually changes its status
  * (`awaiting_payment`/`funds_held` for inbound payment, `released` for
- * outbound release). On `qr`, the buyer's camera (`useQrScanner`) decoding
- * the seller's live QR (`useSellerQrToken`) *does* call the backend
- * (`verifyQr`, SPEC 02) on its own, no button involved — but only to *start*
- * the release — the screen still waits for the webhook before advancing,
- * same as everything else here. `cancelar` (the buyer's refund) works the
- * same way: "Confirmar cancelación" calls `cancel`, then the screen waits
- * for the refund webhook (via the same hook) before moving to `cancelado`.
+ * outbound release). On `qr`, the release itself starts without a nav
+ * button too, but which side triggers it — and how — depends on
+ * `RELEASE_METHOD` (`./releaseMethod`): by default the seller types in the
+ * buyer's renewing code (`ReleaseCodeStep`/`useBuyerReleaseCode`,
+ * `verifyReleaseCode`); flipped to `"qr"`, it's the buyer's camera
+ * (`useQrScanner`) decoding the seller's live QR (`useSellerQrToken`,
+ * `verifyQr`, SPEC 02) instead. Either way this only *starts* the release —
+ * the screen still waits for the webhook before advancing, same as
+ * everything else here. `cancelar` (either side's cancel, from `retenidos`)
+ * works the same way: "Confirmar cancelación" calls `cancel`, then the
+ * screen waits for the refund to resolve (via the same hook) before moving
+ * to `cancelado`.
  */
 export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
   const role = initialRole;
@@ -269,10 +276,22 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
     if (screen !== "qr") setSellerConfirmedMeetup(false);
   }
 
-  const sellerQr = useSellerQrToken(screen === "qr" && !isBuyer && sellerConfirmedMeetup, trato?.code, tratoState.sellerQrSecret);
-  const scanner = useQrScanner(screen === "qr" && isBuyer, (token) => {
+  // Both hooks below stay gated on RELEASE_METHOD === "qr" too — not just
+  // screen/role — so switching to the code flow (the default) doesn't leave
+  // the seller minting unused QR tokens every 30s or prompt the buyer for
+  // camera permission they'll never use. See ./releaseMethod.
+  const sellerQr = useSellerQrToken(screen === "qr" && !isBuyer && sellerConfirmedMeetup && RELEASE_METHOD === "qr", trato?.code, tratoState.sellerQrSecret);
+  const scanner = useQrScanner(screen === "qr" && isBuyer && RELEASE_METHOD === "qr", (token) => {
     tratoState.verifyQr(token);
   });
+
+  // Code-based alternative (SPEC 02, code variant): the buyer's screen
+  // mints/renews a signed 6-digit code every 45s instead of a QR — see
+  // useBuyerReleaseCode. No "confirm meetup" gate needed on this side (the
+  // buyer already passed through "retenidos"'s own "Ya nos juntamos" before
+  // ever reaching "qr" — see FLOWS in ./flow); the seller side is just a
+  // plain input, nothing to gate at all.
+  const buyerReleaseCode = useBuyerReleaseCode(screen === "qr" && isBuyer && RELEASE_METHOD === "code", trato?.code);
 
   // "crear-codigo" (whoever created the trato, waiting on the other side):
   // same wait-for-webhook shape as the rest, but the target status differs
@@ -414,10 +433,28 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
     tratoState.verifyQr(token);
   };
 
-  // Buyer's "Confirmar cancelación" — same idempotency story as the release,
-  // in lib/tratos/cancel.ts. No destination account to send along: a
-  // Mercado Pago refund goes back to whatever the buyer originally paid
-  // with.
+  // Seller's manually-typed release code (code-based alternative — see
+  // ./releaseMethod). Unlike `handleDevQrScan`, this isn't a dev-only
+  // shortcut for something otherwise automatic: it's the real action, just
+  // driven by whatever `ReleaseCodeStep` collected from the input.
+  const handleVerifyReleaseCode = (submittedCode: string) => {
+    tratoState.verifyReleaseCode(submittedCode);
+  };
+
+  // Dev/test-only "Simular ingreso (dev)" button — pulls the buyer's
+  // current code from `/dev-release-code` (no session required) and feeds
+  // it through the same `verifyReleaseCode` path a real typed-in code
+  // would, for testing the whole flow from one device/tab.
+  const handleDevReleaseCode = async () => {
+    if (!trato) return;
+    const { code: currentReleaseCode } = await devReleaseCodeRequest(trato.code);
+    tratoState.verifyReleaseCode(currentReleaseCode);
+  };
+
+  // Either side's "Confirmar cancelación" — same idempotency story as the
+  // release, in lib/tratos/cancel.ts. No destination account to send along:
+  // a Mercado Pago refund goes back to whatever the buyer originally paid
+  // with, regardless of which side cancelled.
   const handleCancelarConfirm = () => {
     tratoState.cancel({});
   };
@@ -503,8 +540,9 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
             onForceAdvancePayment={() => tratoState.forceAdvancePayment()}
             isSubmitting={tratoState.isSubmitting}
             isRefundPending={trato?.status === "refund_pending"}
-            isReleasePending={isBuyer && trato?.status === "release_pending"}
+            isReleasePending={trato?.status === "release_pending"}
             onCancelarConfirm={handleCancelarConfirm}
+            cancelledByRole={trato?.cancelledByRole ?? null}
             qrImageDataUrl={sellerQr.qrImageDataUrl}
             qrCountdownLabel={sellerQr.countdownLabel}
             qrProgressPercent={sellerQr.progressPercent}
@@ -515,6 +553,12 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
             qrScannerError={scanner.error}
             isQrScanning={scanner.isScanning}
             onDevQrScan={handleDevQrScan}
+            releaseCode={buyerReleaseCode.releaseCode}
+            releaseCodeCountdownLabel={buyerReleaseCode.countdownLabel}
+            releaseCodeProgressPercent={buyerReleaseCode.progressPercent}
+            releaseCodeError={buyerReleaseCode.error}
+            onVerifyReleaseCode={handleVerifyReleaseCode}
+            onDevVerifyReleaseCode={handleDevReleaseCode}
           />
         </StepTransition>
 

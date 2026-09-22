@@ -56,35 +56,35 @@ export default function RetenidosStep({ role, summaryItem, counterpartLabel, cou
         recordamos en la home cuando vuelvas.
       </div>
 
-      {isBuyer && (
-        <Card style={{ marginTop: "16px" }}>
-          <div style={{ fontSize: "15px", fontWeight: "700", marginBottom: "5px" }}>¿No se concretó el trato?</div>
-          <div style={{ fontSize: "14px", color: colors.textMuted, marginBottom: "16px" }}>
-            Si el trato no se concreta, cancela y te devolvemos la plata completa a la cuenta desde la que pagaste.
-          </div>
-          <button
-            onClick={onCancel}
-            className="flujo-danger-outline"
-            style={{
-              width: "100%",
-              background: "#ffffff",
-              border: `1px solid ${colors.dangerBorder}`,
-              color: colors.dangerText,
-              fontFamily: "inherit",
-              fontWeight: "700",
-              fontSize: "15px",
-              padding: "14px",
-              borderRadius: "12px",
-              cursor: "pointer",
-            }}
-          >
-            Cancelar el trato y recuperar mi plata
-          </button>
-          <div style={{ fontSize: "13px", color: colors.textFaint, textAlign: "center", marginTop: "11px" }}>
-            Puedes cancelar mientras no hayas escaneado el QR.
-          </div>
-        </Card>
-      )}
+      <Card style={{ marginTop: "16px" }}>
+        <div style={{ fontSize: "15px", fontWeight: "700", marginBottom: "5px" }}>¿No se concretó el trato?</div>
+        <div style={{ fontSize: "14px", color: colors.textMuted, marginBottom: "16px" }}>
+          {isBuyer
+            ? "Si el trato no se concreta, cancela y te devolvemos la plata completa a la cuenta desde la que pagaste."
+            : "Si el trato no se concreta, cancela y le devolvemos la plata completa al comprador."}
+        </div>
+        <button
+          onClick={onCancel}
+          className="flujo-danger-outline"
+          style={{
+            width: "100%",
+            background: "#ffffff",
+            border: `1px solid ${colors.dangerBorder}`,
+            color: colors.dangerText,
+            fontFamily: "inherit",
+            fontWeight: "700",
+            fontSize: "15px",
+            padding: "14px",
+            borderRadius: "12px",
+            cursor: "pointer",
+          }}
+        >
+          {isBuyer ? "Cancelar el trato y recuperar mi plata" : "Cancelar el trato"}
+        </button>
+        <div style={{ fontSize: "13px", color: colors.textFaint, textAlign: "center", marginTop: "11px" }}>
+          Puedes cancelar mientras no hayas escaneado el QR.
+        </div>
+      </Card>
     </div>
   );
 }

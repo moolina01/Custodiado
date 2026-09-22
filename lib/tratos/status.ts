@@ -17,9 +17,13 @@ export const ALLOWED_FROM: Record<TratoStatus, TratoStatus[]> = {
   refund_pending: ["funds_held"],
   refunded: ["refund_pending"],
   refund_failed: ["refund_pending"],
+  // Cancelling before any money is held — no refund involved, straight to
+  // terminal. Once funds_held, cancelling goes through refund_pending
+  // instead (see lib/tratos/cancel.ts).
+  cancelled: ["awaiting_acceptance", "awaiting_payment"],
 };
 
-const TERMINAL_STATUSES: readonly TratoStatus[] = ["released", "refunded"];
+const TERMINAL_STATUSES: readonly TratoStatus[] = ["released", "refunded", "cancelled"];
 
 export function isTerminalStatus(status: TratoStatus): boolean {
   return TERMINAL_STATUSES.includes(status);
@@ -54,11 +58,20 @@ export function categorizeForPanel(status: TratoStatus): PanelCategory {
     case "refunded":
     case "release_failed":
     case "refund_failed":
+    case "cancelled":
       return "cancelado";
   }
 }
 
-/** true → the panel links to /panel/[code] (read-only); false → links to /flujo (wizard). */
-export function panelLinksToDetailPage(category: PanelCategory): boolean {
-  return category === "completado" || category === "cancelado";
+/**
+ * true → the panel links to /panel/[code] (read-only); false → links to
+ * /flujo (wizard). `release_pending` is the one exception carved out of
+ * "retenido": once the QR's been scanned there's nothing left for either
+ * side to *do* in the wizard, just wait for the admin's manual transfer (or
+ * report a problem) — same as a terminal status, even though it isn't one
+ * yet (see isTerminalStatus).
+ */
+export function panelLinksToDetailPage(status: TratoStatus): boolean {
+  const category = categorizeForPanel(status);
+  return category === "completado" || category === "cancelado" || status === "release_pending";
 }

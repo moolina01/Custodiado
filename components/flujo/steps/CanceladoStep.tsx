@@ -3,6 +3,7 @@ import OutcomeCircle, { UndoIcon } from "../ui/OutcomeCircle";
 import StepHeading from "../ui/StepHeading";
 import SummaryRow from "../ui/SummaryRow";
 import { colors } from "../theme";
+import type { CreatedByRole } from "@/lib/tratos/types";
 import type { Role } from "../types";
 
 type CanceladoStepProps = {
@@ -10,21 +11,24 @@ type CanceladoStepProps = {
   summaryItem: string;
   summaryAmount: string;
   totalAmount: string; // buyer's full refund (incl. fee) — only meaningful on the buyer's own screen
+  // Which side actually triggered this cancellation — either role can now
+  // do it (see lib/tratos/cancel.ts), so "quién canceló" needs to come from
+  // the trato itself, not be inferred from `role` (that's just whose screen
+  // this is). `null` covers the rare case this screen renders without the
+  // real trato loaded yet.
+  cancelledByRole: CreatedByRole | null;
 };
 
-// The RUT-mismatch auto-refund (SPEC 03) was Fintoc-specific — a Mercado
-// Pago Checkout API payment is inherently "from the buyer who submitted
-// the form", so there's no separate sender to mismatch against. Every
-// refund reaching this screen now is the buyer's own manual cancellation.
-const COPY: Record<Role, { title: string; subtitle: string }> = {
-  comprador: { title: "Trato cancelado", subtitle: "Tu plata va de vuelta a tu medio de pago, llega en 1 a 2 días hábiles." },
-  vendedor: { title: "El comprador canceló", subtitle: "El comprador canceló el trato antes de la entrega, la venta no se completó." },
-};
-
-/** Terminal screen after a trato ends in a refund — no further actions. Copy varies by role only (see COPY above). */
-export default function CanceladoStep({ role, summaryItem, summaryAmount, totalAmount }: CanceladoStepProps) {
-  const { title, subtitle } = COPY[role];
+/** Terminal screen after a trato ends in a refund — no further actions. Copy varies by both whose screen this is and who cancelled. */
+export default function CanceladoStep({ role, summaryItem, summaryAmount, totalAmount, cancelledByRole }: CanceladoStepProps) {
   const isBuyer = role === "comprador";
+  const iCancelled = cancelledByRole === role;
+  const title = iCancelled ? "Trato cancelado" : cancelledByRole ? `${cancelledByRole === "comprador" ? "El comprador" : "El vendedor"} canceló` : "Trato cancelado";
+  const subtitle = isBuyer
+    ? "Tu plata va de vuelta a tu medio de pago, llega en 1 a 2 días hábiles."
+    : iCancelled
+      ? "Cancelaste el trato antes de la entrega; le devolvimos la plata al comprador."
+      : "El comprador canceló el trato antes de la entrega, la venta no se completó.";
 
   return (
     <div style={{ textAlign: "center", paddingTop: "12px" }}>

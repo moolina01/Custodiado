@@ -99,8 +99,13 @@ export const createTratoRequest = vi.fn(
       releasedAt: null,
       cancelledAt: null,
       cancelReason: null,
+      cancelledByRole: null,
       createdAt: now,
       updatedAt: now,
+      releaseDeadlineAt: null,
+      disputeReportedAt: null,
+      disputeReportedBy: null,
+      disputeNote: null,
     };
     return role === "vendedor" ? { trato, sellerQrSecret: FAKE_SELLER_QR_SECRET } : { trato };
   }
@@ -166,6 +171,22 @@ export type QrTokenResponse = { token: string; expiresAt: number };
 // Fake token for the dev-only escape hatch — the mock never actually
 // verifies it (verifyQrRequest above always "succeeds"), so any string works.
 export const devQrTokenRequest = vi.fn(async (_code: string): Promise<QrTokenResponse> => ({ token: "dev-fake-token", expiresAt: Date.now() + 30_000 }));
+
+export type ReleaseCodeResponse = { code: string; expiresAt: number };
+
+// Fake release code — same "the mock never actually verifies it" shape as
+// devQrTokenRequest/verifyQrRequest above (verifyReleaseCodeRequest below
+// always "succeeds", so any 6-digit string works).
+export const releaseCodeRequest = vi.fn(async (_code: string): Promise<ReleaseCodeResponse> => ({ code: "482913", expiresAt: Date.now() + 45_000 }));
+
+export const devReleaseCodeRequest = vi.fn(async (_code: string): Promise<ReleaseCodeResponse> => ({ code: "482913", expiresAt: Date.now() + 45_000 }));
+
+export const verifyReleaseCodeRequest = vi.fn(async (_code: string, _submittedCode: string): Promise<Trato> => {
+  const current = requireTrato();
+  trato = { ...current, status: "release_pending" };
+  pendingStatus = "released";
+  return trato;
+});
 
 export const cancelTratoRequest = vi.fn(async (_code: string, _input: CancelInput): Promise<Trato> => {
   const current = requireTrato();

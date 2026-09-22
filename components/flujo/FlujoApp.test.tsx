@@ -30,7 +30,7 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/flujo",
 }));
 
-const { __resetMockApi, __setMockTrato, acceptTratoRequest, verifyQrRequest, forceAdvancePaymentRequest, getTratoRequest, ApiError } = await import(
+const { __resetMockApi, __setMockTrato, acceptTratoRequest, verifyReleaseCodeRequest, forceAdvancePaymentRequest, getTratoRequest, ApiError } = await import(
   "./__mocks__/api"
 );
 
@@ -54,8 +54,13 @@ function seedTrato(overrides: Partial<Trato> = {}) {
     releasedAt: null,
     cancelledAt: null,
     cancelReason: null,
+    cancelledByRole: null,
     createdAt: now,
     updatedAt: now,
+    releaseDeadlineAt: null,
+    disputeReportedAt: null,
+    disputeReportedBy: null,
+    disputeNote: null,
     ...overrides,
   });
 }
@@ -128,17 +133,17 @@ describe("FlujoApp", () => {
     expect(screen.getByText("Coordinen la entrega")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Ya nos juntamos"));
-    expect(screen.getByText("Escanea al recibir")).toBeInTheDocument();
+    expect(screen.getByText("Dile el código al entregar")).toBeInTheDocument();
 
-    // The real path is the buyer's camera decoding the seller's QR
-    // (useQrScanner) — untestable in jsdom (see SPEC 02's Decisions: no
-    // camera in jsdom, validated by manual QA instead). The dev-only
-    // "Simular escaneo (dev)" button drives the exact same verifyQr path.
+    // The real path is the seller typing in the code this screen shows the
+    // buyer (ReleaseCodeStep) — nothing to click on the buyer's own screen
+    // for it, same class of gap as the old QR camera scan (untestable in
+    // jsdom). Simulate the seller's submission directly against the fake
+    // backend, same shape the old seller-happy-path test used for verifyQr.
     await act(async () => {
-      fireEvent.click(screen.getByText("Simular escaneo (dev)"));
+      await verifyReleaseCodeRequest("ABC123", "482913");
     });
-    expect(screen.getByText("Liberando el pago…")).toBeInTheDocument();
-    await advancePoll(); // outbound webhook, delivered on the next poll
+    await advancePoll();
     expect(screen.getByText("Trato cerrado")).toBeInTheDocument();
   });
 
@@ -169,13 +174,14 @@ describe("FlujoApp", () => {
     await act(async () => {
       fireEvent.click(screen.getByText("Guardar y continuar")); // calls submitBankDetailsRequest
     });
-    expect(screen.getByText("Muestra el QR al entregar")).toBeInTheDocument();
+    expect(screen.getByText("Ingresa el código de liberación")).toBeInTheDocument();
 
-    // The seller has no forward action on this screen — the release is the
-    // buyer's "Escanear el QR" elsewhere. Simulate that directly against the
-    // fake backend, then let the seller's own poll pick it up.
+    // The real path is typing in the code the buyer read out loud
+    // (ReleaseCodeStep) — untestable in jsdom the same way MP.js/the QR
+    // camera are (no real second device here). The dev-only "Simular
+    // ingreso (dev)" button drives the exact same verifyReleaseCode path.
     await act(async () => {
-      await verifyQrRequest("ABC123", "dev-fake-token");
+      fireEvent.click(screen.getByText("Simular ingreso (dev)"));
     });
     await advancePoll();
     expect(screen.getByText("Trato cerrado")).toBeInTheDocument();
@@ -363,7 +369,7 @@ describe("FlujoApp", () => {
     await advancePoll();
     fireEvent.click(screen.getByText("Ya nos juntamos"));
     await act(async () => {
-      fireEvent.click(screen.getByText("Simular escaneo (dev)"));
+      await verifyReleaseCodeRequest("ABC123", "482913");
     });
     await advancePoll();
     expect(screen.getByText("Trato cerrado")).toBeInTheDocument();
@@ -484,7 +490,7 @@ describe("FlujoApp", () => {
         await vi.advanceTimersByTimeAsync(0);
       });
 
-      expect(screen.getByText("Muestra el QR al entregar")).toBeInTheDocument();
+      expect(screen.getByText("Ingresa el código de liberación")).toBeInTheDocument();
       expect(screen.queryByText("¿Dónde te depositamos?")).not.toBeInTheDocument();
     });
 

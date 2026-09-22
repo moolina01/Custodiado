@@ -114,6 +114,26 @@ export function devQrTokenRequest(code: string): Promise<QrTokenResponse> {
   return request<QrTokenResponse>(`/api/tratos/${encodeURIComponent(code)}/dev-qr-token`);
 }
 
+export type ReleaseCodeResponse = { code: string; expiresAt: number };
+
+/** The buyer's current release code — the code-based alternative to `devQrTokenRequest`/QR. See the route handler and `components/flujo/releaseMethod.ts`. */
+export function releaseCodeRequest(code: string): Promise<ReleaseCodeResponse> {
+  return request<ReleaseCodeResponse>(`/api/tratos/${encodeURIComponent(code)}/release-code`);
+}
+
+/** The seller's submission of the buyer's release code — verifies it and, if it checks out, triggers the same release `verifyQrRequest` would. Safe to call more than once. */
+export function verifyReleaseCodeRequest(code: string, submittedCode: string): Promise<Trato> {
+  return request<Trato>(`/api/tratos/${encodeURIComponent(code)}/verify-release-code`, {
+    method: "POST",
+    body: JSON.stringify({ code: submittedCode }),
+  });
+}
+
+/** Dev/test-only escape hatch: the buyer's current release code, without requiring their session. See the route handler. */
+export function devReleaseCodeRequest(code: string): Promise<ReleaseCodeResponse> {
+  return request<ReleaseCodeResponse>(`/api/tratos/${encodeURIComponent(code)}/dev-release-code`);
+}
+
 export type CancelInput = { reason?: string };
 
 /** The buyer's "Confirmar cancelación" — triggers a real (test-mode) refund, back to whatever the buyer originally paid with. Safe to call more than once. */

@@ -84,5 +84,11 @@ export const config = {
   // SPEC 05 (ajuste): `/cuenta` (perfil de la cuenta, solo lectura por
   // ahora) es el mismo caso que `/panel` — sin sesión no significa nada,
   // mismo gate duro.
-  matcher: ["/api/tratos", "/api/tratos/:path*", "/panel", "/panel/:path*", "/cuenta"],
+  //
+  // `/admin*`/`/api/admin*`: mismo gate duro por sesión que `/panel` — que
+  // *además* sea la cuenta admin (no cualquier cuenta logueada) se valida
+  // dentro de cada handler/página vía `requireAdminUser`
+  // (lib/auth/admin.ts), igual que `/panel` valida "es mi propio trato"
+  // adentro del handler en vez de acá.
+  matcher: ["/api/tratos", "/api/tratos/:path*", "/panel", "/panel/:path*", "/cuenta", "/admin", "/admin/:path*", "/api/admin", "/api/admin/:path*"],
 };

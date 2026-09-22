@@ -1,32 +1,37 @@
 import "server-only";
 import { getOrder } from "@/lib/mercadopago/payments";
 import { refundIdFrom, refundOrder } from "@/lib/mercadopago/refunds";
-import { attachRefund, beginRefund, getTratoByCode, resolvePaymentRefunded } from "./repository";
-import type { TratoRow } from "./types";
+import { notifyCancellation, notifyRefundCompleted } from "@/lib/email/cancellationNotifications";
+import { beginCancelBeforePayment, beginRefund, getTratoByCode, resolvePaymentRefunded, attachRefund } from "./repository";
+import type { CreatedByRole, TratoRow } from "./types";
 
 export type CancelResult =
   | { outcome: "not_found" }
   | { outcome: "wrong_status"; trato: TratoRow }
-  | { outcome: "not_owner"; trato: TratoRow }
+  | { outcome: "not_party"; trato: TratoRow }
   | { outcome: "already_refunded"; trato: TratoRow }
   | { outcome: "submitted"; trato: TratoRow };
 
+function roleOf(trato: TratoRow, userId: string): CreatedByRole | null {
+  if (trato.buyer_user_id === userId) return "comprador";
+  if (trato.seller_user_id === userId) return "vendedor";
+  return null;
+}
+
 /**
- * The buyer's cancel/refund — only reachable from `funds_held` (matches
- * `RetenidosStep`, which only offers it once the money is actually held;
- * before that there's nothing to refund, and after release it's too late).
+ * Either side's cancel — reachable from `awaiting_acceptance`,
+ * `awaiting_payment` or `funds_held`. Before any money moved, cancelling
+ * goes straight to the terminal `cancelled` status; once `funds_held`, it
+ * goes through the existing refund path instead (`refund_pending ->
+ * refunded`). Not reachable from `release_pending` onward — once the
+ * seller's release is already in motion, this is too late, see
+ * `lib/tratos/release.ts`/`reportDispute` for that window instead.
+ *
  * Same retry-safety shape as `lib/tratos/release.ts`: safe to call more
  * than once at any point in the process.
  *
- * Doesn't collect (or need) a destination account: a Mercado Pago refund
- * goes back to whatever the buyer originally paid with
- * (`lib/mercadopago/refunds.ts`) — a real simplification over the Fintoc
- * era, which had no "reverse this transfer" primitive and so had to
- * collect the buyer's own bank details just to send a fresh outbound
- * transfer.
- *
- * SPEC 04: ownership check — the session calling this must be the same
- * account whose `buyer_user_id` this trato recorded at create/accept.
+ * SPEC 04: ownership check — the session calling this must be the account
+ * this trato recorded as either `buyer_user_id` or `seller_user_id`.
  */
 export async function cancelTrato(rawCode: string, userId: string, reason?: string): Promise<CancelResult> {
   const existing = await getTratoByCode(rawCode);
@@ -34,14 +39,33 @@ export async function cancelTrato(rawCode: string, userId: string, reason?: stri
 
   if (existing.status === "refunded") return { outcome: "already_refunded", trato: existing };
 
-  if (existing.status === "funds_held") {
-    if (existing.buyer_user_id !== userId) return { outcome: "not_owner", trato: existing };
+  const role = roleOf(existing, userId);
 
-    const begun = await beginRefund(existing.code, reason);
+  if (existing.status === "awaiting_acceptance" || existing.status === "awaiting_payment") {
+    if (!role) return { outcome: "not_party", trato: existing };
+
+    const begun = await beginCancelBeforePayment(existing.code, role, reason);
+    if (!begun) {
+      const refetched = await getTratoByCode(existing.code);
+      return refetched ? { outcome: "wrong_status", trato: refetched } : { outcome: "not_found" };
+    }
+    await notifyCancellation(begun, role);
+    return { outcome: "submitted", trato: begun };
+  }
+
+  if (existing.status === "funds_held") {
+    if (!role) return { outcome: "not_party", trato: existing };
+
+    const begun = await beginRefund(existing.code, role, reason);
     if (!begun) {
       const refetched = await getTratoByCode(existing.code);
       return refetched ? continueRefund(refetched) : { outcome: "not_found" };
     }
+    // Notify before touching Mercado Pago — the first sign of this
+    // cancellation the buyer could notice through another channel is the
+    // refund landing back on their card/account, so the email has to go
+    // out before that call, not after.
+    await notifyCancellation(begun, role);
     return submitRefundToMercadoPago(begun);
   }
 
@@ -64,6 +88,7 @@ async function continueRefund(trato: TratoRow): Promise<CancelResult> {
     const order = await getOrder(trato.mercadopago_order_id!);
     if (order.status === "refunded") {
       const resolution = await resolvePaymentRefunded(trato.code);
+      if (resolution.outcome === "matched") await notifyRefundCompleted(resolution.trato);
       if (resolution.outcome !== "not_found") return { outcome: "submitted", trato: resolution.trato };
     }
     return { outcome: "submitted", trato };
@@ -110,6 +135,7 @@ async function submitRefundToMercadoPago(trato: TratoRow): Promise<CancelResult>
 
   if (order.status === "refunded") {
     const resolution = await resolvePaymentRefunded(trato.code);
+    if (resolution.outcome === "matched") await notifyRefundCompleted(resolution.trato);
     if (resolution.outcome !== "not_found") return { outcome: "submitted", trato: resolution.trato };
   }
   // Not yet `refunded` per Mercado Pago's own response (rare — a refund

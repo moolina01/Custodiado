@@ -51,10 +51,24 @@ export const cancelTratoSchema = z.object({
 });
 export type CancelTratoPayload = z.infer<typeof cancelTratoSchema>;
 
+// The buyer/seller's "algo no cuadra" flag during the 24h manual-release
+// window — see lib/tratos/repository.ts's reportDispute.
+export const reportProblemSchema = z.object({
+  note: z.string().trim().max(500).optional(),
+});
+export type ReportProblemPayload = z.infer<typeof reportProblemSchema>;
+
 export const verifyQrSchema = z.object({
   token: z.string().trim().min(1, "Falta el token del QR"),
 });
 export type VerifyQrPayload = z.infer<typeof verifyQrSchema>;
+
+// The seller's submission of the buyer's release code (see
+// lib/tratos/releaseCode.ts) — the code-based alternative to verifyQrSchema.
+export const verifyReleaseCodeSchema = z.object({
+  code: z.string().trim().regex(/^\d{6}$/, "El código debe tener 6 dígitos"),
+});
+export type VerifyReleaseCodePayload = z.infer<typeof verifyReleaseCodeSchema>;
 
 // The buyer's Checkout API submission — `token` is a single-use card token
 // already minted client-side by MP.js (`cardForm`/`createCardToken`), so

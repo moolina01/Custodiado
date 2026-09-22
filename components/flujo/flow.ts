@@ -90,6 +90,8 @@ export function screenForExistingTrato(status: TratoStatus, role: Role, isCreato
       return "qr";
     case "refund_failed":
       return "cancelado";
+    case "cancelled":
+      return "cancelado";
   }
 }
 

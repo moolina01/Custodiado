@@ -4,8 +4,10 @@ import Card from "../ui/Card";
 import StepHeading from "../ui/StepHeading";
 import SummaryRow from "../ui/SummaryRow";
 import { colors } from "../theme";
+import type { Role } from "../types";
 
 type CancelarStepProps = {
+  role: Role;
   summaryItem: string;
   totalAmount: string;
   isRefundPending: boolean; // already confirmed; waiting on the refund to clear
@@ -14,21 +16,33 @@ type CancelarStepProps = {
 };
 
 /**
- * Confirmation screen for the buyer's cancel escape hatch — one deliberate
- * extra tap before money moves back. Unlike the Fintoc era, there's
- * nothing to fill in here: a Mercado Pago refund goes straight back to
- * whatever the buyer originally paid with, not a bank account chosen at
- * this point.
+ * Confirmation screen for the cancel escape hatch — one deliberate extra
+ * tap before money moves back. Either side can reach this from "retenidos"
+ * now, not just the buyer (see RetenidosStep) — copy varies by role since
+ * only the buyer is the one getting money back. Unlike the Fintoc era,
+ * there's nothing to fill in here: a Mercado Pago refund goes straight
+ * back to whatever the buyer originally paid with, not a bank account
+ * chosen at this point.
  */
-export default function CancelarStep({ summaryItem, totalAmount, isRefundPending, isSubmitting, onConfirm }: CancelarStepProps) {
+export default function CancelarStep({ role, summaryItem, totalAmount, isRefundPending, isSubmitting, onConfirm }: CancelarStepProps) {
+  const isBuyer = role === "comprador";
   return (
     <div>
-      <StepHeading title="Cancelar el trato" subtitle="Te devolvemos el total al medio de pago con el que pagaste, el vendedor no recibe nada." />
+      <StepHeading
+        title="Cancelar el trato"
+        subtitle={isBuyer ? "Te devolvemos el total al medio de pago con el que pagaste, el vendedor no recibe nada." : "Cancelamos el trato y le devolvemos el total al comprador."}
+      />
 
       <Card>
         <SummaryRow label="Producto" value={summaryItem} last />
-        <SummaryRow label="Te devolvemos" value={totalAmount} strong valueColor={colors.successAlt} divider />
-        <div style={{ fontSize: "13.5px", color: colors.textFaint, marginTop: "12px" }}>Incluye la comisión, llega en 1 a 2 días hábiles.</div>
+        {isBuyer ? (
+          <>
+            <SummaryRow label="Te devolvemos" value={totalAmount} strong valueColor={colors.successAlt} divider />
+            <div style={{ fontSize: "13.5px", color: colors.textFaint, marginTop: "12px" }}>Incluye la comisión, llega en 1 a 2 días hábiles.</div>
+          </>
+        ) : (
+          <SummaryRow label="Le devolvemos al comprador" value={totalAmount} strong valueColor={colors.successAlt} last />
+        )}
       </Card>
 
       <div style={{ marginTop: "16px" }}>

@@ -8,7 +8,7 @@ import type { Role } from "../types";
 type QrStepProps = {
   role: Role;
   summaryAmount: string;
-  isReleasePending: boolean; // buyer already scanned; waiting on the outbound webhook
+  isReleasePending: boolean; // buyer already scanned; waiting on the admin's manual transfer (see lib/tratos/release.ts)
   isSubmitting: boolean; // the verify-qr request itself is in flight
 
   // Seller side — driven by `useSellerQrToken` in FlujoApp. The QR itself
@@ -93,7 +93,7 @@ export default function QrStep({
             ? "Revisa el producto, si está todo bien, escanea el QR del vendedor."
             : isSellerWaiting
               ? "Confirmá cuando el comprador esté ahí para mostrarle el código."
-              : "El comprador escanea este código y el pago se libera al instante."
+              : "El comprador escanea este código y el pago queda listo para transferirse."
         }
       />
 
@@ -205,19 +205,21 @@ export default function QrStep({
             <div
               style={{
                 display: "flex",
+                flexDirection: "column",
                 alignItems: "center",
-                gap: "9px",
+                gap: "4px",
                 justifyContent: "center",
                 background: colors.successBg,
                 borderRadius: "14px",
                 padding: "16px",
-                fontSize: "14px",
-                fontWeight: "700",
-                color: colors.successAlt,
+                textAlign: "center",
               }}
             >
-              <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: colors.successAlt, animation: "dotBlink 2s ease-in-out infinite" }} />
-              Liberando el pago…
+              <div style={{ display: "flex", alignItems: "center", gap: "9px", fontSize: "14px", fontWeight: "700", color: colors.successAlt }}>
+                <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: colors.successAlt, animation: "dotBlink 2s ease-in-out infinite" }} />
+                Confirmado, se paga en menos de 24h
+              </div>
+              <div style={{ fontSize: "13px", color: colors.textFaint }}>Seguí el estado (y reportá un problema si hace falta) en Mis tratos.</div>
             </div>
           ) : (
             isSubmitting && (

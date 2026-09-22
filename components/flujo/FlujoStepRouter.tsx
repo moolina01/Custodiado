@@ -1,5 +1,6 @@
 import type { ReactNode, RefObject } from "react";
 import { COUNTERPART_LABEL } from "./data";
+import type { CreatedByRole } from "@/lib/tratos/types";
 import type { Role, Screen, WizardFields } from "./types";
 
 
@@ -15,7 +16,9 @@ import RetenidosStep from "./steps/RetenidosStep";
 import CancelarStep from "./steps/CancelarStep";
 import CanceladoStep from "./steps/CanceladoStep";
 import QrStep from "./steps/QrStep";
+import ReleaseCodeStep from "./steps/ReleaseCodeStep";
 import ListoStep from "./steps/ListoStep";
+import { RELEASE_METHOD } from "./releaseMethod";
 type FlujoStepRouterProps = FlujoStepContext & { screen: Screen };
 
 /**
@@ -58,6 +61,8 @@ export type FlujoStepContext = {
   isRefundPending: boolean;
   isReleasePending: boolean;
   onCancelarConfirm: () => void;
+  // Which side actually triggered the cancellation — see CanceladoStep.
+  cancelledByRole: CreatedByRole | null;
   // Seller side of "qr" — from `useSellerQrToken`, gated behind an explicit
   // "Ya llegó el comprador" confirmation (see FlujoApp).
   qrImageDataUrl: string | null;
@@ -71,6 +76,14 @@ export type FlujoStepContext = {
   qrScannerError: string | null;
   isQrScanning: boolean;
   onDevQrScan: () => void;
+  // "qr" screen, code-based alternative (see ./releaseMethod) — buyer side
+  // from `useBuyerReleaseCode`, seller side a plain submit callback.
+  releaseCode: string | null;
+  releaseCodeCountdownLabel: string;
+  releaseCodeProgressPercent: number;
+  releaseCodeError: string | null;
+  onVerifyReleaseCode: (code: string) => void;
+  onDevVerifyReleaseCode: () => void;
 };
 
 type StepRenderer = (ctx: FlujoStepContext) => ReactNode;
@@ -144,29 +157,56 @@ const STEP_RENDERERS: Record<Screen, StepRenderer> = {
   ),
 
   cancelar: (ctx) => (
-    <CancelarStep summaryItem={ctx.summaryItem} totalAmount={ctx.totalAmount} isRefundPending={ctx.isRefundPending} isSubmitting={ctx.isSubmitting} onConfirm={ctx.onCancelarConfirm} />
-  ),
-
-  cancelado: (ctx) => <CanceladoStep role={ctx.role} summaryItem={ctx.summaryItem} summaryAmount={ctx.summaryAmount} totalAmount={ctx.totalAmount} />,
-
-  qr: (ctx) => (
-    <QrStep
+    <CancelarStep
       role={ctx.role}
-      summaryAmount={ctx.summaryAmount}
-      isReleasePending={ctx.isReleasePending}
+      summaryItem={ctx.summaryItem}
+      totalAmount={ctx.totalAmount}
+      isRefundPending={ctx.isRefundPending}
       isSubmitting={ctx.isSubmitting}
-      qrImageDataUrl={ctx.qrImageDataUrl}
-      qrCountdownLabel={ctx.qrCountdownLabel}
-      qrProgressPercent={ctx.qrProgressPercent}
-      sellerQrError={ctx.sellerQrError}
-      sellerConfirmedMeetup={ctx.sellerConfirmedMeetup}
-      onSellerConfirmMeetup={ctx.onSellerConfirmMeetup}
-      videoRef={ctx.qrVideoRef}
-      scannerError={ctx.qrScannerError}
-      isScanning={ctx.isQrScanning}
-      onDevScan={ctx.onDevQrScan}
+      onConfirm={ctx.onCancelarConfirm}
     />
   ),
+
+  cancelado: (ctx) => (
+    <CanceladoStep role={ctx.role} summaryItem={ctx.summaryItem} summaryAmount={ctx.summaryAmount} totalAmount={ctx.totalAmount} cancelledByRole={ctx.cancelledByRole} />
+  ),
+
+  // RELEASE_METHOD (./releaseMethod) picks which handshake this screen
+  // runs — the QR component/props above are left wired in either way, just
+  // not rendered while "code" is active, so flipping the flag back is the
+  // only change needed to restore it.
+  qr: (ctx) =>
+    RELEASE_METHOD === "code" ? (
+      <ReleaseCodeStep
+        role={ctx.role}
+        summaryAmount={ctx.summaryAmount}
+        isReleasePending={ctx.isReleasePending}
+        isSubmitting={ctx.isSubmitting}
+        releaseCode={ctx.releaseCode}
+        releaseCodeCountdownLabel={ctx.releaseCodeCountdownLabel}
+        releaseCodeProgressPercent={ctx.releaseCodeProgressPercent}
+        releaseCodeError={ctx.releaseCodeError}
+        onVerifyReleaseCode={ctx.onVerifyReleaseCode}
+        onDevVerifyReleaseCode={ctx.onDevVerifyReleaseCode}
+      />
+    ) : (
+      <QrStep
+        role={ctx.role}
+        summaryAmount={ctx.summaryAmount}
+        isReleasePending={ctx.isReleasePending}
+        isSubmitting={ctx.isSubmitting}
+        qrImageDataUrl={ctx.qrImageDataUrl}
+        qrCountdownLabel={ctx.qrCountdownLabel}
+        qrProgressPercent={ctx.qrProgressPercent}
+        sellerQrError={ctx.sellerQrError}
+        sellerConfirmedMeetup={ctx.sellerConfirmedMeetup}
+        onSellerConfirmMeetup={ctx.onSellerConfirmMeetup}
+        videoRef={ctx.qrVideoRef}
+        scannerError={ctx.qrScannerError}
+        isScanning={ctx.isQrScanning}
+        onDevScan={ctx.onDevQrScan}
+      />
+    ),
 
   listo: (ctx) => <ListoStep role={ctx.role} summaryItem={ctx.summaryItem} listoAmount={ctx.listoAmount} />,
 };

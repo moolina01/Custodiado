@@ -34,8 +34,13 @@ function makeRow(overrides: Partial<TratoRow> = {}): TratoRow {
     mercadopago_refund_id: null,
     cancel_reason: null,
     cancelled_at: null,
+    cancelled_by_role: null,
     created_at: "2026-08-01T00:00:00.000Z",
     updated_at: "2026-08-01T00:00:00.000Z",
+    release_deadline_at: null,
+    dispute_reported_at: null,
+    dispute_reported_by: null,
+    dispute_note: null,
     ...overrides,
   };
 }

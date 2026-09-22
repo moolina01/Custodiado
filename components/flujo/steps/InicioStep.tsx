@@ -1,6 +1,7 @@
-import Card from "../ui/Card";
-import StepHeading from "../ui/StepHeading";
-import { RetainedFundsIllustration, QrVerifiedIllustration } from "@/components/custodio/illustrations";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { Lock, QrCode } from "lucide-react";
+import type { ComponentType, ReactNode } from "react";
 import { colors } from "../theme";
 import type { Role } from "../types";
 
@@ -35,34 +36,19 @@ export default function InicioStep({ role, onCrear, onCodigo }: InicioStepProps)
 
   return (
     <div>
-      <StepHeading title="¿Cómo quieres partir?" subtitle="Crea uno nuevo, o entra con un código." />
-
-      {/* Same illustrated, gradient-panel language as the Hero's two stacked
-          panels (`components/custodio/illustrations.tsx`) instead of small
-          flat cards — this is the wizard's own opening moment, it should
-          feel like one. Stacked full-width rather than side-by-side: at the
-          column's 560px max-width, two side-by-side panels would squeeze
-          the illustrations down to nothing. */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-        <PathPanel
+      <PathChoiceHeading title="¿Cómo quieres partir?" subtitle="Crea uno nuevo, o entra con un código." />
+      <div className="mx-auto mt-8 grid max-w-md grid-cols-1 gap-5 *:text-center sm:grid-cols-2">
+        <PathChoiceCard
           onClick={onCrear}
-          gradient={`linear-gradient(135deg, ${colors.brand} 0%, #1E3363 55%, #7EB6F5 130%)`}
-          shadow="rgba(22,35,74,0.32)"
+          icon={Lock}
           title="Crear el trato"
-          tagline="Tú pones el monto"
-          illustration={<RetainedFundsIllustration />}
-          illustrationSize={{ width: 108, height: 98 }}
-          animationDelay="0ms"
+          description="Tú pones el monto y compartes el código con la otra persona."
         />
-        <PathPanel
+        <PathChoiceCard
           onClick={onCodigo}
-          gradient={`linear-gradient(135deg, ${colors.accent} 0%, #5B9DF7 60%, #BFDAFB 130%)`}
-          shadow="rgba(59,130,246,0.32)"
+          icon={QrCode}
           title="Tengo un código"
-          tagline="Alguien ya lo creó"
-          illustration={<QrVerifiedIllustration />}
-          illustrationSize={{ width: 112, height: 82 }}
-          animationDelay="80ms"
+          description="Alguien ya creó el trato — ingresa el código para sumarte."
         />
       </div>
 
@@ -86,74 +72,87 @@ export default function InicioStep({ role, onCrear, onCodigo }: InicioStepProps)
   );
 }
 
-type PathPanelProps = {
+/**
+ * Plain centered "<h2>Title</h2><p>Subtitle</p>" header — the reference
+ * component's own header block (`<h2>Built to cover your needs</h2><p>...`),
+ * reused here by both `InicioStep` and `ChooseRoleScreen` since they share
+ * the same card grid below it. This project's own `StepHeading` (used by
+ * every other wizard step) is left-aligned by default and doesn't match
+ * the reference's centered, larger type, hence a dedicated component
+ * instead of reusing it here.
+ */
+export function PathChoiceHeading({ title, subtitle }: { title: string; subtitle: string }) {
+  return (
+    <div className="mx-auto max-w-sm text-center">
+      <h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h1>
+      <p className="mt-3 text-sm text-muted-foreground">{subtitle}</p>
+    </div>
+  );
+}
+
+/**
+ * The reference's `CardDecorator`: a faint dotted-grid square (radial-mask
+ * fade at the edges) with a smaller open-cornered box centered on top of
+ * it, holding the icon. Copied as-is — it's a purely decorative wrapper,
+ * nothing about it is specific to "team members" vs. this wizard's choice.
+ */
+function CardDecorator({ children }: { children: ReactNode }) {
+  return (
+    <div aria-hidden className="relative mx-auto size-36 [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)]">
+      <div className="absolute inset-0 [--border:black] bg-[linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] bg-size-[24px_24px] opacity-10" />
+      <div className="absolute inset-0 m-auto flex size-12 items-center justify-center border-t border-l bg-background">{children}</div>
+    </div>
+  );
+}
+
+type PathChoiceCardProps = {
   /** Wizard-internal choice (advances a local step) — mutually exclusive with `href`. */
   onClick?: () => void;
   /** Cross-page choice (e.g. `ChooseRoleScreen` picking `?role=`) — renders an `<a>` instead of a `<button>`. */
   href?: string;
-  gradient: string;
-  shadow: string;
+  icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
   title: string;
-  /** Three words max — the illustration and the color carry the rest of the story. */
-  tagline: string;
-  illustration: React.ReactNode;
-  illustrationSize: { width: number; height: number };
-  /** Staggers the two panels' entrance (`.flujo-path-panel`'s own animation, globals.css) so they settle in one after another instead of both popping at once. */
-  animationDelay: string;
+  description: string;
 };
 
 /**
- * One large, illustrated, tap-anywhere choice — the wizard's equivalent of
- * the Hero's gradient panels. `--panel-shadow` is a CSS custom property
- * (globals.css reads it for both the resting and `:hover` box-shadow) so
- * each panel's own colored shadow can grow on hover without a bespoke CSS
- * rule per gradient.
+ * One tap-anywhere choice card — ported from a reference shadcn/Tailwind
+ * "Features" card (flat `bg-muted` card, no border/shadow, icon in a
+ * dotted-grid decorator box) into the wizard's own two-up choice. The
+ * reference itself isn't interactive (three static feature blurbs); this
+ * version wraps the same visual in a real `<button>`/`<a>` since each card
+ * here is a navigation choice, not a description.
  *
- * `href` (vs. `onClick`) swaps the root tag to an `<a>` — same
- * `.flujo-path-panel` class/animation either way, only the navigation
- * mechanics differ. `ChooseRoleScreen` uses `href` since picking a role
- * there is a real page transition (`?role=` decided server-side by
- * `app/flujo/page.tsx`), not local wizard state.
+ * `href` (vs. `onClick`) swaps the wrapper tag to an `<a>` — same visuals
+ * either way, only the navigation mechanics differ. `ChooseRoleScreen`
+ * uses `href` since picking a role there is a real page transition
+ * (`?role=` decided server-side by `app/flujo/page.tsx`), not local
+ * wizard state.
  */
-export function PathPanel({ onClick, href, gradient, shadow, title, tagline, illustration, illustrationSize, animationDelay }: PathPanelProps) {
-  const panelStyle = {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "16px",
-    textAlign: "left",
-    width: "100%",
-    border: "none",
-    borderRadius: "22px",
-    padding: "24px 22px",
-    cursor: "pointer",
-    fontFamily: "inherit",
-    background: gradient,
-    animationDelay,
-    "--panel-shadow": shadow,
-  } as React.CSSProperties;
-
-  const content = (
-    <>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: "21px", fontWeight: "800", letterSpacing: "-0.01em", color: "#ffffff", marginBottom: "5px" }}>{title}</div>
-        <div style={{ fontSize: "14.5px", fontWeight: "500", color: "rgba(255,255,255,0.88)" }}>{tagline}</div>
-      </div>
-      <div style={{ flexShrink: 0, width: `${illustrationSize.width}px`, height: `${illustrationSize.height}px` }}>{illustration}</div>
-    </>
+export function PathChoiceCard({ onClick, href, icon: Icon, title, description }: PathChoiceCardProps) {
+  const card = (
+    <Card className="h-full border-0 bg-muted shadow-none transition-colors hover:bg-muted/70">
+      <CardHeader className="pb-3">
+        <CardDecorator>
+          <Icon className="size-6" aria-hidden />
+        </CardDecorator>
+        <h3 className="mt-6 font-medium">{title}</h3>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground">{description}</p>
+      </CardContent>
+    </Card>
   );
 
-  if (href) {
-    return (
-      <a href={href} className="flujo-path-panel" style={{ ...panelStyle, textDecoration: "none" }}>
-        {content}
-      </a>
-    );
-  }
+  const wrapperClassName = "block h-full cursor-pointer rounded-lg no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
 
-  return (
-    <button onClick={onClick} className="flujo-path-panel" style={panelStyle}>
-      {content}
+  return href ? (
+    <a href={href} className={wrapperClassName}>
+      {card}
+    </a>
+  ) : (
+    <button type="button" onClick={onClick} className={cn(wrapperClassName, "w-full text-left")}>
+      {card}
     </button>
   );
 }

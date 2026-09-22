@@ -375,14 +375,120 @@ export async function attachPayout(tratoId: string, payoutId: string): Promise<T
   return data as TratoRow;
 }
 
+const MANUAL_RELEASE_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Atomically flips `funds_held -> release_pending` for the manual release
+ * path (Money Out is blocked, see lib/mercadopago/payouts.ts) and stamps
+ * the 24h deadline the admin has to pay the seller by hand. Same shape as
+ * `beginRelease` — returns `null` if the trato wasn't in `funds_held`, the
+ * caller re-reads to decide what to do next.
+ */
+export async function beginManualRelease(rawCode: string): Promise<TratoRow | null> {
+  const db = getSupabaseAdmin();
+  const code = normalizeTratoCode(rawCode);
+  const { data, error } = await db
+    .from(TABLE)
+    .update({ status: "release_pending", release_deadline_at: new Date(Date.now() + MANUAL_RELEASE_WINDOW_MS).toISOString() })
+    .eq("code", code)
+    .eq("status", "funds_held")
+    .select()
+    .maybeSingle();
+  if (error) throw new Error(`No se pudo iniciar la liberación: ${error.message}`);
+  return (data as TratoRow | null) ?? null;
+}
+
+export type MarkReleasedResult =
+  | { outcome: "not_found" }
+  | { outcome: "wrong_status"; trato: TratoRow }
+  | { outcome: "released"; trato: TratoRow };
+
+/** The admin's "ya transferí" action — `release_pending -> released`, done by hand after the manual bank transfer. */
+export async function markReleasedManually(rawCode: string): Promise<MarkReleasedResult> {
+  const db = getSupabaseAdmin();
+  const code = normalizeTratoCode(rawCode);
+  const { data, error } = await db
+    .from(TABLE)
+    .update({ status: "released", released_at: new Date().toISOString() })
+    .eq("code", code)
+    .eq("status", "release_pending")
+    .select()
+    .maybeSingle();
+  if (error) throw new Error(`No se pudo marcar el trato como pagado: ${error.message}`);
+  if (data) return { outcome: "released", trato: data as TratoRow };
+
+  const existing = await getTratoByCode(code);
+  if (!existing) return { outcome: "not_found" };
+  if (existing.status === "released") return { outcome: "released", trato: existing };
+  return { outcome: "wrong_status", trato: existing };
+}
+
+/** Every trato currently waiting on a manual release, oldest deadline first — backs `/admin`. */
+export async function listTratosAwaitingRelease(): Promise<TratoRow[]> {
+  const db = getSupabaseAdmin();
+  const { data, error } = await db.from(TABLE).select().eq("status", "release_pending").order("release_deadline_at", { ascending: true });
+  if (error) throw new Error(`No se pudieron listar los tratos por liberar: ${error.message}`);
+  return (data as TratoRow[] | null) ?? [];
+}
+
+export type ReportDisputeResult =
+  | { outcome: "not_found" }
+  | { outcome: "wrong_status"; trato: TratoRow }
+  | { outcome: "not_owner"; trato: TratoRow }
+  | { outcome: "already_reported"; trato: TratoRow }
+  | { outcome: "reported"; trato: TratoRow };
+
+/**
+ * Either side flags a problem during the 24h manual-release window — from
+ * `/panel/[code]` (see components/panel/TratoDetailView.tsx). Only allowed
+ * once (first report wins) and only while `release_pending`: once the admin
+ * actually pays there's nothing left to hold back.
+ */
+export async function reportDispute(rawCode: string, userId: string, note: string | undefined): Promise<ReportDisputeResult> {
+  const db = getSupabaseAdmin();
+  const code = normalizeTratoCode(rawCode);
+
+  const existing = await getTratoByCode(code);
+  if (!existing) return { outcome: "not_found" };
+  if (existing.status !== "release_pending") return { outcome: "wrong_status", trato: existing };
+  if (existing.dispute_reported_at) return { outcome: "already_reported", trato: existing };
+
+  const role: CreatedByRole | null = existing.buyer_user_id === userId ? "comprador" : existing.seller_user_id === userId ? "vendedor" : null;
+  if (!role) return { outcome: "not_owner", trato: existing };
+
+  const { data, error } = await db
+    .from(TABLE)
+    .update({
+      dispute_reported_at: new Date().toISOString(),
+      dispute_reported_by: role,
+      dispute_note: note ?? null,
+    })
+    .eq("code", code)
+    .eq("status", "release_pending")
+    .is("dispute_reported_at", null) // atomic guard against a concurrent double-report
+    .select()
+    .maybeSingle();
+
+  if (error) throw new Error(`No se pudo registrar el reclamo: ${error.message}`);
+  if (!data) {
+    const refetched = await getTratoByCode(code);
+    return refetched ? { outcome: "already_reported", trato: refetched } : { outcome: "not_found" };
+  }
+  return { outcome: "reported", trato: data as TratoRow };
+}
+
 /**
  * Atomically flips `funds_held -> refund_pending` and mints the refund's
  * idempotency key in the same update. Mirrors `beginRelease` — same
  * retry-safety story via `lib/tratos/cancel.ts`. Unlike the Fintoc-era
  * version, doesn't collect a destination account: a Mercado Pago refund
  * goes back to the payment's own original payment method.
+ *
+ * `cancelledByRole` records which side triggered it — either party can now
+ * cancel a funds_held trato, not just the buyer (see lib/tratos/cancel.ts),
+ * and notification content needs to know who to address as "the other side".
  */
-export async function beginRefund(rawCode: string, reason?: string): Promise<TratoRow | null> {
+export async function beginRefund(rawCode: string, cancelledByRole: CreatedByRole, reason?: string): Promise<TratoRow | null> {
   const db = getSupabaseAdmin();
   const code = normalizeTratoCode(rawCode);
   const { data, error } = await db
@@ -392,6 +498,7 @@ export async function beginRefund(rawCode: string, reason?: string): Promise<Tra
       refund_idempotency_key: randomUUID(),
       cancel_reason: reason ?? null,
       cancelled_at: new Date().toISOString(),
+      cancelled_by_role: cancelledByRole,
     })
     .eq("code", code)
     .eq("status", "funds_held")
@@ -407,4 +514,75 @@ export async function attachRefund(tratoId: string, refundId: string): Promise<T
   const { data, error } = await db.from(TABLE).update({ mercadopago_refund_id: refundId }).eq("id", tratoId).select().single();
   if (error) throw new Error(`No se pudo registrar el reembolso: ${error.message}`);
   return data as TratoRow;
+}
+
+// A cancellation before any money moved — awaiting_acceptance or
+// awaiting_payment. No refund involved, straight to the terminal
+// `cancelled` status (see ALLOWED_FROM in lib/tratos/status.ts).
+const PRE_PAYMENT_CANCELLABLE_STATUSES: TratoRow["status"][] = ["awaiting_acceptance", "awaiting_payment"];
+
+/**
+ * Atomically flips `awaiting_acceptance`/`awaiting_payment` -> `cancelled`.
+ * Mirrors `beginRefund`'s shape but with no idempotency key to mint — there's
+ * no outbound payment attempt to make safe to retry, this is the terminal
+ * state itself. Returns `null` if the trato wasn't in a cancellable
+ * pre-payment status (lost a race, or the caller's state was stale).
+ */
+export async function beginCancelBeforePayment(rawCode: string, cancelledByRole: CreatedByRole, reason?: string): Promise<TratoRow | null> {
+  const db = getSupabaseAdmin();
+  const code = normalizeTratoCode(rawCode);
+  const { data, error } = await db
+    .from(TABLE)
+    .update({
+      status: "cancelled",
+      cancel_reason: reason ?? null,
+      cancelled_at: new Date().toISOString(),
+      cancelled_by_role: cancelledByRole,
+    })
+    .eq("code", code)
+    .in("status", PRE_PAYMENT_CANCELLABLE_STATUSES)
+    .select()
+    .maybeSingle();
+  if (error) throw new Error(`No se pudo cancelar el trato: ${error.message}`);
+  return (data as TratoRow | null) ?? null;
+}
+
+export type MarkRefundedResult =
+  | { outcome: "not_found" }
+  | { outcome: "wrong_status"; trato: TratoRow }
+  | { outcome: "refunded"; trato: TratoRow };
+
+/**
+ * The admin's manual fallback confirmation — `refund_pending -> refunded`,
+ * calcado de `markReleasedManually`. Solo hace falta cuando el reembolso
+ * automático de Mercado Pago (ver submitRefundToMercadoPago en
+ * lib/tratos/cancel.ts) no se resolvió solo dentro de la misma request y el
+ * webhook tampoco llegó — el admin confirma a mano, tras verificarlo en el
+ * dashboard de Mercado Pago, que el reembolso ya ocurrió.
+ */
+export async function markRefundedManually(rawCode: string): Promise<MarkRefundedResult> {
+  const db = getSupabaseAdmin();
+  const code = normalizeTratoCode(rawCode);
+  const { data, error } = await db
+    .from(TABLE)
+    .update({ status: "refunded" })
+    .eq("code", code)
+    .eq("status", "refund_pending")
+    .select()
+    .maybeSingle();
+  if (error) throw new Error(`No se pudo confirmar el reembolso: ${error.message}`);
+  if (data) return { outcome: "refunded", trato: data as TratoRow };
+
+  const existing = await getTratoByCode(code);
+  if (!existing) return { outcome: "not_found" };
+  if (existing.status === "refunded") return { outcome: "refunded", trato: existing };
+  return { outcome: "wrong_status", trato: existing };
+}
+
+/** Every trato currently waiting on a refund confirmation, oldest first — backs `/admin`, same shape as `listTratosAwaitingRelease`. */
+export async function listTratosAwaitingRefundConfirmation(): Promise<TratoRow[]> {
+  const db = getSupabaseAdmin();
+  const { data, error } = await db.from(TABLE).select().eq("status", "refund_pending").order("cancelled_at", { ascending: true });
+  if (error) throw new Error(`No se pudieron listar los tratos por reembolsar: ${error.message}`);
+  return (data as TratoRow[] | null) ?? [];
 }

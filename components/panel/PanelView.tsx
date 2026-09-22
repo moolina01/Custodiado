@@ -19,7 +19,7 @@ const CATEGORY_STYLE: Record<PanelCategory, { bg: string; text: string }> = {
 };
 
 function detailHrefFor(trato: PanelTrato): string {
-  return panelLinksToDetailPage(trato.category) ? `/panel/${trato.code}` : `/flujo?role=${trato.myRole}&code=${trato.code}`;
+  return panelLinksToDetailPage(trato.status) ? `/panel/${trato.code}` : `/flujo?role=${trato.myRole}&code=${trato.code}`;
 }
 
 type LoadState = { status: "loading" } | { status: "error"; message: string } | { status: "ready"; tratos: PanelTrato[] };
