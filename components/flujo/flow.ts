@@ -12,8 +12,8 @@ const FLOWS: Record<Role, Record<Exclude<Mode, null>, Screen[]>> = {
     codigo: ["inicio", "codigo-ingresar", "detalle", "pagar", "retenidos", "qr", "listo"],
   },
   vendedor: {
-    crear: ["inicio", "crear-datos", "crear-modalidad", "crear-codigo", "banco", "qr", "listo"],
-    codigo: ["inicio", "codigo-ingresar", "detalle", "esperando-pago", "banco", "qr", "listo"],
+    crear: ["inicio", "crear-datos", "crear-modalidad", "crear-codigo", "banco", "retenidos", "qr", "listo"],
+    codigo: ["inicio", "codigo-ingresar", "detalle", "esperando-pago", "banco", "retenidos", "qr", "listo"],
   },
 };
 
@@ -58,7 +58,7 @@ export function screenFor(role: Role, mode: Mode, stepIndex: number, cancelStage
  * `status`, only this separate flag. Without checking it, re-entering via
  * `?code=` (the panel, or the home page's "fondos retenidos" reminder)
  * after already saving bank details sent the seller straight back to that
- * form, fields blank and all, instead of "qr" — a real bug found by
+ * form, fields blank and all, instead of "retenidos" — a real bug found by
  * actually walking a seller through save → leave → come back.
  */
 export function screenForExistingTrato(status: TratoStatus, role: Role, isCreator: boolean, hasSellerBankDetails: boolean): Screen {
@@ -79,7 +79,7 @@ export function screenForExistingTrato(status: TratoStatus, role: Role, isCreato
     // but this is the honest fallback either way.
     case "refund_pending":
       if (isBuyer) return "retenidos";
-      return hasSellerBankDetails ? "qr" : "banco";
+      return hasSellerBankDetails ? "retenidos" : "banco";
     case "release_pending":
       return "qr";
     case "released":

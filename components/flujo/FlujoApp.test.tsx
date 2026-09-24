@@ -178,6 +178,11 @@ describe("FlujoApp", () => {
     await act(async () => {
       fireEvent.click(screen.getByText("Guardar y continuar")); // calls submitBankDetailsRequest
     });
+    expect(screen.getByRole("heading", { name: "Pago protegido" })).toBeInTheDocument();
+
+    // Same in-card confirmation the buyer's "retenidos" screen has, just
+    // the seller's side of it — no backend call, just a local step advance.
+    fireEvent.click(screen.getByText("Ya estoy con el comprador"));
     expect(screen.getByText("Ingresa el código de liberación")).toBeInTheDocument();
 
     // The real path is typing in the code the buyer read out loud
@@ -494,9 +499,9 @@ describe("FlujoApp", () => {
     // that doesn't change `status`. This used to map straight to "banco"
     // regardless, so re-entering via `?code=` (the panel, or the home page's
     // "fondos retenidos" reminder) after already saving bank details sent
-    // the seller back to that form instead of "qr" — found by actually
-    // walking a seller through save → leave → come back.
-    it("puts a seller who already saved bank details on 'qr', not back on 'banco'", async () => {
+    // the seller back to that form instead of "retenidos" — found by
+    // actually walking a seller through save → leave → come back.
+    it("puts a seller who already saved bank details on 'retenidos', not back on 'banco'", async () => {
       seedTrato({ status: "funds_held", createdByRole: "vendedor", hasSellerBankDetails: true });
 
       await act(async () => {
@@ -504,7 +509,7 @@ describe("FlujoApp", () => {
         await vi.advanceTimersByTimeAsync(0);
       });
 
-      expect(screen.getByText("Ingresa el código de liberación")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Pago protegido" })).toBeInTheDocument();
       expect(screen.queryByText("¿Dónde te depositamos?")).not.toBeInTheDocument();
     });
 

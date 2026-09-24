@@ -12,11 +12,11 @@ describe("stepsFor", () => {
   });
 
   it("returns the seller's 'crear' flow", () => {
-    expect(stepsFor("vendedor", "crear")).toEqual(["inicio", "crear-datos", "crear-modalidad", "crear-codigo", "banco", "qr", "listo"]);
+    expect(stepsFor("vendedor", "crear")).toEqual(["inicio", "crear-datos", "crear-modalidad", "crear-codigo", "banco", "retenidos", "qr", "listo"]);
   });
 
   it("returns the seller's 'codigo' flow", () => {
-    expect(stepsFor("vendedor", "codigo")).toEqual(["inicio", "codigo-ingresar", "detalle", "esperando-pago", "banco", "qr", "listo"]);
+    expect(stepsFor("vendedor", "codigo")).toEqual(["inicio", "codigo-ingresar", "detalle", "esperando-pago", "banco", "retenidos", "qr", "listo"]);
   });
 
   it("returns just 'inicio' when no mode is chosen yet", () => {

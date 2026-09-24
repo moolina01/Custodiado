@@ -186,7 +186,7 @@ export default function RetenidosStep({ role, summaryItem, counterpartLabel, cou
             cursor: isSubmitting ? "default" : "pointer",
           }}
         >
-          Cancelar el trato y solicitar devolución
+          {isBuyer ? "Cancelar el trato y solicitar devolución" : "Cancelar el trato"}
         </button>
         <div style={{ fontSize: "12.5px", color: colors.textFaint, marginTop: "6px" }}>Disponible mientras no hayas confirmado la entrega.</div>
       </div>

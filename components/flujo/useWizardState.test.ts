@@ -65,10 +65,11 @@ describe("useWizardState", () => {
     const { result } = renderHook(() => useWizardState("vendedor"));
 
     act(() => result.current.start("crear"));
-    // vendedor/crear: inicio, crear-datos, crear-modalidad, crear-codigo, banco, qr, listo
+    // vendedor/crear: inicio, crear-datos, crear-modalidad, crear-codigo, banco, retenidos, qr, listo
     act(() => result.current.goNext()); // crear-modalidad
     act(() => result.current.goNext()); // crear-codigo
     act(() => result.current.goNext()); // banco
+    act(() => result.current.goNext()); // retenidos
     act(() => result.current.goNext()); // qr
     act(() => result.current.goNext()); // listo
     expect(result.current.screen).toBe("listo");
@@ -203,10 +204,11 @@ describe("useWizardState", () => {
     const { result } = renderHook(() => useWizardState("vendedor"));
 
     act(() => result.current.start("crear"));
-    // vendedor/crear: inicio, crear-datos, crear-modalidad, crear-codigo, banco, qr, listo
+    // vendedor/crear: inicio, crear-datos, crear-modalidad, crear-codigo, banco, retenidos, qr, listo
     act(() => result.current.goNext()); // crear-modalidad
     act(() => result.current.goNext()); // crear-codigo
     act(() => result.current.goNext()); // banco
+    act(() => result.current.goNext()); // retenidos
     act(() => result.current.goNext()); // qr
     act(() => result.current.goNext()); // listo
     expect(loadWizard("vendedor")).not.toBeNull();
