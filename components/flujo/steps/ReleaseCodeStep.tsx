@@ -2,12 +2,15 @@ import { useState } from "react";
 import Card from "../ui/Card";
 import Callout from "../ui/Callout";
 import StepHeading from "../ui/StepHeading";
+import OutcomeCircle, { CheckIcon } from "../ui/OutcomeCircle";
 import { colors } from "../theme";
+import { normalizeTratoCode } from "@/lib/codeFormat";
 import type { Role } from "../types";
 
 type ReleaseCodeStepProps = {
   role: Role;
   summaryAmount: string;
+  dealCode: string;
   isReleasePending: boolean; // release already submitted; waiting on the admin's manual transfer (see lib/tratos/release.ts)
   isSubmitting: boolean; // the verify-release-code request itself is in flight
 
@@ -66,6 +69,7 @@ function formatCodeForDisplay(code: string): string {
 export default function ReleaseCodeStep({
   role,
   summaryAmount,
+  dealCode,
   isReleasePending,
   isSubmitting,
   releaseCode,
@@ -83,6 +87,20 @@ export default function ReleaseCodeStep({
     if (inputCode.length !== 6) return;
     onVerifyReleaseCode(inputCode);
   };
+
+  // The handshake already went through (either side's action can win it —
+  // the buyer's code got typed in, or vice versa) — Money Out is blocked
+  // (lib/mercadopago/payouts.ts) so an admin still moves it by hand, but
+  // there's nothing left for either side to click here. Replacing the
+  // form/code display outright (instead of just graying it out below a
+  // small confirmation banner, which used to sit under the tips box) makes
+  // that unmistakable — a disabled input on a screen still titled "Ingresa
+  // el código de liberación" reads as broken/stuck, not as "done" (found by
+  // a seller reporting exactly that: submitted the code, button went gray,
+  // reloaded, still gray, assumed the app was bricked).
+  if (isReleasePending) {
+    return <ReleaseConfirmed role={role} summaryAmount={summaryAmount} dealCode={dealCode} />;
+  }
 
   return (
     <div>
@@ -145,7 +163,7 @@ export default function ReleaseCodeStep({
               inputMode="numeric"
               placeholder="000000"
               maxLength={6}
-              disabled={isSubmitting || isReleasePending}
+              disabled={isSubmitting}
               className="flujo-input"
               style={{
                 width: "100%",
@@ -163,7 +181,7 @@ export default function ReleaseCodeStep({
             />
             <button
               onClick={handleSubmit}
-              disabled={inputCode.length !== 6 || isSubmitting || isReleasePending}
+              disabled={inputCode.length !== 6 || isSubmitting}
               className="flujo-btn-next"
               style={{
                 width: "100%",
@@ -175,8 +193,8 @@ export default function ReleaseCodeStep({
                 fontSize: "16px",
                 padding: "15px 20px",
                 borderRadius: "14px",
-                cursor: inputCode.length !== 6 || isSubmitting || isReleasePending ? "default" : "pointer",
-                opacity: inputCode.length !== 6 || isSubmitting || isReleasePending ? 0.55 : 1,
+                cursor: inputCode.length !== 6 || isSubmitting ? "default" : "pointer",
+                opacity: inputCode.length !== 6 || isSubmitting ? 0.55 : 1,
                 boxShadow: "0 8px 24px rgba(22,35,74,0.24)",
               }}
             >
@@ -206,30 +224,7 @@ export default function ReleaseCodeStep({
         </div>
       </div>
 
-      {isReleasePending && (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "4px",
-            justifyContent: "center",
-            background: colors.successBg,
-            borderRadius: "14px",
-            padding: "16px",
-            marginTop: "16px",
-            textAlign: "center",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "9px", fontSize: "14px", fontWeight: "700", color: colors.successAlt }}>
-            <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: colors.successAlt, animation: "dotBlink 2s ease-in-out infinite" }} />
-            Confirmado, se paga en menos de 24h
-          </div>
-          <div style={{ fontSize: "13px", color: colors.textFaint }}>Seguí el estado (y reportá un problema si hace falta) en Mis tratos.</div>
-        </div>
-      )}
-
-      {IS_DEV && !isBuyer && !isReleasePending && (
+      {IS_DEV && !isBuyer && (
         <div style={{ background: colors.accentSoft, border: `1px solid ${colors.warnBorder}`, borderRadius: "14px", padding: "16px", marginTop: "16px" }}>
           <div style={{ fontSize: "12px", fontWeight: "700", letterSpacing: "0.06em", textTransform: "uppercase", color: colors.accent, marginBottom: "10px" }}>
             Modo prueba
@@ -255,6 +250,55 @@ export default function ReleaseCodeStep({
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+/** What either side sees once the handshake's already confirmed — replaces the code form/display outright instead of just disabling it in place (see the comment above `isReleasePending`'s early return). */
+function ReleaseConfirmed({ role, summaryAmount, dealCode }: { role: Role; summaryAmount: string; dealCode: string }) {
+  const isBuyer = role === "comprador";
+  const panelHref = dealCode ? `/panel/${normalizeTratoCode(dealCode)}` : "/panel";
+
+  return (
+    <div style={{ textAlign: "center", paddingTop: "12px" }}>
+      <OutcomeCircle>
+        <CheckIcon />
+      </OutcomeCircle>
+      <StepHeading
+        title="Código confirmado"
+        subtitle={
+          isBuyer
+            ? `Liberamos el pago — el vendedor recibe ${summaryAmount} en su cuenta en un plazo máximo de 12 horas.`
+            : `Confirmaste el código y liberamos tu pago — vas a recibir ${summaryAmount} en tu cuenta en un plazo máximo de 12 horas.`
+        }
+        align="center"
+      />
+
+      <Card shadow>
+        <div style={{ display: "flex", alignItems: "center", gap: "9px", fontSize: "14px", fontWeight: "700", color: colors.successAlt, justifyContent: "center" }}>
+          <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: colors.successAlt, animation: "dotBlink 2s ease-in-out infinite" }} />
+          Confirmado, transferencia en camino
+        </div>
+      </Card>
+
+      <a
+        href={panelHref}
+        style={{
+          display: "block",
+          textAlign: "center",
+          marginTop: "16px",
+          background: "#ffffff",
+          border: `1px solid ${colors.border}`,
+          color: colors.brandDeep,
+          fontWeight: "600",
+          fontSize: "15px",
+          padding: "14px",
+          borderRadius: "12px",
+        }}
+      >
+        Seguir el estado en Mis tratos
+      </a>
+      <div style={{ fontSize: "13px", color: colors.textFaint, marginTop: "10px" }}>Ahí también podés reportar un problema si hace falta.</div>
     </div>
   );
 }

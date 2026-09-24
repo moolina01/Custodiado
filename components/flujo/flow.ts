@@ -159,18 +159,19 @@ export function showsProgress(screen: Screen): boolean {
   return !NO_PROGRESS_SCREENS.includes(screen);
 }
 
-// "pagar", "cancelar", "qr" and "retenidos" render their own primary button
-// inline (or, for "qr", none at all for the seller — see QrStep). "inicio"
-// has no forward action. "crear-codigo", "esperando-pago" and "qr" used to
-// have manual "Ya aceptó"/"Ya pagó"/"Ya escaneó" claim buttons here — now
-// that real webhooks confirm all three, they advance themselves via polling
-// instead of trusting a "yes, the other side did it" click. "cancelado" —
-// like "listo" — is terminal but *does* get a "Volver al inicio": with the
-// wizard's progress persisted (see ./persistence), a reload no longer
+// "pagar", "cancelar", "qr", "retenidos" and "listo" render their own
+// primary button inline (or, for "qr", none at all for the seller — see
+// QrStep). "inicio" has no forward action. "crear-codigo", "esperando-pago"
+// and "qr" used to have manual "Ya aceptó"/"Ya pagó"/"Ya escaneó" claim
+// buttons here — now that real webhooks confirm all three, they advance
+// themselves via polling instead of trusting a "yes, the other side did it"
+// click. "cancelado" is terminal but *does* still get the generic
+// "Volver al inicio" here (unlike "listo", which now renders its own): with
+// the wizard's progress persisted (see ./persistence), a reload no longer
 // resets it for free the way it used to, so leaving it out here would trap
 // the user on a cancelled deal with no way back to "inicio" short of
 // clearing storage by hand.
-const NO_NEXT_BUTTON_SCREENS: Screen[] = ["inicio", "crear-codigo", "pagar", "esperando-pago", "qr", "cancelar", "retenidos"];
+const NO_NEXT_BUTTON_SCREENS: Screen[] = ["inicio", "crear-codigo", "pagar", "esperando-pago", "qr", "cancelar", "retenidos", "listo"];
 
 export function showsNextButton(screen: Screen): boolean {
   return !NO_NEXT_BUTTON_SCREENS.includes(screen);

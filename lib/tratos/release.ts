@@ -1,5 +1,6 @@
 import "server-only";
 import { notifyAdminReleaseReady } from "@/lib/email/adminNotifications";
+import { notifyReleaseStarted } from "@/lib/email/paymentNotifications";
 import { beginManualRelease, getTratoByCode } from "./repository";
 import type { TratoRow } from "./types";
 
@@ -25,7 +26,8 @@ function hasSellerBankDetails(trato: TratoRow): boolean {
  * 24h window (release_deadline_at) for either side to flag a problem first.
  *
  * - `funds_held`: the normal case. Flips to `release_pending`, stamps the
- *   deadline, emails the admin the bank details to pay.
+ *   deadline, emails the admin the bank details to pay, and emails both
+ *   sides a "trato hecho" confirmation.
  * - `release_pending`: already handed off — idempotent no-op (the admin
  *   panel is now the only thing that can move this further).
  * - `released`: already paid — idempotent success.
@@ -51,5 +53,6 @@ export async function releaseTrato(rawCode: string): Promise<ReleaseResult> {
   }
 
   await notifyAdminReleaseReady(begun);
+  await notifyReleaseStarted(begun);
   return { outcome: "submitted", trato: begun };
 }

@@ -80,7 +80,7 @@ describe("showsProgress", () => {
 });
 
 describe("showsNextButton", () => {
-  const noButtonScreens: Screen[] = ["inicio", "crear-codigo", "pagar", "esperando-pago", "qr", "cancelar", "retenidos"];
+  const noButtonScreens: Screen[] = ["inicio", "crear-codigo", "pagar", "esperando-pago", "qr", "cancelar", "retenidos", "listo"];
 
   it.each(noButtonScreens)("hides the next button on '%s'", (screen) => {
     expect(showsNextButton(screen)).toBe(false);
@@ -90,10 +90,11 @@ describe("showsNextButton", () => {
     expect(showsNextButton("crear-datos")).toBe(true);
     expect(showsNextButton("detalle")).toBe(true);
     expect(showsNextButton("banco")).toBe(true);
-    expect(showsNextButton("listo")).toBe(true);
-    // "cancelado" is terminal, like "listo" — but still gets a "Volver al
-    // inicio" (see flow.ts), now that the wizard's progress persists across
-    // reloads and can no longer rely on one to bail it out for free.
+    // "cancelado" is terminal, like "listo" — but still gets the *generic*
+    // "Volver al inicio" (see flow.ts), now that the wizard's progress
+    // persists across reloads and can no longer rely on one to bail it out
+    // for free. "listo" gets the same button, just rendered inside the step
+    // itself instead (see ListoStep) — hence it's in noButtonScreens above.
     expect(showsNextButton("cancelado")).toBe(true);
   });
 });

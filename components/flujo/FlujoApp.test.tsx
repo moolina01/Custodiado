@@ -2,7 +2,7 @@ import { StrictMode } from "react";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import FlujoApp from "./FlujoApp";
-import { loadTratoCode } from "./persistence";
+import { loadTratoCode, saveTratoCode, saveWizard } from "./persistence";
 import type { Trato } from "./__mocks__/api";
 
 // Manual mock of `./api` (see `__mocks__/api.ts`) — stands in for the
@@ -147,7 +147,7 @@ describe("FlujoApp", () => {
       await verifyReleaseCodeRequest("ABC123", "482913");
     });
     await advancePoll();
-    expect(screen.getByText("Trato cerrado")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Entrega confirmada" })).toBeInTheDocument();
   });
 
   it("walks the seller through the happy path, from 'inicio' to 'listo'", async () => {
@@ -193,7 +193,8 @@ describe("FlujoApp", () => {
       fireEvent.click(screen.getByText("Simular ingreso (dev)"));
     });
     await advancePoll();
-    expect(screen.getByText("Trato cerrado")).toBeInTheDocument();
+    // "Pago liberado" is also one of TRATO_MILESTONES' own labels — disambiguate via role.
+    expect(screen.getByRole("heading", { name: "Pago liberado" })).toBeInTheDocument();
   });
 
   it("walks the buyer through cancelling from 'retenidos', ending on 'cancelado'", async () => {
@@ -269,6 +270,34 @@ describe("FlujoApp", () => {
     // blank "inicio" a fresh mount would otherwise show.
     expect(screen.getByText("Comparte este código con el vendedor")).toBeInTheDocument();
     expect(screen.getByText("ABC-123")).toBeInTheDocument();
+  });
+
+  // Regression: a buyer reported reloading mid-flow and landing on a blank
+  // "Datos del trato" form (a brand-new trato's own first step) while the
+  // milestone stepper above it still showed real progress ("Pago
+  // protegido" done) — the persisted *wizard* step (useWizardState's own
+  // localStorage key) had gone stale relative to the *trato*'s real status
+  // (a separate key), and nothing reconciled the two on a plain reload
+  // (only the `?code=` deep-link path used to). Simulates that exact
+  // mismatch directly instead of trying to reproduce how the wizard step
+  // got stale in the first place.
+  it("resyncs a stale local wizard step to the trato's real status on a plain reload (no ?code=)", async () => {
+    saveTratoCode("comprador", "ABC123");
+    saveWizard("comprador", {
+      mode: "crear",
+      stepIndex: 1, // "crear-datos" — long stale; the real trato below is already funds_held
+      cancelStage: "none",
+      fields: { item: "", amount: "", deliveryMethod: "presencial", code: "", bankName: "", account: "", accountType: "" },
+    });
+    seedTrato({ code: "ABC123", status: "funds_held", createdByRole: "comprador" });
+
+    await act(async () => {
+      render(<FlujoApp initialRole="comprador" />);
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    expect(screen.getByRole("heading", { name: "Pago protegido" })).toBeInTheDocument();
+    expect(screen.queryByText("Datos del trato")).not.toBeInTheDocument();
   });
 
   // Regression: `useTrato`'s `restore` used to clear the persisted code on
@@ -386,7 +415,7 @@ describe("FlujoApp", () => {
       await verifyReleaseCodeRequest("ABC123", "482913");
     });
     await advancePoll();
-    expect(screen.getByText("Trato cerrado")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Entrega confirmada" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Volver al inicio"));
     expect(screen.getByText("¿Cómo quieres comenzar?")).toBeInTheDocument();

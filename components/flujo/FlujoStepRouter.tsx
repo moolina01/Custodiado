@@ -65,6 +65,7 @@ export type FlujoStepContext = {
   totalAmountClp: number;
   feeLineValue: string;
   listoAmount: string;
+  releasedAt: string | null;
   counterpartName: string;
   whatsappHref: string;
   onPay: (input: {
@@ -84,6 +85,11 @@ export type FlujoStepContext = {
   // the step now that it renders its own primary button (see ./flow's
   // `NO_NEXT_BUTTON_SCREENS`).
   onConfirmMeetup: () => void;
+  // "listo"'s own in-card "Volver al inicio" — same `handleNext` the
+  // generic nav button used to trigger for this screen (see ./flow's
+  // `NO_NEXT_BUTTON_SCREENS`); past the wizard's last step it resets back
+  // to "inicio" (see useWizardState's `goNext`).
+  onFinish: () => void;
   onCancelarConfirm: () => void;
   // Which side actually triggered the cancellation — see CanceladoStep.
   cancelledByRole: CreatedByRole | null;
@@ -215,6 +221,7 @@ const STEP_RENDERERS: Record<Screen, StepRenderer> = {
       <ReleaseCodeStep
         role={ctx.role}
         summaryAmount={ctx.summaryAmount}
+        dealCode={ctx.dealCode}
         isReleasePending={ctx.isReleasePending}
         isSubmitting={ctx.isSubmitting}
         releaseCode={ctx.releaseCode}
@@ -243,7 +250,20 @@ const STEP_RENDERERS: Record<Screen, StepRenderer> = {
       />
     ),
 
-  listo: (ctx) => <ListoStep role={ctx.role} summaryItem={ctx.summaryItem} listoAmount={ctx.listoAmount} />,
+  listo: (ctx) => (
+    <ListoStep
+      role={ctx.role}
+      summaryItem={ctx.summaryItem}
+      counterpartLabel={COUNTERPART_LABEL[ctx.role]}
+      counterpartName={ctx.counterpartName}
+      listoAmount={ctx.listoAmount}
+      feeDisplay={ctx.feeDisplay}
+      dealCode={ctx.dealCode}
+      releasedAt={ctx.releasedAt}
+      onNext={ctx.onFinish}
+      isSubmitting={ctx.isSubmitting}
+    />
+  ),
 };
 
 

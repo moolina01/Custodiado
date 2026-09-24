@@ -191,34 +191,65 @@ export default function FlujoApp({ initialRole, initialMode, initialCode }: Fluj
   const skipNextInicioResetRef = useRef(false);
 
   // Resumes a trato that was mid-flow when the user left (see
-  // `useWizardState`'s own restore, and `./persistence`). `useWizardState`
-  // already restores *which step* to show — via its own post-mount layout
-  // effect, so hydration never sees it — this fills in the real trato data
-  // behind it. Gated on `"authenticated"` — `/api/tratos*` 401s otherwise
-  // (proxy.ts), and firing this while the session is still `"loading"`
-  // would waste the request. If the saved trato turns out to be stale
-  // (deleted, or belongs to a different account now logged in on this
-  // browser), `restore` returns `null` and the wizard bails back to a clean
-  // "inicio" instead of sitting on a step with no data behind it.
+  // `useWizardState`'s own restore, and `./persistence`). Gated on
+  // `"authenticated"` — `/api/tratos*` 401s otherwise (proxy.ts), and firing
+  // this while the session is still `"loading"` would waste the request. If
+  // the saved trato turns out to be stale (deleted, or belongs to a
+  // different account now logged in on this browser), `restore` returns
+  // `null` and the wizard bails back to a clean "inicio" instead of sitting
+  // on a step with no data behind it.
+  //
+  // Also resyncs *which step* is showing to the trato's real status
+  // (`screenForExistingTrato`), the same way the `?code=` deep-link effect
+  // below already does — `useWizardState`'s own restore (its post-mount
+  // layout effect, from a *separate* localStorage key than the trato code
+  // this effect reads) used to be trusted blindly here on the assumption it
+  // was always already correct. It isn't always: a real case found live — a
+  // buyer whose local wizard state was still sitting on "crear-datos" (an
+  // abandoned or much older local session) while the trato itself, tracked
+  // separately, had long since progressed to `funds_held`. The stepper
+  // above (driven by `trato.status`, refreshed here regardless) showed the
+  // real progress; the step below it showed a blank "Datos del trato" form
+  // — reload doesn't fix that without this resync, since nothing else ever
+  // reconciles the two. Harmless in the common case where they already
+  // agree (same mode/stepIndex in, same out) — `fields` isn't touched by
+  // `jumpToScreen`, so mid-typed form input survives a merely-cosmetic
+  // resync same as it already did before.
   useEffect(() => {
     if (session.status !== "authenticated") return;
     if (initialCode) return; // SPEC 05: the deep-link effect below handles this case instead
+    // A trato already live in memory means the wizard is already tracking
+    // the real thing — through this exact restore already having run, or
+    // (the case that actually broke without this guard) through a *fresh*
+    // create/lookup that happened moments ago in this same session. Without
+    // it, this effect's own async gap (waiting on `session.status` to
+    // settle, same microtask window a fresh create's own request resolves
+    // in) can race a brand-new trato: by the time `restore` below returns,
+    // `awaiting_acceptance` already exists, and resyncing to
+    // `screenForExistingTrato` for it jumps straight to "crear-codigo" —
+    // skipping "crear-modalidad", which the user (or a test) was still
+    // legitimately standing on.
+    if (tratoState.trato) return;
     const code = loadTratoCode(role);
     if (!code) return;
     tratoState.restore(code).then((found) => {
-      if (found) return;
-      // `tratoState.restore` only wipes the persisted code itself on a
-      // confirmed 404 — a transient failure (401 while the session was
-      // still resolving, 429, a 500, a dropped request) leaves it in
-      // `localStorage` on purpose, so the next attempt can still recover
-      // it. But landing on "inicio" right below would otherwise trigger
-      // the "landed on inicio" cleanup effect further down and wipe it
-      // anyway — this flag tells that effect to skip its *next* firing so
-      // a same-page retry isn't the only way back to the trato.
-      skipNextInicioResetRef.current = true;
-      wizard.reset();
+      if (!found) {
+        // `tratoState.restore` only wipes the persisted code itself on a
+        // confirmed 404 — a transient failure (401 while the session was
+        // still resolving, 429, a 500, a dropped request) leaves it in
+        // `localStorage` on purpose, so the next attempt can still recover
+        // it. But landing on "inicio" right below would otherwise trigger
+        // the "landed on inicio" cleanup effect further down and wipe it
+        // anyway — this flag tells that effect to skip its *next* firing so
+        // a same-page retry isn't the only way back to the trato.
+        skipNextInicioResetRef.current = true;
+        wizard.reset();
+        return;
+      }
+      const mode: Exclude<Mode, null> = found.createdByRole === role ? "crear" : "codigo";
+      wizard.jumpToScreen(role, mode, screenForExistingTrato(found.status, role, mode === "crear", found.hasSellerBankDetails));
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- tratoState.restore/wizard.reset are stable for a fixed `role`; re-running this on every render of theirs would refetch on every state change instead of once per session-status transition.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- tratoState.restore/wizard.reset/wizard.jumpToScreen are stable for a fixed `role`; re-running this on every render of theirs would refetch on every state change instead of once per session-status transition.
   }, [session.status, role, initialCode]);
 
   // SPEC 05: `/flujo?code=...` — how the panel (`/panel`) opens an
@@ -408,6 +439,7 @@ export default function FlujoApp({ initialRole, initialMode, initialCode }: Fluj
   const totalAmount = isBuyer ? money(totalAmountClp) : summaryAmount;
   const feeLineValue = totalAmount;
   const listoAmount = totalAmount;
+  const releasedAt = trato?.releasedAt ?? null;
   const counterpartName = (trato ? (isBuyer ? trato.sellerName : trato.buyerName) : null) ?? "—";
 
   const whatsappHref = useMemo(() => {
@@ -640,10 +672,12 @@ export default function FlujoApp({ initialRole, initialMode, initialCode }: Fluj
             totalAmountClp={totalAmountClp}
             feeLineValue={feeLineValue}
             listoAmount={listoAmount}
+            releasedAt={releasedAt}
             counterpartName={counterpartName}
             whatsappHref={whatsappHref}
             onPay={handlePay}
             onConfirmMeetup={handleNext}
+            onFinish={handleNext}
             onForceAdvancePayment={() => tratoState.forceAdvancePayment()}
             isSubmitting={tratoState.isSubmitting}
             isRefundPending={trato?.status === "refund_pending"}
