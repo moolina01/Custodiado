@@ -6,6 +6,7 @@ import type { Role, Screen, WizardFields } from "./types";
 
 import InicioStep from "./steps/InicioStep";
 import CrearDatosStep from "./steps/CrearDatosStep";
+import ModalidadStep from "./steps/ModalidadStep";
 import CrearCodigoStep from "./steps/CrearCodigoStep";
 import CodigoIngresarStep from "./steps/CodigoIngresarStep";
 import DetalleStep from "./steps/DetalleStep";
@@ -28,6 +29,20 @@ type FlujoStepRouterProps = FlujoStepContext & { screen: Screen };
  */
 export type FlujoStepContext = {
   role: Role;
+  // Sets the real role once it's decided: the "crear" path's toggle
+  // (CrearDatosStep), or inference from the trato's `createdByRole` once a
+  // code is looked up (FlujoApp's `handleCodigoIngresarSubmit`). See
+  // FlujoApp's `role` state for why it starts as a harmless "comprador"
+  // placeholder rather than `null`.
+  onRoleChange: (role: Role) => void;
+  // The looked-up trato's own creator role — only meaningful once one
+  // exists (código path); DetalleStep uses this to say who actually
+  // created the trato, distinct from `role` (which side *this* account
+  // ends up playing).
+  createdByRole: CreatedByRole | null;
+  // "Este no es mi trato" (DetalleStep) — clears the looked-up trato and
+  // returns to "codigo-ingresar" to try a different code.
+  onRejectDetalle: () => void;
   // SPEC 04: identidad de la cuenta logueada (useSession) — de solo lectura
   // en CrearDatosStep/DetalleStep, reemplaza los campos name/rut que se
   // tipeaban por trato (SPEC 03).
@@ -39,6 +54,9 @@ export type FlujoStepContext = {
   onStartCrear: () => void;
   onStartCodigo: () => void;
   onOpenCancel: () => void;
+  // Buyer-only "Eliminar trato" from "crear-codigo" (see CrearCodigoStep) —
+  // distinct from `onOpenCancel`, which is the post-payment "cancelar" flow.
+  onOpenDeleteTrato: () => void;
   dealCode: string;
   summaryItem: string;
   summaryAmount: string;
@@ -60,6 +78,12 @@ export type FlujoStepContext = {
   isSubmitting: boolean;
   isRefundPending: boolean;
   isReleasePending: boolean;
+  // "retenidos"'s own in-card "Ya estoy con el <counterpart>" — same
+  // underlying action `handleNext`'s default branch (`wizard.goNext`)
+  // already ran from the generic nav button, just triggered from inside
+  // the step now that it renders its own primary button (see ./flow's
+  // `NO_NEXT_BUTTON_SCREENS`).
+  onConfirmMeetup: () => void;
   onCancelarConfirm: () => void;
   // Which side actually triggered the cancellation — see CanceladoStep.
   cancelledByRole: CreatedByRole | null;
@@ -90,12 +114,12 @@ type StepRenderer = (ctx: FlujoStepContext) => ReactNode;
 
 /** Maps each wizard screen to the step it renders — the single place that answers "which component is this screen?". */
 const STEP_RENDERERS: Record<Screen, StepRenderer> = {
-  inicio: (ctx) =>
-   <InicioStep role={ctx.role} onCrear={ctx.onStartCrear} onCodigo={ctx.onStartCodigo} />,
+  inicio: (ctx) => <InicioStep onCrear={ctx.onStartCrear} onCodigo={ctx.onStartCodigo} />,
 
   "crear-datos": (ctx) => (
     <CrearDatosStep
       role={ctx.role}
+      onRoleChange={ctx.onRoleChange}
       fields={ctx.fields}
       onFieldChange={ctx.onFieldChange}
       feeLineValue={ctx.feeLineValue}
@@ -104,20 +128,27 @@ const STEP_RENDERERS: Record<Screen, StepRenderer> = {
     />
   ),
 
+  "crear-modalidad": (ctx) => (
+    <ModalidadStep deliveryMethod={ctx.fields.deliveryMethod} onDeliveryMethodChange={(v) => ctx.onFieldChange("deliveryMethod", v)} />
+  ),
+
   "crear-codigo": (ctx) => (
     <CrearCodigoStep
       role={ctx.role}
       dealCode={ctx.dealCode}
       summaryLabel={`${ctx.summaryItem} · ${ctx.summaryAmount}`}
       whatsappHref={ctx.whatsappHref}
+      onDeleteTrato={ctx.onOpenDeleteTrato}
     />
   ),
 
-  "codigo-ingresar": (ctx) => <CodigoIngresarStep role={ctx.role} code={ctx.fields.code} onCodeChange={ctx.onCodeChange} />,
+  "codigo-ingresar": (ctx) => <CodigoIngresarStep code={ctx.fields.code} onCodeChange={ctx.onCodeChange} />,
 
   detalle: (ctx) => (
     <DetalleStep
       role={ctx.role}
+      createdByRole={ctx.createdByRole}
+      onReject={ctx.onRejectDetalle}
       summaryItem={ctx.summaryItem}
       counterpartLabel={COUNTERPART_LABEL[ctx.role]}
       counterpartName={ctx.counterpartName}
@@ -129,7 +160,7 @@ const STEP_RENDERERS: Record<Screen, StepRenderer> = {
     />
   ),
 
-  "esperando-pago": (ctx) => <EsperandoPagoStep summaryAmount={ctx.summaryAmount} summaryItem={ctx.summaryItem} />,
+  "esperando-pago": (ctx) => <EsperandoPagoStep summaryAmount={ctx.summaryAmount} summaryItem={ctx.summaryItem} counterpartName={ctx.counterpartName} />,
 
   pagar: (ctx) => (
     <PagarStep
@@ -137,6 +168,8 @@ const STEP_RENDERERS: Record<Screen, StepRenderer> = {
       totalAmountClp={ctx.totalAmountClp}
       summaryAmount={ctx.summaryAmount}
       feeDisplay={ctx.feeDisplay}
+      summaryItem={ctx.summaryItem}
+      counterpartName={ctx.counterpartName}
       onPay={ctx.onPay}
       onForceAdvancePayment={ctx.onForceAdvancePayment}
       isSubmitting={ctx.isSubmitting}
@@ -152,7 +185,9 @@ const STEP_RENDERERS: Record<Screen, StepRenderer> = {
       counterpartLabel={COUNTERPART_LABEL[ctx.role]}
       counterpartName={ctx.counterpartName}
       summaryAmount={ctx.summaryAmount}
+      onNext={ctx.onConfirmMeetup}
       onCancel={ctx.onOpenCancel}
+      isSubmitting={ctx.isSubmitting}
     />
   ),
 

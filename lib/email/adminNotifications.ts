@@ -1,6 +1,7 @@
 import "server-only";
 import { money } from "@/lib/pricing";
 import type { TratoRow } from "@/lib/tratos/types";
+import type { SoporteTicketRow } from "@/lib/soporte/types";
 import { getAdminEmails, getAdminNotificationFrom, getResendClient } from "./resend";
 
 function requireAppBaseUrl(): string {
@@ -11,6 +12,10 @@ function requireAppBaseUrl(): string {
 
 function adminLinkFor(code: string): string {
   return `${requireAppBaseUrl()}/admin/tratos/${code}`;
+}
+
+function adminSoporteLink(): string {
+  return `${requireAppBaseUrl()}/admin/soporte`;
 }
 
 /**
@@ -70,4 +75,11 @@ export async function notifyAdminDisputeReported(trato: TratoRow): Promise<void>
   ].join("\n");
 
   await sendAdminEmail(`Reclamo en trato ${trato.code}`, text);
+}
+
+/** Fires when `lib/soporte/repository.ts`'s `askSoporte` finds no matching FAQ — the ticket is `pendiente` and needs a manual reply. */
+export async function notifyAdminSoporteUnmatched(ticket: SoporteTicketRow): Promise<void> {
+  const text = [`Nueva consulta de soporte sin respuesta automática.`, ``, `Pregunta: ${ticket.pregunta}`, ``, `Responder: ${adminSoporteLink()}`].join("\n");
+
+  await sendAdminEmail(`Consulta de soporte sin responder`, text);
 }

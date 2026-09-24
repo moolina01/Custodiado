@@ -103,10 +103,10 @@ export default function ShaderShowcase() {
               animate={{ backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }}
               transition={{ duration: 8, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
             >
-              Vende y compra
+              Compra y vende
             </motion.span>
-            <span className="block font-black text-white drop-shadow-2xl">sin miedo</span>
-            <span className="block font-light text-white/80 italic">aunque no se conozcan.</span>
+            <span className="block font-black text-white drop-shadow-2xl">entre personas.</span>
+            <span className="block font-light text-white/80 italic">Sin tener que confiar a ciegas.</span>
           </motion.h1>
 
           <motion.p
@@ -115,8 +115,8 @@ export default function ShaderShowcase() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.5 }}
           >
-            Compra y vende tus productos de forma segura, sin importar dónde, Custodiado retiene el pago y lo libera
-            recién cuando confirmás que todo está bien.
+            El comprador paga, Custodiado protege el dinero y el vendedor lo recibe cuando la entrega queda
+            confirmada.
           </motion.p>
 
           <motion.div
@@ -126,22 +126,22 @@ export default function ShaderShowcase() {
             transition={{ duration: 0.6, delay: 0.7 }}
           >
             <motion.a
-              href="/flujo?role=comprador"
+              href="/flujo?mode=crear"
               className="hero-cta-buyer px-10 py-4 rounded-full text-white font-semibold text-sm transition-shadow duration-300 cursor-pointer shadow-lg hover:shadow-xl"
               style={{ background: BRAND.accent }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              Soy comprador
+              Crear trato seguro
             </motion.a>
             <motion.a
-              href="/flujo?role=vendedor"
+              href="/flujo?mode=codigo"
               className="hero-cta-seller px-10 py-4 rounded-full font-semibold text-sm transition-shadow duration-300 cursor-pointer shadow-lg hover:shadow-xl"
               style={{ background: "#ffffff", color: BRAND.brandDeep }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              Soy vendedor
+              Ya tengo un código
             </motion.a>
           </motion.div>
         </div>

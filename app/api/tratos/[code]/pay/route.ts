@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { NextRequest } from "next/server";
 import { jsonError, jsonOk } from "@/lib/http";
 import { requireSessionUser, UnauthorizedError } from "@/lib/auth/session";
+import { notifyFundsHeld } from "@/lib/email/paymentNotifications";
 import { createCardOrder } from "@/lib/mercadopago/payments";
 import { toPublicDto } from "@/lib/tratos/dto";
 import { getTratoByCode, resolvePaymentApproved } from "@/lib/tratos/repository";
@@ -81,6 +82,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (order.status === "processed") {
       const result = await resolvePaymentApproved(trato.code, order.id);
       if (result.outcome === "not_found") return jsonError(404, "Trato no encontrado, revisa el código.");
+      if (result.outcome === "matched") await notifyFundsHeld(result.trato);
       return jsonOk(toPublicDto(result.trato));
     }
 

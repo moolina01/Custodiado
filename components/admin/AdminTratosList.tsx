@@ -41,9 +41,14 @@ export default function AdminTratosList() {
     <div className="custodio-landing">
       <Navbar />
       <main style={{ maxWidth: "760px", margin: "0 auto", padding: "56px 20px 100px" }}>
-        <h1 style={{ fontSize: "clamp(24px, 3.5vw, 32px)", fontWeight: "700", letterSpacing: "-0.02em", color: colors.brandDeep, margin: "0 0 8px" }}>
-          Pagos pendientes
-        </h1>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "12px" }}>
+          <h1 style={{ fontSize: "clamp(24px, 3.5vw, 32px)", fontWeight: "700", letterSpacing: "-0.02em", color: colors.brandDeep, margin: "0 0 8px" }}>
+            Pagos pendientes
+          </h1>
+          <Link href="/admin/soporte" style={{ fontSize: "14px", fontWeight: "600", color: colors.accent, whiteSpace: "nowrap" }}>
+            Soporte →
+          </Link>
+        </div>
         <p style={{ fontSize: "15px", color: colors.textMuted, margin: "0 0 32px" }}>
           Tratos con el QR ya escaneado esperando la transferencia manual al vendedor, y cancelaciones cuyo reembolso todavía no se confirma solo.
         </p>

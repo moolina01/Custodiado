@@ -63,7 +63,7 @@ export default function Footer() {
       <div className="relative z-10 mx-auto max-w-6xl px-6 py-14 md:px-12">
         <div className="grid grid-cols-1 gap-10 pb-10 md:grid-cols-3 md:gap-14">
           <div className="flex flex-col gap-3">
-            <Logo size={19} variant="dark" />
+            <Logo size={14} variant="dark" />
             <p className="max-w-[240px] text-sm leading-relaxed text-[#9AA7C4]">Pago seguro entre particulares.</p>
             <p className="text-sm text-[#9AA7C4]">Hecho en Chile 🇨🇱</p>
           </div>

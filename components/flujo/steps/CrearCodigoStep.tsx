@@ -10,10 +10,14 @@ type CrearCodigoStepProps = {
   dealCode: string;
   summaryLabel: string; // "{item} · {amount}"
   whatsappHref: string;
+  // Buyer-only escape hatch while waiting for the seller to accept — nothing's
+  // been paid yet at this point, so this just deletes the trato outright
+  // (no refund flow involved) instead of the post-payment "cancelar" screen.
+  onDeleteTrato: () => void;
 };
 
 /** "Comparte este código con el vendedor/comprador": the trato's share code, ready to send over WhatsApp. */
-export default function CrearCodigoStep({ role, dealCode, summaryLabel, whatsappHref }: CrearCodigoStepProps) {
+export default function CrearCodigoStep({ role, dealCode, summaryLabel, whatsappHref, onDeleteTrato }: CrearCodigoStepProps) {
   const isBuyer = role === "comprador";
   const [copied, setCopied] = useState(false);
 
@@ -90,6 +94,30 @@ export default function CrearCodigoStep({ role, dealCode, summaryLabel, whatsapp
           <span style={{ width: "4px", height: "4px", borderRadius: "50%", background: colors.textFaint, animation: "dotBlink 1.2s ease-in-out 0.4s infinite" }} />
         </span>
       </div>
+
+      {isBuyer && (
+        <button
+          type="button"
+          onClick={onDeleteTrato}
+          className="flujo-danger-outline"
+          style={{
+            display: "block",
+            width: "100%",
+            marginTop: "18px",
+            background: "#ffffff",
+            border: `1px solid ${colors.dangerBorder}`,
+            color: colors.dangerText,
+            fontFamily: "inherit",
+            fontWeight: "700",
+            fontSize: "14px",
+            padding: "13px",
+            borderRadius: "12px",
+            cursor: "pointer",
+          }}
+        >
+          Eliminar trato y empezar de nuevo
+        </button>
+      )}
 
       <SafetyTips />
     </div>

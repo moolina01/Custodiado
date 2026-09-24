@@ -110,6 +110,9 @@ describe("FlujoApp", () => {
     await act(async () => {
       fireEvent.click(screen.getByText("Generar el código")); // calls createTratoRequest
     });
+    expect(screen.getByText("¿Cómo se va a entregar?")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Presencial"));
+    fireEvent.click(screen.getByText("Continuar"));
     expect(screen.getByText("Comparte este código con el vendedor")).toBeInTheDocument();
     expect(screen.getByText("ABC-123")).toBeInTheDocument();
 
@@ -120,7 +123,7 @@ describe("FlujoApp", () => {
       await acceptTratoRequest("ABC123", "vendedor");
     });
     await advancePoll();
-    expect(screen.getByText("Paga con tarjeta")).toBeInTheDocument();
+    expect(screen.getByText("Paga de forma segura")).toBeInTheDocument();
 
     // The real path is a Checkout API card form (MP.js) — untestable in
     // jsdom (no real card-tokenizing iframes here, same class of gap as
@@ -130,9 +133,9 @@ describe("FlujoApp", () => {
       fireEvent.click(screen.getByText("Forzar avance (sin tarjeta, sin esperar el webhook)"));
     });
     await advancePoll();
-    expect(screen.getByText("Coordinen la entrega")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Pago protegido" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText("Ya nos juntamos"));
+    fireEvent.click(screen.getByText("Ya estoy con el vendedor"));
     expect(screen.getByText("Dile el código al entregar")).toBeInTheDocument();
 
     // The real path is the seller typing in the code this screen shows the
@@ -157,6 +160,7 @@ describe("FlujoApp", () => {
     await act(async () => {
       fireEvent.click(screen.getByText("Generar el código"));
     });
+    fireEvent.click(screen.getByText("Continuar"));
     expect(screen.getByText("ABC-123")).toBeInTheDocument();
 
     // No button to click here either — the seller's "crear" flow has no
@@ -196,6 +200,7 @@ describe("FlujoApp", () => {
     await act(async () => {
       fireEvent.click(screen.getByText("Generar el código"));
     });
+    fireEvent.click(screen.getByText("Continuar"));
     await act(async () => {
       await acceptTratoRequest("ABC123", "vendedor");
     });
@@ -204,9 +209,9 @@ describe("FlujoApp", () => {
       fireEvent.click(screen.getByText("Forzar avance (sin tarjeta, sin esperar el webhook)"));
     });
     await advancePoll();
-    expect(screen.getByText("Coordinen la entrega")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Pago protegido" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText("Cancelar el trato y recuperar mi plata"));
+    fireEvent.click(screen.getByText("Cancelar el trato y solicitar devolución"));
     expect(screen.getByText("Cancelar el trato")).toBeInTheDocument();
 
     // No form to fill anymore — a Mercado Pago refund goes back to
@@ -238,6 +243,7 @@ describe("FlujoApp", () => {
     await act(async () => {
       fireEvent.click(screen.getByText("Generar el código")); // calls createTratoRequest
     });
+    fireEvent.click(screen.getByText("Continuar"));
     expect(screen.getByText("ABC-123")).toBeInTheDocument();
 
     // Stands in for closing the tab / a stray reload — everything React was
@@ -275,6 +281,7 @@ describe("FlujoApp", () => {
     await act(async () => {
       fireEvent.click(screen.getByText("Generar el código"));
     });
+    fireEvent.click(screen.getByText("Continuar"));
     expect(screen.getByText("ABC-123")).toBeInTheDocument();
     expect(loadTratoCode("comprador")).toBe("ABC123");
 
@@ -293,7 +300,7 @@ describe("FlujoApp", () => {
     // confirmed trato) — but, unlike before the fix, the code itself
     // survives so a later retry (next reload, or the next poll) isn't
     // starting from nothing.
-    expect(screen.getByText("¿Cómo quieres partir?")).toBeInTheDocument();
+    expect(screen.getByText("¿Cómo quieres comenzar?")).toBeInTheDocument();
     expect(loadTratoCode("comprador")).toBe("ABC123");
   });
 
@@ -321,6 +328,7 @@ describe("FlujoApp", () => {
     await act(async () => {
       fireEvent.click(screen.getByText("Generar el código"));
     });
+    fireEvent.click(screen.getByText("Continuar"));
     expect(screen.getByText("ABC-123")).toBeInTheDocument();
     expect(loadTratoCode("comprador")).toBe("ABC123");
 
@@ -357,6 +365,7 @@ describe("FlujoApp", () => {
     await act(async () => {
       fireEvent.click(screen.getByText("Generar el código"));
     });
+    fireEvent.click(screen.getByText("Continuar"));
     expect(loadTratoCode("comprador")).toBe("ABC123");
 
     await act(async () => {
@@ -367,7 +376,7 @@ describe("FlujoApp", () => {
       fireEvent.click(screen.getByText("Forzar avance (sin tarjeta, sin esperar el webhook)"));
     });
     await advancePoll();
-    fireEvent.click(screen.getByText("Ya nos juntamos"));
+    fireEvent.click(screen.getByText("Ya estoy con el vendedor"));
     await act(async () => {
       await verifyReleaseCodeRequest("ABC123", "482913");
     });
@@ -375,7 +384,7 @@ describe("FlujoApp", () => {
     expect(screen.getByText("Trato cerrado")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Volver al inicio"));
-    expect(screen.getByText("¿Cómo quieres partir?")).toBeInTheDocument();
+    expect(screen.getByText("¿Cómo quieres comenzar?")).toBeInTheDocument();
     expect(loadTratoCode("comprador")).toBeNull();
   });
 
@@ -395,6 +404,10 @@ describe("FlujoApp", () => {
     // A real trato exists now — "Atrás" is gone, so there's no way back to
     // "crear-datos" to hit "Generar el código" again and mint a *second*
     // trato out from under the one just shared with the counterpart.
+    expect(screen.getByText("¿Cómo se va a entregar?")).toBeInTheDocument();
+    expect(screen.queryByText("Atrás")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Continuar"));
     expect(screen.getByText("Comparte este código con el vendedor")).toBeInTheDocument();
     expect(screen.queryByText("Atrás")).not.toBeInTheDocument();
 
@@ -402,7 +415,7 @@ describe("FlujoApp", () => {
       await acceptTratoRequest("ABC123", "vendedor");
     });
     await advancePoll();
-    expect(screen.getByText("Paga con tarjeta")).toBeInTheDocument();
+    expect(screen.getByText("Paga de forma segura")).toBeInTheDocument();
     // Still no "Atrás" — rewinding into "detalle" here would let the buyer
     // hit "Aceptar y pagar" again against a trato that's already accepted.
     expect(screen.queryByText("Atrás")).not.toBeInTheDocument();
@@ -417,6 +430,7 @@ describe("FlujoApp", () => {
     await act(async () => {
       fireEvent.click(screen.getByText("Generar el código"));
     });
+    fireEvent.click(screen.getByText("Continuar"));
     await act(async () => {
       await acceptTratoRequest("ABC123", "vendedor");
     });
@@ -425,15 +439,15 @@ describe("FlujoApp", () => {
       fireEvent.click(screen.getByText("Forzar avance (sin tarjeta, sin esperar el webhook)"));
     });
     await advancePoll();
-    expect(screen.getByText("Coordinen la entrega")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Pago protegido" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText("Cancelar el trato y recuperar mi plata"));
+    fireEvent.click(screen.getByText("Cancelar el trato y solicitar devolución"));
     expect(screen.getByText("Cancelar el trato")).toBeInTheDocument();
 
     // Backing out of the cancel form is local UI, not a backend action — it
     // stays available and just returns to "retenidos" without cancelling.
     fireEvent.click(screen.getByText("Atrás"));
-    expect(screen.getByText("Coordinen la entrega")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Pago protegido" })).toBeInTheDocument();
   });
 
   // SPEC 05: how `/panel` opens an in-progress trato — `/flujo?role=...&code=...`.
@@ -448,8 +462,8 @@ describe("FlujoApp", () => {
         await vi.advanceTimersByTimeAsync(0);
       });
 
-      expect(screen.getByText("Coordinen la entrega")).toBeInTheDocument();
-      expect(screen.queryByText("¿Cómo quieres partir?")).not.toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Pago protegido" })).toBeInTheDocument();
+      expect(screen.queryByText("¿Cómo quieres comenzar?")).not.toBeInTheDocument();
       expect(screen.queryByText("Buscar el trato")).not.toBeInTheDocument(); // "codigo-ingresar"'s own button, never shown
     });
 
@@ -472,7 +486,7 @@ describe("FlujoApp", () => {
         await vi.advanceTimersByTimeAsync(0);
       });
 
-      expect(screen.getByText("Aceptaste el trato")).toBeInTheDocument();
+      expect(screen.getByText("Esperando el pago del comprador")).toBeInTheDocument();
     });
 
     // Regression: `funds_held` alone doesn't say whether the seller already
@@ -507,7 +521,7 @@ describe("FlujoApp", () => {
 
     it("falls back to normal 'inicio' behavior when no code is in the URL", async () => {
       render(<FlujoApp initialRole="comprador" />);
-      expect(screen.getByText("¿Cómo quieres partir?")).toBeInTheDocument();
+      expect(screen.getByText("¿Cómo quieres comenzar?")).toBeInTheDocument();
     });
   });
 });

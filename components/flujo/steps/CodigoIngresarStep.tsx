@@ -1,20 +1,22 @@
 import StepHeading from "../ui/StepHeading";
 import { colors } from "../theme";
-import type { Role } from "../types";
 
 type CodigoIngresarStepProps = {
-  role: Role;
   code: string;
   onCodeChange: (value: string) => void;
 };
 
-/** "Pon el código": entry point for whoever received a trato code over WhatsApp. */
-export default function CodigoIngresarStep({ role, code, onCodeChange }: CodigoIngresarStepProps) {
-  const isBuyer = role === "comprador";
-
+/**
+ * "Pon el código": entry point for whoever received a trato code over
+ * WhatsApp. Role-neutral — whether this account ends up comprador or
+ * vendedor is inferred right after the code resolves, from the trato's own
+ * `createdByRole` (see FlujoApp's `handleCodigoIngresarSubmit`), so there's
+ * nothing role-specific to say yet at this point.
+ */
+export default function CodigoIngresarStep({ code, onCodeChange }: CodigoIngresarStepProps) {
   return (
     <div>
-      <StepHeading title="Pon el código" subtitle={isBuyer ? "El código que te pasó el vendedor." : "El código que te pasó el comprador."} />
+      <StepHeading title="Pon el código" subtitle="El código que te pasaron para sumarte al trato." />
 
       <input
         value={code}

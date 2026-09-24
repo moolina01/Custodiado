@@ -90,5 +90,22 @@ export const config = {
   // dentro de cada handler/página vía `requireAdminUser`
   // (lib/auth/admin.ts), igual que `/panel` valida "es mi propio trato"
   // adentro del handler en vez de acá.
-  matcher: ["/api/tratos", "/api/tratos/:path*", "/panel", "/panel/:path*", "/cuenta", "/admin", "/admin/:path*", "/api/admin", "/api/admin/:path*"],
+  //
+  // `/soporte`/`/api/soporte*`: mismo gate duro — sin sesión no hay a quién
+  // responderle una consulta.
+  matcher: [
+    "/api/tratos",
+    "/api/tratos/:path*",
+    "/panel",
+    "/panel/:path*",
+    "/cuenta",
+    "/admin",
+    "/admin/:path*",
+    "/api/admin",
+    "/api/admin/:path*",
+    "/soporte",
+    "/soporte/:path*",
+    "/api/soporte",
+    "/api/soporte/:path*",
+  ],
 };

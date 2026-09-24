@@ -27,7 +27,8 @@ type UserMenuProps = {
  * SPEC 05 (ajuste post-implementación): reemplaza el link de texto plano
  * "Mis tratos" por un ícono de cuenta (inicial del nombre) que despliega un
  * menú con "Tratos" (a `/panel`), "Cuenta" (a `/cuenta`, solo lectura por
- * ahora — la edición queda para un spec aparte) y "Cerrar sesión". `Navbar`
+ * ahora — la edición queda para un spec aparte), "Soporte" (a `/soporte`) y
+ * "Cerrar sesión". `Navbar`
  * (landing/`/panel`/`/cuenta`) y `FlujoHeader` (`/flujo`) son los dos
  * lugares que lo usan — este componente no vuelve a consultar la sesión,
  * recibe `name` ya resuelto para no duplicar la llamada a `GET /api/auth/me`.
@@ -136,6 +137,14 @@ export default function UserMenu({ name, onLoggedOut, onLogout, onDark }: UserMe
             style={{ display: "block", padding: "12px 16px", fontSize: "14px", fontWeight: "600", color: colors.brandDeep, borderTop: `1px solid ${colors.borderSoft}` }}
           >
             Cuenta
+          </Link>
+          <Link
+            href="/soporte"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            style={{ display: "block", padding: "12px 16px", fontSize: "14px", fontWeight: "600", color: colors.brandDeep, borderTop: `1px solid ${colors.borderSoft}` }}
+          >
+            Soporte
           </Link>
           <button
             role="menuitem"

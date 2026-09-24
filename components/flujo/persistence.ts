@@ -56,22 +56,42 @@ function remove(key: string) {
 
 const CANCEL_STAGES: CancelStage[] = ["none", "form", "done"];
 const MODES: Mode[] = ["crear", "codigo", null];
-const FIELD_NAMES: (keyof WizardFields)[] = ["item", "amount", "code", "bankName", "account", "accountType"];
+const FIELD_NAMES: (keyof WizardFields)[] = ["item", "amount", "deliveryMethod", "code", "bankName", "account", "accountType"];
 
-/** Defensive against a shape from an older deploy — a malformed entry is treated as "nothing saved" rather than crashing the reducer's lazy init. */
-function isValidPersistedWizard(value: unknown): value is PersistedWizard {
+// Kept in sync with `useWizardState`'s own `initialState.fields` — used to
+// backfill a field added *after* some entries were already saved (see
+// `isValidPersistedWizard` below), so a trato someone's mid-flow on when a
+// new field ships doesn't get thrown away wholesale just because that one
+// key hasn't been typed into yet.
+const DEFAULT_FIELDS: WizardFields = { item: "", amount: "", deliveryMethod: "presencial", code: "", bankName: "", account: "", accountType: "" };
+
+/**
+ * Defensive against a shape from an older deploy — a malformed entry is
+ * treated as "nothing saved" rather than crashing the reducer's lazy init.
+ * Only the fields *present* have to be strings — a field added after this
+ * entry was saved (missing from `v.fields` entirely) doesn't invalidate the
+ * whole thing; `loadWizard` backfills it from `DEFAULT_FIELDS` instead. A
+ * stricter "every FIELD_NAMES key must exist" check used to live here, but
+ * that meant shipping any new field wiped every in-progress trato saved
+ * before that deploy back to "inicio" on their next reload — the trato
+ * itself was still fine (see `useTrato`'s own, separately-keyed
+ * persistence), just orphaned with no screen pointing back at it.
+ */
+function isValidPersistedWizard(value: unknown): value is Omit<PersistedWizard, "fields"> & { fields: Partial<WizardFields> } {
   if (!value || typeof value !== "object") return false;
   const v = value as Record<string, unknown>;
   if (!MODES.includes(v.mode as Mode)) return false;
   if (typeof v.stepIndex !== "number") return false;
   if (!CANCEL_STAGES.includes(v.cancelStage as CancelStage)) return false;
   if (!v.fields || typeof v.fields !== "object") return false;
-  return FIELD_NAMES.every((name) => typeof (v.fields as Record<string, unknown>)[name] === "string");
+  const fields = v.fields as Record<string, unknown>;
+  return FIELD_NAMES.every((name) => !(name in fields) || typeof fields[name] === "string");
 }
 
 export function loadWizard(role: Role): PersistedWizard | null {
   const value = readJSON<PersistedWizard>(WIZARD_KEY_PREFIX + role);
-  return isValidPersistedWizard(value) ? value : null;
+  if (!isValidPersistedWizard(value)) return null;
+  return { ...value, fields: { ...DEFAULT_FIELDS, ...value.fields } };
 }
 
 export function saveWizard(role: Role, state: PersistedWizard): void {

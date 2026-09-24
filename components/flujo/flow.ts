@@ -8,11 +8,11 @@ import type { CancelStage, Mode, Role, Screen } from "./types";
  */
 const FLOWS: Record<Role, Record<Exclude<Mode, null>, Screen[]>> = {
   comprador: {
-    crear: ["inicio", "crear-datos", "crear-codigo", "pagar", "retenidos", "qr", "listo"],
+    crear: ["inicio", "crear-datos", "crear-modalidad", "crear-codigo", "pagar", "retenidos", "qr", "listo"],
     codigo: ["inicio", "codigo-ingresar", "detalle", "pagar", "retenidos", "qr", "listo"],
   },
   vendedor: {
-    crear: ["inicio", "crear-datos", "crear-codigo", "banco", "qr", "listo"],
+    crear: ["inicio", "crear-datos", "crear-modalidad", "crear-codigo", "banco", "qr", "listo"],
     codigo: ["inicio", "codigo-ingresar", "detalle", "esperando-pago", "banco", "qr", "listo"],
   },
 };
@@ -95,29 +95,62 @@ export function screenForExistingTrato(status: TratoStatus, role: Role, isCreato
   }
 }
 
-// The 4 named phases shown above the progress bar, and which screens fall
-// into each one.
-const PHASE_NAMES = ["Acordar el trato", "Retener el pago", "Coordinar la entrega", "Liberar el pago"] as const;
+/**
+ * The 6 named milestones shown by `TratoStatusStepper` above every screen —
+ * replaces the old thin 4-phase `ProgressBar` (whose labels — "Acordar el
+ * trato", "Retener el pago"... — named the *activity*, not what actually
+ * happened) with concrete, already-happened-or-not events, readable
+ * identically for either role. Deliberately status-driven rather than
+ * screen-driven like the old phases were: `completedMilestones` below reads
+ * `trato.status` directly, so a screen that spans more than one status
+ * (e.g. "crear-codigo", shown to a seller-creator through both
+ * `awaiting_acceptance` and `awaiting_payment`) still reports the right
+ * count instead of being stuck at whatever a screen-only mapping would
+ * have said.
+ *
+ * Stops at "Pago liberado" — there's no separate tracked event for
+ * "entrega confirmada" distinct from the release itself (the buyer's QR
+ * scan / release-code verification *is* their confirmation that delivery
+ * happened, see lib/tratos/release.ts), so "Coordinando entrega" covers
+ * the whole in-person handoff and "Pago liberado" is genuinely the last
+ * milestone, not an arbitrary cutoff.
+ */
+export const TRATO_MILESTONES = ["Trato creado", "Trato aceptado", "Esperando pago", "Pago protegido", "Coordinando entrega", "Pago liberado"] as const;
 
-const SCREEN_PHASE: Partial<Record<Screen, number>> = {
-  "crear-datos": 0,
-  "codigo-ingresar": 0,
-  detalle: 0,
-  "crear-codigo": 1,
-  "esperando-pago": 1,
-  pagar: 1,
-  banco: 2,
-  retenidos: 2,
-  qr: 3,
-  listo: 3,
-};
-
-export function phaseFor(screen: Screen): number | undefined {
-  return SCREEN_PHASE[screen];
-}
-
-export function phaseName(phase: number | undefined): string {
-  return PHASE_NAMES[phase ?? 0];
+/**
+ * How many of `TRATO_MILESTONES`, from the start, are done for a trato at
+ * `status` — `undefined` (no trato yet: "crear-datos"/"crear-modalidad"
+ * before submitting, "codigo-ingresar" before a code resolves) means none
+ * of them. "Esperando pago" and "Pago protegido" flip from not-done to
+ * both-done in the same instant (`awaiting_payment -> funds_held` is one
+ * atomic transition, not two) — there's no real in-between state where only
+ * one of them is true, unlike the creado/aceptado pair a step earlier.
+ *
+ * The failure/refund statuses (a cancellation, a refund, a failed release)
+ * all end the trato before "Pago liberado" — `showsProgress` already hides
+ * the stepper on "cancelar"/"cancelado", the only screens that render for
+ * those in practice, so the exact count returned for them here doesn't
+ * surface anywhere; it just needs to not crash a `switch`.
+ */
+export function completedMilestones(status: TratoStatus | undefined): number {
+  if (!status) return 0;
+  switch (status) {
+    case "awaiting_acceptance":
+      return 1;
+    case "awaiting_payment":
+      return 2;
+    case "funds_held":
+    case "release_pending":
+      return 4;
+    case "released":
+      return 6;
+    case "refund_pending":
+    case "refunded":
+    case "release_failed":
+    case "refund_failed":
+    case "cancelled":
+      return 4;
+  }
 }
 
 const NO_PROGRESS_SCREENS: Screen[] = ["inicio", "cancelar", "cancelado"];
@@ -126,18 +159,18 @@ export function showsProgress(screen: Screen): boolean {
   return !NO_PROGRESS_SCREENS.includes(screen);
 }
 
-// "pagar", "cancelar" and "qr" render their own primary button inline (or,
-// for "qr", none at all for the seller — see QrStep). "inicio" has no
-// forward action. "crear-codigo", "esperando-pago" and "qr" used to have
-// manual "Ya aceptó"/"Ya pagó"/"Ya escaneó" claim buttons here — now that
-// real webhooks confirm all three, they advance themselves via polling
+// "pagar", "cancelar", "qr" and "retenidos" render their own primary button
+// inline (or, for "qr", none at all for the seller — see QrStep). "inicio"
+// has no forward action. "crear-codigo", "esperando-pago" and "qr" used to
+// have manual "Ya aceptó"/"Ya pagó"/"Ya escaneó" claim buttons here — now
+// that real webhooks confirm all three, they advance themselves via polling
 // instead of trusting a "yes, the other side did it" click. "cancelado" —
 // like "listo" — is terminal but *does* get a "Volver al inicio": with the
 // wizard's progress persisted (see ./persistence), a reload no longer
 // resets it for free the way it used to, so leaving it out here would trap
 // the user on a cancelled deal with no way back to "inicio" short of
 // clearing storage by hand.
-const NO_NEXT_BUTTON_SCREENS: Screen[] = ["inicio", "crear-codigo", "pagar", "esperando-pago", "qr", "cancelar"];
+const NO_NEXT_BUTTON_SCREENS: Screen[] = ["inicio", "crear-codigo", "pagar", "esperando-pago", "qr", "cancelar", "retenidos"];
 
 export function showsNextButton(screen: Screen): boolean {
   return !NO_NEXT_BUTTON_SCREENS.includes(screen);
@@ -185,7 +218,7 @@ export function nextButtonLabel(screen: Screen, role: Role): string {
     case "codigo-ingresar":
       return "Buscar el trato";
     case "detalle":
-      return isBuyer ? "Aceptar y pagar" : "Aceptar el trato";
+      return isBuyer ? "Aceptar y pagar" : "Aceptar trato";
     case "esperando-pago":
       return "Ya pagó, continuar";
     case "banco":

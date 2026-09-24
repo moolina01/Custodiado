@@ -240,7 +240,7 @@ export default function Navbar() {
           className="navbar-logo-scale"
           style={{ display: "inline-flex", transform: scrolled ? "scale(1.06)" : "scale(1)" }}
         >
-          <Logo href="/" size={25} variant={overDark ? "dark" : "light"} />
+          <Logo href="/" size={34} variant={overDark ? "dark" : "light"} />
         </span>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "10px" }}>
@@ -256,13 +256,14 @@ export default function Navbar() {
             // "Empezar" (→ comprador) lado a lado, pero ese segundo link se
             // perdió en un cambio a medio terminar y "Empezar" quedó
             // apuntando siempre a comprador — cualquiera que quisiera
-            // vender caía ahí igual, sin darse cuenta. En vez de restaurar
-            // el segundo link, "Empezar" ahora manda a `/flujo` sin rol:
-            // `ChooseRoleScreen` (ver app/flujo/page.tsx) es quien pregunta
-            // "¿comprar o vender?" un paso después, con espacio real para
-            // explicar cada opción — mismo trato que ya reciben el resto de
-            // los puntos de entrada sin rol (`/panel`'s "Nuevo trato", el
-            // `next` por defecto tras login/signup/Google).
+            // vender caía ahí igual, sin darse cuenta. "Empezar" manda a
+            // `/flujo` sin rol ni modo: "inicio" (InicioStep, ver
+            // FlujoApp/app/flujo/page.tsx) es quien pregunta "¿crear un
+            // trato o tengo un código?" — el rol ya no se pregunta ahí, se
+            // decide dentro de cada camino (ver components/flujo/steps/
+            // CrearDatosStep.tsx y DetalleStep.tsx) — mismo trato que ya
+            // reciben el resto de los puntos de entrada sin rol (`/panel`'s
+            // "Nuevo trato", el `next` por defecto tras login/signup/Google).
             <a
               href="/flujo"
               className="nav-cta"

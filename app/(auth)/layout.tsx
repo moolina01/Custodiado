@@ -21,7 +21,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           borderBottom: `1px solid ${colors.border}`,
         }}
       >
-        <Logo href="/" size={18} />
+        <Logo href="/" size={9} />
       </header>
 
       <main style={{ maxWidth: "420px", margin: "0 auto", padding: "48px 20px 64px" }}>{children}</main>

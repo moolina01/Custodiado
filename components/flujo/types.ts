@@ -12,6 +12,7 @@ export type Mode = "crear" | "codigo" | null;
 export type Screen =
   | "inicio"
   | "crear-datos"
+  | "crear-modalidad"
   | "crear-codigo"
   | "codigo-ingresar"
   | "detalle"
@@ -34,6 +35,7 @@ export type CancelStage = "none" | "form" | "done";
 export type WizardFields = {
   item: string;
   amount: string; // thousands-formatted as the user types it, e.g. "180.000"
+  deliveryMethod: string; // "presencial" | "envio" (envío is preview-only, disabled — see ModalidadStep)
   code: string;
   bankName: string; // e.g. "Banco Estado" — see lib/mercadopago/banks.ts
   account: string;

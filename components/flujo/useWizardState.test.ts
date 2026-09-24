@@ -20,6 +20,7 @@ describe("useWizardState", () => {
     expect(result.current.fields).toEqual({
       item: "",
       amount: "",
+      deliveryMethod: "presencial",
       code: "",
       bankName: "",
       account: "",
@@ -50,6 +51,9 @@ describe("useWizardState", () => {
     act(() => result.current.start("crear")); // crear-datos
     expect(result.current.screen).toBe("crear-datos");
 
+    act(() => result.current.goNext()); // crear-modalidad
+    expect(result.current.screen).toBe("crear-modalidad");
+
     act(() => result.current.goNext()); // crear-codigo
     expect(result.current.screen).toBe("crear-codigo");
 
@@ -61,7 +65,8 @@ describe("useWizardState", () => {
     const { result } = renderHook(() => useWizardState("vendedor"));
 
     act(() => result.current.start("crear"));
-    // vendedor/crear: inicio, crear-datos, crear-codigo, banco, qr, listo
+    // vendedor/crear: inicio, crear-datos, crear-modalidad, crear-codigo, banco, qr, listo
+    act(() => result.current.goNext()); // crear-modalidad
     act(() => result.current.goNext()); // crear-codigo
     act(() => result.current.goNext()); // banco
     act(() => result.current.goNext()); // qr
@@ -88,7 +93,7 @@ describe("useWizardState", () => {
     const { result } = renderHook(() => useWizardState("vendedor"));
 
     act(() => result.current.start("crear")); // crear-datos
-    act(() => result.current.goNext()); // crear-codigo
+    act(() => result.current.goNext()); // crear-modalidad
     act(() => result.current.goBack());
 
     expect(result.current.screen).toBe("crear-datos");
@@ -98,6 +103,7 @@ describe("useWizardState", () => {
     const { result } = renderHook(() => useWizardState("comprador"));
 
     act(() => result.current.start("crear"));
+    act(() => result.current.goNext()); // crear-modalidad
     act(() => result.current.goNext()); // crear-codigo
     act(() => result.current.openCancel());
 
@@ -109,6 +115,7 @@ describe("useWizardState", () => {
     const { result } = renderHook(() => useWizardState("comprador"));
 
     act(() => result.current.start("crear"));
+    act(() => result.current.goNext()); // crear-modalidad
     act(() => result.current.goNext()); // crear-codigo
     act(() => result.current.openCancel());
     act(() => result.current.goBack());
@@ -147,6 +154,7 @@ describe("useWizardState", () => {
     const { result, unmount } = renderHook(() => useWizardState("vendedor"));
 
     act(() => result.current.start("crear"));
+    act(() => result.current.goNext()); // crear-modalidad
     act(() => result.current.goNext()); // crear-codigo
     act(() => result.current.setField("item", "Bicicleta"));
     unmount();
@@ -155,6 +163,30 @@ describe("useWizardState", () => {
 
     expect(resumed.current.screen).toBe("crear-codigo");
     expect(resumed.current.fields.item).toBe("Bicicleta");
+  });
+
+  // Regression: adding `deliveryMethod` (crear-modalidad) used to make
+  // `isValidPersistedWizard` reject any entry saved before that field
+  // existed — a real trato someone was already mid-flow on (e.g. waiting on
+  // "crear-codigo" for the other side to accept) silently fell back to a
+  // blank "inicio" on their next reload, with no screen left pointing back
+  // at it, even though the trato itself was still fine. See ./persistence.
+  it("resumes an old-shaped saved entry that predates a newer field, defaulting the missing one", () => {
+    localStorage.setItem(
+      "custodio:flujo:wizard:vendedor",
+      JSON.stringify({
+        mode: "crear",
+        stepIndex: 3, // crear-codigo
+        cancelStage: "none",
+        fields: { item: "Bicicleta", amount: "180.000", code: "", bankName: "", account: "", accountType: "" }, // no deliveryMethod
+      })
+    );
+
+    const { result } = renderHook(() => useWizardState("vendedor"));
+
+    expect(result.current.screen).toBe("crear-codigo");
+    expect(result.current.fields.item).toBe("Bicicleta");
+    expect(result.current.fields.deliveryMethod).toBe("presencial");
   });
 
   it("keeps a comprador's and a vendedor's saved progress independent", () => {
@@ -171,7 +203,8 @@ describe("useWizardState", () => {
     const { result } = renderHook(() => useWizardState("vendedor"));
 
     act(() => result.current.start("crear"));
-    // vendedor/crear: inicio, crear-datos, crear-codigo, banco, qr, listo
+    // vendedor/crear: inicio, crear-datos, crear-modalidad, crear-codigo, banco, qr, listo
+    act(() => result.current.goNext()); // crear-modalidad
     act(() => result.current.goNext()); // crear-codigo
     act(() => result.current.goNext()); // banco
     act(() => result.current.goNext()); // qr

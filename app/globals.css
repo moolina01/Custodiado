@@ -130,9 +130,8 @@ html {
    etc.), but that utility class always lost to the reset above regardless
    of selector order: Tailwind's utilities live inside a CSS `@layer`, and
    an unlayered rule beats a layered one no matter its specificity. So
-   Footer's link colors live here instead, same convention as `.nav-link`/
-   `.logo-mark` above (also here because inline styles can't express
-   `:hover`). */
+   Footer's link colors live here instead, same convention as `.nav-link`
+   above (also here because inline styles can't express `:hover`). */
 a.footer-link {
   color: #e6eaf5;
 }
@@ -214,6 +213,25 @@ a.footer-icon-link:hover {
   50% {
     opacity: 1;
   }
+}
+/* Expanding ring pulse — "this is live, something's actively being waited
+ * on" (EsperandoPagoStep's clock icon + active numbered step). Same shape as
+ * the ticker's `livePulse`, just re-colored to the wizard's accent blue
+ * instead of the landing page's green so it reads as "pending" rather than
+ * "success". */
+@keyframes flujoPulseAccent {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+.flujo-pulse-ring {
+  animation: flujoPulseAccent 2.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 }
 @keyframes qrSweep2 {
   0% {
@@ -542,19 +560,6 @@ a.footer-icon-link:hover {
     transform: none;
   }
 }
-.logo-text {
-  transition: background-position 0.4s ease;
-}
-.logo-mark:hover .logo-text,
-.logo-mark:focus-visible .logo-text {
-  background-position: 100% 0% !important;
-}
-@media (prefers-reduced-motion: reduce) {
-  .logo-text {
-    transition: none;
-  }
-}
-
 /* -----------------------------------------------------------------------
  * /panel — SPEC 05. Same hover-affordance convention as the nav classes
  * above (a color/shadow shift, no layout jump), scoped here instead of
@@ -618,37 +623,32 @@ a.footer-icon-link:hover {
   animation: flujoPageIn 0.5s ease both;
 }
 
-/* ProgressBar: smoother fill transition + a small "pop" on the segment that
- * just became active, so a phase change reads as an event, not a snap. */
-.flujo-progress-bar {
-  transition: background 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+/* TratoStatusStepper: smooth color transitions on every circle/line as
+ * `completedCount` advances, plus a small "pop" on whichever circle just
+ * became the most-recently-completed one — a milestone flipping to done
+ * reads as an event, not a snap (same idea the old ProgressBar's
+ * "active bar" pulse had). */
+.flujo-milestone-circle {
+  transition:
+    background 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
-@keyframes flujoBarPulse {
+@keyframes flujoMilestonePop {
   0% {
-    transform: scaleY(1);
+    transform: scale(1);
   }
-  40% {
-    transform: scaleY(2.2);
+  45% {
+    transform: scale(1.35);
   }
   100% {
-    transform: scaleY(1);
+    transform: scale(1);
   }
 }
-.flujo-progress-bar-active {
-  animation: flujoBarPulse 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+.flujo-milestone-circle-active {
+  animation: flujoMilestonePop 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
-@keyframes flujoLabelIn {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-.flujo-progress-label {
-  animation: flujoLabelIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+.flujo-milestone-line {
+  transition: background 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* Terminal screens ("listo"/"cancelado"): the outcome circle pops in, then
@@ -801,13 +801,13 @@ a.footer-icon-link:hover {
 @media (prefers-reduced-motion: reduce) {
   .flujo-step-enter,
   .flujo-page,
-  .flujo-progress-bar-active,
-  .flujo-progress-label,
+  .flujo-milestone-circle-active,
   .flujo-outcome-circle,
   .flujo-outcome-icon-path,
   .flujo-fade-in,
   .flujo-error-backdrop,
-  .flujo-error-modal {
+  .flujo-error-modal,
+  .flujo-pulse-ring {
     animation: none !important;
   }
   .flujo-outcome-icon-path {

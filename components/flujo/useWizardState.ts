@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useReducer } from "react";
+import { useEffect, useLayoutEffect, useMemo, useReducer, useRef } from "react";
 import { formatThousands } from "./format";
 import { screenFor, stepsFor } from "./flow";
 import { loadWizard, saveWizard, clearWizard, type PersistedWizard } from "./persistence";
@@ -36,7 +36,7 @@ const initialState: WizardState = {
   mode: null,
   stepIndex: 0,
   cancelStage: "none",
-  fields: { item: "", amount: "", code: "", bankName: "", account: "", accountType: "" },
+  fields: { item: "", amount: "", deliveryMethod: "presencial", code: "", bankName: "", account: "", accountType: "" },
 };
 
 function createReducer(role: Role) {
@@ -101,13 +101,41 @@ export function useWizardState(role: Role) {
   const reducer = useMemo(() => createReducer(role), [role]);
   const [state, dispatch] = useReducer(reducer, initialState);
 
+  // Mount-only: `role` isn't fixed for the life of this hook anymore — it
+  // flips (still inside the same mount) once a "código" lookup infers the
+  // real role, and again from the role toggle in "crear-datos". Restoring
+  // on every one of those flips would clobber whatever the wizard just
+  // navigated to with old localStorage from a previous session under that
+  // *other* role (e.g. a seller mid-lookup, right after `setRole("vendedor")`,
+  // getting silently bounced back to a stale vendedor step instead of
+  // landing on "detalle") — restoring is only meaningful once, for whatever
+  // role this hook actually opened with.
+  const hasRestoredRef = useRef(false);
   useIsomorphicLayoutEffect(() => {
+    if (hasRestoredRef.current) return;
+    hasRestoredRef.current = true;
     const saved = loadWizard(role);
     if (saved) dispatch({ type: "restore", state: saved });
-  }, [role]);
+    // Empty deps is deliberate — runs once per mount (see comment above); role changes afterwards shouldn't re-trigger a restore.
+  }, []);
 
   useEffect(() => {
     const isBlank = state.mode === null && state.stepIndex === 0 && state.cancelStage === "none";
+    // "codigo-ingresar" itself (stepIndex 1 of "codigo" mode) is role-neutral
+    // — see CodigoIngresarStep's own comment — but `role` here is still
+    // whatever placeholder FlujoApp defaulted to ("comprador"), not a real
+    // choice yet. Saving under that guess would leave an orphaned entry the
+    // instant the code resolves to the *other* role (see FlujoApp's
+    // `handleCodigoIngresarSubmit`, which calls `setRole`) — a real bug: a
+    // later fresh mount with no `?role=` in the URL to hint otherwise (e.g.
+    // the browser's Back button forcing a full reload) would restore that
+    // stale placeholder entry instead of the real in-progress trato, dumping
+    // the user back on "codigo-ingresar" mid-flow. Skipping the write here
+    // means there's nothing stale left behind to restore — losing an
+    // untyped/partial code on an actual reload is an acceptable tradeoff,
+    // the alternative is silently corrupting the *real* session.
+    const isUnresolvedCodigoEntry = state.mode === "codigo" && state.stepIndex === 1;
+    if (isUnresolvedCodigoEntry) return;
     if (isBlank) clearWizard(role);
     else saveWizard(role, state);
   }, [role, state]);
@@ -126,16 +154,27 @@ export function useWizardState(role: Role) {
     confirmCancel: () => dispatch({ type: "confirmCancel" }),
     setField: (field: FieldName, value: string) => dispatch({ type: "setField", field, value }),
     reset: () => dispatch({ type: "reset" }),
-    // SPEC 05: used once, by FlujoApp's `?code=` deep-link effect. "cancelado"
-    // isn't a step inside `stepsFor` — it's reached via `cancelStage`
-    // overriding whatever step/mode is underneath (see `screenFor`), same as
-    // the live `confirmCancel` path.
-    jumpToScreen: (mode: Exclude<Mode, null>, screen: Screen) => {
+    // SPEC 05: used by FlujoApp's `?code=` deep-link effect, and by
+    // `handleCodigoIngresarSubmit` once a manually-typed code resolves.
+    // "cancelado" isn't a step inside `stepsFor` — it's reached via
+    // `cancelStage` overriding whatever step/mode is underneath (see
+    // `screenFor`), same as the live `confirmCancel` path.
+    //
+    // Takes `targetRole` explicitly rather than closing over this hook's own
+    // `role` — `stepsFor` returns a *different* array of screen names per
+    // role (e.g. "codigo" mode's step 3 is "pagar" for a comprador but
+    // "esperando-pago" for a vendedor), and `handleCodigoIngresarSubmit`
+    // calls `setRole(inferredRole)` and this in the same tick: `role` here
+    // would still be last render's value, `stepsFor(role, mode).indexOf(...)`
+    // would look for the target screen name in the *wrong* role's array,
+    // fail to find it, and silently fall back to "codigo-ingresar" — right
+    // back where the user started.
+    jumpToScreen: (targetRole: Role, mode: Exclude<Mode, null>, screen: Screen) => {
       if (screen === "cancelado") {
         dispatch({ type: "jumpTo", mode, stepIndex: 0, cancelStage: "done" });
         return;
       }
-      const stepIndex = stepsFor(role, mode).indexOf(screen);
+      const stepIndex = stepsFor(targetRole, mode).indexOf(screen);
       dispatch({ type: "jumpTo", mode, stepIndex: stepIndex === -1 ? 1 : stepIndex, cancelStage: "none" });
     },
   };

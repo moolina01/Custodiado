@@ -64,11 +64,11 @@ export default function HowItWorks() {
           </Reveal>
 
           <Reveal as="div" delay={120} style={{ display: "flex", flexWrap: "wrap", gap: "12px", marginTop: "36px" }}>
-            <a href="/flujo?role=comprador" style={{ background: colors.accent, color: "#ffffff", fontWeight: "700", fontSize: "16px", padding: "15px 26px", borderRadius: "13px" }}>
-              Soy comprador
+            <a href="/flujo?mode=crear" style={{ background: colors.accent, color: "#ffffff", fontWeight: "700", fontSize: "16px", padding: "15px 26px", borderRadius: "13px" }}>
+              Crear trato seguro
             </a>
-            <a href="/flujo?role=vendedor" style={{ background: colors.brand, color: "#ffffff", fontWeight: "700", fontSize: "16px", padding: "15px 26px", borderRadius: "13px" }}>
-              Soy vendedor
+            <a href="/flujo?mode=codigo" style={{ background: colors.brand, color: "#ffffff", fontWeight: "700", fontSize: "16px", padding: "15px 26px", borderRadius: "13px" }}>
+              Ya tengo un código
             </a>
           </Reveal>
         </div>

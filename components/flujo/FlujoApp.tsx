@@ -10,16 +10,17 @@ import FlujoErrorModal from "./ui/FlujoErrorModal";
 import FlujoHeader from "./ui/FlujoHeader";
 import FlujoNavButtons from "./ui/FlujoNavButtons";
 import FlujoFooter from "./ui/FlujoFooter";
-import ProgressBar from "./ui/ProgressBar";
+import TratoStatusStepper from "./ui/TratoStatusStepper";
 import StepTransition from "./ui/StepTransition";
 import TransferIdentityModal from "./ui/TransferIdentityModal";
+import EliminarTratoModal from "./ui/EliminarTratoModal";
 import { devQrTokenRequest, devReleaseCodeRequest } from "./api";
 import { logoutRequest } from "@/components/auth/api";
 import { DEFAULT_ITEM_LABEL } from "./data";
 import { calculateFee, money, toAmountNumber } from "./format";
-import { errorHeading, missingFieldsMessage, nextButtonLabel, phaseFor, phaseName, screenForExistingTrato, showsNextButton, showsProgress } from "./flow";
+import { TRATO_MILESTONES, completedMilestones, errorHeading, missingFieldsMessage, nextButtonLabel, screenForExistingTrato, showsNextButton, showsProgress } from "./flow";
 import { clearAllFlujoState, loadTratoCode } from "./persistence";
-import { roleColor } from "./theme";
+import { clearRoleCookie, saveRoleCookie } from "./roleCookie";
 import { useAdvanceOnTratoStatus } from "./useAdvanceOnTratoStatus";
 import { useHelpChat } from "./useHelpChat";
 import { useQrScanner } from "./useQrScanner";
@@ -32,7 +33,7 @@ import { useWizardState } from "./useWizardState";
 import { formatTratoCodeForDisplay, normalizeTratoCode } from "@/lib/codeFormat";
 import type { Mode, Role, Screen } from "./types";
 
-type FlujoAppProps = { initialRole: Role; initialCode?: string };
+type FlujoAppProps = { initialRole?: Role; initialMode?: Exclude<Mode, null>; initialCode?: string };
 
 /**
  * Orchestrates the whole `/flujo` wizard: owns the step machine, derives
@@ -68,8 +69,27 @@ type FlujoAppProps = { initialRole: Role; initialCode?: string };
  * screen waits for the refund to resolve (via the same hook) before moving
  * to `cancelado`.
  */
-export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
-  const role = initialRole;
+export default function FlujoApp({ initialRole, initialMode, initialCode }: FlujoAppProps) {
+  // No longer fixed by the URL alone: `initialRole` still covers deep links
+  // into a trato where the role is already known (PanelView,
+  // ActiveTratoBanner — those pass `?role=` together with `?code=`), but a
+  // fresh start via `?mode=` has none yet. Defaults to "comprador" as a
+  // harmless placeholder — every screen that can render before the real
+  // role is decided ("inicio", "codigo-ingresar") has identical content
+  // either way (see `FLOWS` in ./flow); the real value is set for real
+  // either by the role toggle in "crear-datos" or by inferring it from the
+  // trato once "codigo-ingresar" looks up a code (see
+  // `handleCodigoIngresarSubmit` below).
+  const [role, setRole] = useState<Role>(initialRole ?? "comprador");
+  // Every *meaningful* role choice (not the mount-time placeholder above)
+  // goes through this instead of `setRole` directly, so the server knows it
+  // on the next visit too (see roleCookie.ts / app/flujo/page.tsx) — used by
+  // the "crear-datos" role toggle and by `handleCodigoIngresarSubmit`'s
+  // inferred role, below.
+  const updateRole = (next: Role) => {
+    setRole(next);
+    saveRoleCookie(next);
+  };
   const isBuyer = role === "comprador";
   const router = useRouter();
   const wizard = useWizardState(role);
@@ -158,6 +178,11 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
     if (screen === "pagar") setShowTransferIdentityModal(true);
   }, [screen]);
 
+  // Buyer's "Eliminar trato" confirm modal (CrearCodigoStep, `awaiting_acceptance`
+  // — nothing paid yet). Closed automatically once the delete actually goes
+  // through and the wizard resets, same as the confirm handler below does.
+  const [showDeleteTratoModal, setShowDeleteTratoModal] = useState(false);
+
   // Consumed by the "landed on inicio" cleanup effect further down — set
   // right below, by the restore effect, for the one case where landing on
   // "inicio" does *not* mean "done with this trato": a restore that failed
@@ -210,10 +235,38 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
     tratoState.lookup(initialCode).then((found) => {
       if (!found) return;
       const mode: Exclude<Mode, null> = found.createdByRole === role ? "crear" : "codigo";
-      wizard.jumpToScreen(mode, screenForExistingTrato(found.status, role, mode === "crear", found.hasSellerBankDetails));
+      wizard.jumpToScreen(role, mode, screenForExistingTrato(found.status, role, mode === "crear", found.hasSellerBankDetails));
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- tratoState.lookup/wizard.jumpToScreen are stable for a fixed `role`; this should only run once per session-status transition, not on every render of theirs.
   }, [session.status, initialCode, role]);
+
+  // The Hero's two CTAs ("Crear trato seguro"/"Ya tengo un código", see
+  // components/ui/hero.tsx) pre-select `mode` via `?mode=` instead of
+  // landing on "inicio" just to make the user tap the same choice again.
+  // Mutually exclusive with the `?code=` deep-link effect above (a link
+  // never carries both). Only fires while still genuinely on "inicio" —
+  // `useWizardState`'s own restore (a layout effect, so it's already
+  // applied by the time this runs) takes priority if there's a real
+  // in-progress session saved locally; this never overwrites that.
+  //
+  // Waits out an anonymous visitor rather than calling `requireAuthOrGate`
+  // itself (that helper just shows the gate and returns, with no way to
+  // resume the original action once the visitor actually authenticates —
+  // this needs to keep re-checking, since it's an effect, not a one-shot
+  // click handler). The existing 4s-delay gate above still shows up for
+  // them in the meantime; once they authenticate through it, this effect's
+  // own `session.status` dependency re-fires and starts the wizard. The ref
+  // is only set once `wizard.start` has actually run, not merely attempted.
+  const startedInitialModeRef = useRef(false);
+  useEffect(() => {
+    if (startedInitialModeRef.current) return;
+    if (!initialMode || initialCode) return;
+    if (session.status !== "authenticated") return;
+    if (screen !== "inicio") return;
+    startedInitialModeRef.current = true;
+    wizard.start(initialMode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- wizard.start is stable; the ref guard is what prevents this from re-firing once it has actually run.
+  }, [session.status, initialMode, initialCode, screen]);
 
   // `useWizardState` clears its own saved step once it's back to a blank
   // "inicio" (finished via "listo", or backed out before a trato existed) —
@@ -357,8 +410,6 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
   const listoAmount = totalAmount;
   const counterpartName = (trato ? (isBuyer ? trato.sellerName : trato.buyerName) : null) ?? "—";
 
-  const phase = phaseFor(screen);
-  const accent = roleColor(role);
   const whatsappHref = useMemo(() => {
     if (!trato) return "https://wa.me/";
     const displayCode = formatTratoCodeForDisplay(trato.code);
@@ -383,7 +434,35 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
     if (normalizeTratoCode(fields.code).length !== 6) return setValidationError(missingFieldsMessage(["el código completo"], "buscar el trato"));
 
     const found = await tratoState.lookup(fields.code);
-    if (found) wizard.goNext();
+    if (found) {
+      // No role was ever chosen to get here — it's the complement of
+      // whoever created the trato. Set before jumping so the destination
+      // screen already renders with the real role, not the "comprador"
+      // placeholder — see the `role` state's own comment above.
+      const inferredRole = found.createdByRole === "comprador" ? "vendedor" : "comprador";
+      updateRole(inferredRole);
+      // Same status-aware jump the `?code=` deep-link effect uses, not a
+      // blind `wizard.goNext()` into "detalle" — this is also how someone
+      // gets back into a trato they'd already accepted (e.g. their local
+      // wizard progress got lost — closed tab, cleared storage, different
+      // device), so retyping the same code always lands them exactly where
+      // that trato actually is, not back at square one on "detalle" trying
+      // to "accept" something already in progress.
+      wizard.jumpToScreen(
+        inferredRole,
+        "codigo",
+        screenForExistingTrato(found.status, inferredRole, false, found.hasSellerBankDetails)
+      );
+    }
+  };
+
+  // "Este no es mi trato" (DetalleStep, código path) — the code matched a
+  // real trato, but not the one this person meant to join. Clears it and
+  // returns to "codigo-ingresar" to try another, rather than forcing them
+  // to accept a role/trato that isn't theirs or reload the page.
+  const handleRejectDetalle = () => {
+    tratoState.reset();
+    wizard.goBack();
   };
 
   const handleDetalleAccept = async () => {
@@ -459,6 +538,23 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
     tratoState.cancel({});
   };
 
+  // Buyer's "Eliminar trato" (CrearCodigoStep, waiting on the seller to
+  // accept): at `awaiting_acceptance` the same `cancel` call resolves
+  // straight to `cancelled` synchronously (see lib/tratos/cancel.ts — no
+  // refund leg, nothing's been paid) instead of the `refund_pending` ->
+  // `refunded` wait the post-payment "cancelar" screen polls for. So
+  // there's nothing to poll here either: on success just close the modal
+  // and reset the wizard straight back to a blank "inicio" (the
+  // "empezar un flujo nuevo" the button promises), which also clears the
+  // trato client-side (see the "landed on inicio" effect above).
+  const handleDeleteTratoConfirm = async () => {
+    const updated = await tratoState.cancel({});
+    if (updated) {
+      setShowDeleteTratoModal(false);
+      wizard.reset();
+    }
+  };
+
   const handleNext =
     screen === "crear-datos"
       ? handleCrearDatosSubmit
@@ -497,6 +593,7 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
     await logoutRequest().catch(() => {});
     clearAllFlujoState("comprador");
     clearAllFlujoState("vendedor");
+    clearRoleCookie();
     router.push("/");
     router.refresh();
   };
@@ -505,6 +602,7 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
     <div className="flujo-page">
       <FlujoHeader
         role={role}
+        showRoleBadge={screen !== "inicio" && screen !== "codigo-ingresar"}
         showBackToHome={screen === "inicio"}
         isAuthenticated={session.status === "authenticated"}
         name={session.name}
@@ -512,12 +610,19 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
       />
 
       <div style={{ maxWidth: "560px", margin: "0 auto", padding: "26px 20px 64px" }}>
-        {showsProgress(screen) && <ProgressBar activeColor={accent} filledBars={phase !== undefined ? phase + 1 : 0} stepLabel={phaseName(phase)} />}
+        {showsProgress(screen) && (
+          <div style={{ marginBottom: "28px" }}>
+            <TratoStatusStepper steps={TRATO_MILESTONES} completedCount={completedMilestones(trato?.status)} />
+          </div>
+        )}
 
         <StepTransition stepKey={screen}>
           <FlujoStepRouter
             screen={screen}
             role={role}
+            onRoleChange={updateRole}
+            createdByRole={trato?.createdByRole ?? null}
+            onRejectDetalle={handleRejectDetalle}
             profileName={session.name}
             profileRut={session.rut}
             fields={fields}
@@ -526,6 +631,7 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
             onStartCrear={() => requireAuthOrGate(() => wizard.start("crear"))}
             onStartCodigo={() => requireAuthOrGate(() => wizard.start("codigo"))}
             onOpenCancel={wizard.openCancel}
+            onOpenDeleteTrato={() => setShowDeleteTratoModal(true)}
             dealCode={trato ? formatTratoCodeForDisplay(trato.code) : ""}
             summaryItem={summaryItem}
             summaryAmount={summaryAmount}
@@ -537,6 +643,7 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
             counterpartName={counterpartName}
             whatsappHref={whatsappHref}
             onPay={handlePay}
+            onConfirmMeetup={handleNext}
             onForceAdvancePayment={() => tratoState.forceAdvancePayment()}
             isSubmitting={tratoState.isSubmitting}
             isRefundPending={trato?.status === "refund_pending"}
@@ -569,6 +676,9 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
           onBack={handleBack}
           onNext={handleNext}
           isLoading={tratoState.isSubmitting}
+          helperText={
+            screen === "detalle" && !isBuyer ? "Podrás continuar con la entrega una vez que Custodiado confirme el pago." : undefined
+          }
         />
 
         <FlujoFooter />
@@ -596,6 +706,14 @@ export default function FlujoApp({ initialRole, initialCode }: FlujoAppProps) {
       {showAuthGate && <AuthModal role={role} onClose={() => setShowAuthGate(false)} onAuthenticated={handleAuthenticated} />}
 
       {showTransferIdentityModal && <TransferIdentityModal onClose={() => setShowTransferIdentityModal(false)} />}
+
+      {showDeleteTratoModal && (
+        <EliminarTratoModal
+          isSubmitting={tratoState.isSubmitting}
+          onConfirm={handleDeleteTratoConfirm}
+          onClose={() => setShowDeleteTratoModal(false)}
+        />
+      )}
 
       {validationError ? (
         <FlujoErrorModal heading="Falta un dato" message={validationError} onClose={() => setValidationError(null)} />

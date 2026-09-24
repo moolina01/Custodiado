@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { nextButtonLabel, phaseFor, phaseName, screenFor, showsNextButton, showsProgress, stepsFor } from "./flow";
+import { TRATO_MILESTONES, completedMilestones, nextButtonLabel, screenFor, showsNextButton, showsProgress, stepsFor } from "./flow";
 import type { Screen } from "./types";
 
 describe("stepsFor", () => {
   it("returns the buyer's 'crear' flow", () => {
-    expect(stepsFor("comprador", "crear")).toEqual(["inicio", "crear-datos", "crear-codigo", "pagar", "retenidos", "qr", "listo"]);
+    expect(stepsFor("comprador", "crear")).toEqual(["inicio", "crear-datos", "crear-modalidad", "crear-codigo", "pagar", "retenidos", "qr", "listo"]);
   });
 
   it("returns the buyer's 'codigo' flow", () => {
@@ -12,7 +12,7 @@ describe("stepsFor", () => {
   });
 
   it("returns the seller's 'crear' flow", () => {
-    expect(stepsFor("vendedor", "crear")).toEqual(["inicio", "crear-datos", "crear-codigo", "banco", "qr", "listo"]);
+    expect(stepsFor("vendedor", "crear")).toEqual(["inicio", "crear-datos", "crear-modalidad", "crear-codigo", "banco", "qr", "listo"]);
   });
 
   it("returns the seller's 'codigo' flow", () => {
@@ -35,7 +35,7 @@ describe("screenFor", () => {
   });
 
   it("resolves the screen from the role/mode flow when there's no cancellation", () => {
-    expect(screenFor("vendedor", "crear", 2, "none")).toBe("crear-codigo");
+    expect(screenFor("vendedor", "crear", 3, "none")).toBe("crear-codigo");
   });
 
   it("falls back to 'inicio' when stepIndex is out of range", () => {
@@ -43,41 +43,44 @@ describe("screenFor", () => {
   });
 });
 
-describe("phaseFor / phaseName", () => {
-  it("maps known screens to their phase index", () => {
-    expect(phaseFor("crear-datos")).toBe(0);
-    expect(phaseFor("crear-codigo")).toBe(1);
-    expect(phaseFor("banco")).toBe(2);
-    expect(phaseFor("qr")).toBe(3);
+describe("completedMilestones", () => {
+  it("has 6 milestones, none done before a trato exists", () => {
+    expect(TRATO_MILESTONES).toHaveLength(6);
+    expect(completedMilestones(undefined)).toBe(0);
   });
 
-  it("returns undefined for screens with no phase (e.g. 'inicio')", () => {
-    expect(phaseFor("inicio")).toBeUndefined();
+  it("advances one at a time through creation and acceptance", () => {
+    expect(completedMilestones("awaiting_acceptance")).toBe(1);
+    expect(completedMilestones("awaiting_payment")).toBe(2);
   });
 
-  it("names the phase, defaulting to phase 0 when undefined", () => {
-    expect(phaseName(0)).toBe("Acordar el trato");
-    expect(phaseName(3)).toBe("Liberar el pago");
-    expect(phaseName(undefined)).toBe("Acordar el trato");
+  it("flips 'Esperando pago' and 'Pago protegido' together — one atomic status transition, not two", () => {
+    expect(completedMilestones("funds_held")).toBe(4);
+    expect(completedMilestones("release_pending")).toBe(4);
+  });
+
+  it("completes every milestone once released", () => {
+    expect(completedMilestones("released")).toBe(TRATO_MILESTONES.length);
   });
 });
 
 describe("showsProgress", () => {
-  it("hides the progress bar on 'inicio', 'cancelar' and 'cancelado'", () => {
+  it("hides the milestone tracker on 'inicio', 'cancelar' and 'cancelado'", () => {
     expect(showsProgress("inicio")).toBe(false);
     expect(showsProgress("cancelar")).toBe(false);
     expect(showsProgress("cancelado")).toBe(false);
   });
 
-  it("shows the progress bar on every other screen", () => {
+  it("shows it on every other screen", () => {
     expect(showsProgress("crear-datos")).toBe(true);
+    expect(showsProgress("esperando-pago")).toBe(true);
     expect(showsProgress("qr")).toBe(true);
     expect(showsProgress("listo")).toBe(true);
   });
 });
 
 describe("showsNextButton", () => {
-  const noButtonScreens: Screen[] = ["inicio", "crear-codigo", "pagar", "esperando-pago", "qr", "cancelar"];
+  const noButtonScreens: Screen[] = ["inicio", "crear-codigo", "pagar", "esperando-pago", "qr", "cancelar", "retenidos"];
 
   it.each(noButtonScreens)("hides the next button on '%s'", (screen) => {
     expect(showsNextButton(screen)).toBe(false);
@@ -87,7 +90,6 @@ describe("showsNextButton", () => {
     expect(showsNextButton("crear-datos")).toBe(true);
     expect(showsNextButton("detalle")).toBe(true);
     expect(showsNextButton("banco")).toBe(true);
-    expect(showsNextButton("retenidos")).toBe(true);
     expect(showsNextButton("listo")).toBe(true);
     // "cancelado" is terminal, like "listo" — but still gets a "Volver al
     // inicio" (see flow.ts), now that the wizard's progress persists across
@@ -99,7 +101,7 @@ describe("showsNextButton", () => {
 describe("nextButtonLabel", () => {
   it("differs by role on shared screens", () => {
     expect(nextButtonLabel("detalle", "comprador")).toBe("Aceptar y pagar");
-    expect(nextButtonLabel("detalle", "vendedor")).toBe("Aceptar el trato");
+    expect(nextButtonLabel("detalle", "vendedor")).toBe("Aceptar trato");
     expect(nextButtonLabel("qr", "comprador")).toBe("Escanear el QR");
     expect(nextButtonLabel("qr", "vendedor")).toBe("El comprador ya escaneó");
   });

@@ -7,7 +7,20 @@ import { ROLE_BADGE_LABEL } from "../data";
 import { colors, roleColor } from "../theme";
 import type { Role } from "../types";
 
-type FlujoHeaderProps = { role: Role; showBackToHome: boolean; isAuthenticated: boolean; name: string; onLogout: () => void };
+type FlujoHeaderProps = {
+  role: Role;
+  // False while the role hasn't actually been decided yet ("inicio",
+  // "codigo-ingresar" — see FlujoApp's `role` state) — `role` itself is
+  // just a harmless placeholder at that point, so showing it here would
+  // claim a side the account hasn't picked. Becomes true once it's for
+  // real: chosen via the toggle in "crear-datos", or inferred from the
+  // trato once a code resolves.
+  showRoleBadge: boolean;
+  showBackToHome: boolean;
+  isAuthenticated: boolean;
+  name: string;
+  onLogout: () => void;
+};
 
 /**
  * Top bar: logo back to the landing page, a badge reminding the user which
@@ -45,7 +58,7 @@ type FlujoHeaderProps = { role: Role; showBackToHome: boolean; isAuthenticated: 
  * previo a donde volver, solo la landing. En cualquier otro paso la flecha
  * no se muestra: ahí "Atrás" ya existe abajo y es al wizard, no a home.
  */
-export default function FlujoHeader({ role, showBackToHome, isAuthenticated, name, onLogout }: FlujoHeaderProps) {
+export default function FlujoHeader({ role, showRoleBadge, showBackToHome, isAuthenticated, name, onLogout }: FlujoHeaderProps) {
   const accent = roleColor(role);
   const badgeBg = role === "comprador" ? colors.accentSoft : colors.roleSellerBg;
   const scrolled = useScrolled();
@@ -95,14 +108,16 @@ export default function FlujoHeader({ role, showBackToHome, isAuthenticated, nam
               </svg>
             </a>
           )}
-          <div style={{ display: "flex", alignItems: "center", gap: "7px", background: badgeBg, padding: "7px 14px", borderRadius: "9999px", width: "fit-content" }}>
-            <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: accent }} />
-            <span style={{ fontSize: "13px", fontWeight: "700", color: accent, whiteSpace: "nowrap" }}>{ROLE_BADGE_LABEL[role]}</span>
-          </div>
+          {showRoleBadge && (
+            <div style={{ display: "flex", alignItems: "center", gap: "7px", background: badgeBg, padding: "7px 14px", borderRadius: "9999px", width: "fit-content" }}>
+              <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: accent }} />
+              <span style={{ fontSize: "13px", fontWeight: "700", color: accent, whiteSpace: "nowrap" }}>{ROLE_BADGE_LABEL[role]}</span>
+            </div>
+          )}
         </div>
 
         <span className="navbar-logo-scale" style={{ display: "inline-flex", transform: scrolled ? "scale(1.06)" : "scale(1)" }}>
-          <Logo href="/" size={20} />
+          <Logo href="/" size={28} />
         </span>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "10px" }}>

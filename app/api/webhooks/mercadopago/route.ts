@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { notifyFundsHeld } from "@/lib/email/paymentNotifications";
 import { getOrder } from "@/lib/mercadopago/payments";
 import { getPayout } from "@/lib/mercadopago/payouts";
 import { parseMercadoPagoWebhookEvent, verifyMercadoPagoWebhookSignature, webhookResourceType, type MercadoPagoWebhookEvent } from "@/lib/mercadopago/webhooks";
@@ -91,6 +92,7 @@ async function handleEvent(event: MercadoPagoWebhookEvent): Promise<string | nul
 
       if (order.status === "processed") {
         const result = await resolvePaymentApproved(externalReference, order.id);
+        if (result.outcome === "matched") await notifyFundsHeld(result.trato);
         return result.outcome === "not_found" ? null : result.trato.id;
       }
       if (order.status === "refunded") {

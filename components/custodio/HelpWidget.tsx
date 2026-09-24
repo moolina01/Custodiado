@@ -99,7 +99,7 @@ export default function HelpWidget() {
               padding: "18px",
             }}
           >
-            <Logo size={17} />
+            <Logo size={9} />
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <div style={{ display: "flex" }}>
                 <span style={{ width: "34px", height: "34px", borderRadius: "50%", background: colors.accentSoft, border: "2px solid #ffffff", marginRight: "-10px", display: "flex", alignItems: "center", justifyContent: "center" }}>

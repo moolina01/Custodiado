@@ -120,18 +120,18 @@ export default function CTAWithTextMarquee() {
             </p>
             <div className="animate-fade-in-up flex flex-wrap gap-4 [animation-delay:600ms]">
               <a
-                href="/flujo?role=comprador"
+                href="/flujo?mode=crear"
                 className="rounded-full px-8 py-3.5 text-sm font-semibold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl"
                 style={{ background: BRAND.accent }}
               >
-                Soy comprador
+                Crear trato seguro
               </a>
               <a
-                href="/flujo?role=vendedor"
+                href="/flujo?mode=codigo"
                 className="rounded-full border px-8 py-3.5 text-sm font-semibold shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-md"
                 style={{ color: BRAND.brandDeep, borderColor: "rgba(11,18,32,0.18)" }}
               >
-                Soy vendedor
+                Ya tengo un código
               </a>
             </div>
           </div>
