@@ -48,14 +48,7 @@ export default function ShaderShowcase() {
         // vez de este shader. `--navbar-h` la publica `Navbar` (altura real,
         // vía `ResizeObserver`); el fallback de 60px cubre el primer paint
         // antes de que ese efecto corra, para no mostrar un salto de layout.
-        //
-        // `--trato-banner-h` cubre lo mismo para `ActiveTratoBanner`
-        // (también entre `Navbar` y este Hero en el DOM, ver `app/page.tsx`):
-        // 0px cuando no hay trato activo, o su altura real si la hay — en
-        // mobile ese banner puede envolver a 2 líneas (mismo texto, menos
-        // ancho) y sin restarla acá el Hero queda empujado más abajo de lo
-        // que el navbar transparente compensa.
-        marginTop: "calc(-1 * (var(--navbar-h, 60px) + var(--trato-banner-h, 0px)))",
+        marginTop: "calc(-1 * var(--navbar-h, 60px))",
       }}
     >
       <svg className="absolute inset-0 w-0 h-0">

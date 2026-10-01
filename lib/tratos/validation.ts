@@ -38,7 +38,7 @@ export const bankDetailsSchema = z.object({
     .min(1, "Falta el número de cuenta")
     .max(30)
     .refine((v) => /^\d+$/.test(v), "El número de cuenta solo lleva dígitos"),
-  accountType: z.enum(["checking_account", "sight_account"]),
+  accountType: z.enum(["checking_account", "sight_account", "savings_account"]),
 });
 export type BankDetailsPayload = z.infer<typeof bankDetailsSchema>;
 

@@ -34,10 +34,31 @@ const WhatsAppGlyph = () => (
   </svg>
 );
 
+// Same isotype family as WhatsAppGlyph above (filled brand mark, not a
+// stroke icon) so both third-party brand links read consistently.
+const InstagramGlyph = () => (
+  <svg viewBox="0 0 32 32" width="18" height="18">
+    <defs>
+      <linearGradient id="ig-gradient" x1="0" y1="32" x2="32" y2="0">
+        <stop offset="0" stopColor="#FFDD55" />
+        <stop offset="0.5" stopColor="#E1306C" />
+        <stop offset="1" stopColor="#5851DB" />
+      </linearGradient>
+    </defs>
+    <rect x="1" y="1" width="30" height="30" rx="8" fill="url(#ig-gradient)" />
+    <rect x="9" y="9" width="14" height="14" rx="4.5" fill="none" stroke="#fff" strokeWidth="1.8" />
+    <circle cx="16" cy="16" r="3.6" fill="none" stroke="#fff" strokeWidth="1.8" />
+    <circle cx="20.6" cy="11.4" r="1" fill="#fff" />
+  </svg>
+);
+
+const INSTAGRAM_URL = "https://www.instagram.com/custodiado.cl/";
+
 const CONTACT_LINKS = [
   { icon: <MailGlyph />, label: "contacto@custodiado.cl", href: "mailto:contacto@custodiado.cl" },
   { icon: <PhoneGlyph />, label: "+56 9 4937 8795", href: "tel:+56949378795" },
   { icon: <WhatsAppGlyph />, label: "WhatsApp", href: WHATSAPP_URL },
+  { icon: <InstagramGlyph />, label: "Instagram", href: INSTAGRAM_URL },
 ];
 
 // No dedicated /terminos or /privacidad routes exist yet — same "#"

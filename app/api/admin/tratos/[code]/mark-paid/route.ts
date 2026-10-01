@@ -2,6 +2,7 @@ import { jsonError, jsonOk } from "@/lib/http";
 import { ForbiddenError, requireAdminUser } from "@/lib/auth/admin";
 import { toAdminDto } from "@/lib/tratos/dto";
 import { markReleasedManually } from "@/lib/tratos/repository";
+import { notifyTratoCompleted } from "@/lib/email/paymentNotifications";
 
 export const runtime = "nodejs";
 
@@ -19,6 +20,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ co
       case "wrong_status":
         return jsonError(409, "Este trato no está esperando un pago manual.");
       case "released":
+        if (result.transitioned) await notifyTratoCompleted(result.trato);
         return jsonOk(toAdminDto(result.trato));
     }
   } catch (error) {

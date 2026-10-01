@@ -3,6 +3,7 @@ import FundsHeldBadge from "../ui/FundsHeldBadge";
 import SelectField from "../ui/SelectField";
 import StepHeading from "../ui/StepHeading";
 import { CHILE_BANKS } from "@/lib/mercadopago/banks";
+import { ACCOUNT_TYPES, ACCOUNT_TYPE_LABEL } from "@/lib/tratos/accountType";
 import type { WizardFields } from "../types";
 
 type BancoFields = Pick<WizardFields, "bankName" | "account" | "accountType">;
@@ -13,10 +14,7 @@ type BancoStepProps = {
   onFieldChange: (field: keyof BancoFields, value: string) => void;
 };
 
-const ACCOUNT_TYPE_OPTIONS = [
-  { label: "Cuenta corriente", value: "checking_account" },
-  { label: "Cuenta vista / RUT", value: "sight_account" },
-];
+const ACCOUNT_TYPE_OPTIONS = ACCOUNT_TYPES.map((type) => ({ label: ACCOUNT_TYPE_LABEL[type], value: type }));
 
 const BANK_OPTIONS = CHILE_BANKS.map((bank) => ({ label: bank, value: bank }));
 
@@ -25,7 +23,10 @@ const BANK_OPTIONS = CHILE_BANKS.map((bank) => ({ label: bank, value: bank }));
  * only after the buyer's money is already held in escrow. SPEC 04: ya no
  * pide RUT — el RUT de identidad quedó guardado desde el perfil al
  * crear/aceptar (SPEC 03's model, ahora servido por la cuenta en vez de
- * tipeado acá).
+ * tipeado acá). Antes de
+ * guardar, FlujoApp muestra un resumen para confirmar
+ * (`ConfirmBankDetailsModal`) — un dígito mal puesto en el número de
+ * cuenta es la forma más fácil de que la plata no llegue.
  */
 export default function BancoStep({ summaryAmount, fields, onFieldChange }: BancoStepProps) {
   return (
@@ -46,7 +47,7 @@ export default function BancoStep({ summaryAmount, fields, onFieldChange }: Banc
         <FormField
           label="Número de cuenta"
           value={fields.account}
-          onChange={(v) => onFieldChange("account", v)}
+          onChange={(v) => onFieldChange("account", v.replace(/\D/g, ""))}
           placeholder="000123456789"
           inputMode="numeric"
           hint={`Recibes ${summaryAmount} completos, la comisión ya la pagó el comprador.`}

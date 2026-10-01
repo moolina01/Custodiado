@@ -91,7 +91,7 @@ describe("showsNextButton", () => {
     expect(showsNextButton("detalle")).toBe(true);
     expect(showsNextButton("banco")).toBe(true);
     // "cancelado" is terminal, like "listo" — but still gets the *generic*
-    // "Volver al inicio" (see flow.ts), now that the wizard's progress
+    // "Crear otro trato" (see flow.ts), now that the wizard's progress
     // persists across reloads and can no longer rely on one to bail it out
     // for free. "listo" gets the same button, just rendered inside the step
     // itself instead (see ListoStep) — hence it's in noButtonScreens above.
@@ -113,8 +113,8 @@ describe("nextButtonLabel", () => {
     expect(nextButtonLabel("esperando-pago", "vendedor")).toBe("Ya pagó, continuar");
     expect(nextButtonLabel("banco", "vendedor")).toBe("Guardar y continuar");
     expect(nextButtonLabel("retenidos", "comprador")).toBe("Ya nos juntamos");
-    expect(nextButtonLabel("listo", "comprador")).toBe("Volver al inicio");
-    expect(nextButtonLabel("cancelado", "vendedor")).toBe("Volver al inicio");
+    expect(nextButtonLabel("listo", "comprador")).toBe("Crear otro trato");
+    expect(nextButtonLabel("cancelado", "vendedor")).toBe("Crear otro trato");
   });
 
   it("falls back to 'Continuar' for screens with no explicit label", () => {

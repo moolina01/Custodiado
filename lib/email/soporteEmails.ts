@@ -1,7 +1,7 @@
 import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import type { SoporteTicketRow } from "@/lib/soporte/types";
-import { sendEmail } from "./resend";
+import { requireAppBaseUrl, sendBrandedEmail } from "./send";
 
 /**
  * Fires after the admin answers a pending ticket
@@ -17,10 +17,18 @@ export async function notifyUserSoporteAnswered(userId: string, ticket: SoporteT
       return;
     }
 
-    await sendEmail({
-      to: data.user.email,
-      subject: "Respondimos tu consulta",
-      text: [`Tu pregunta: ${ticket.pregunta}`, ``, `Nuestra respuesta: ${ticket.respuesta}`].join("\n"),
+    await sendBrandedEmail(data.user.email, "Respondimos tu consulta", {
+      preheader: (ticket.respuesta ?? "").slice(0, 120),
+      tone: "info",
+      eyebrow: "Centro de ayuda",
+      title: "Respondimos tu consulta",
+      intro: "Gracias por escribirnos. Esta es la respuesta a tu pregunta:",
+      blocks: [
+        { label: "Tu pregunta", body: ticket.pregunta },
+        { label: "Nuestra respuesta", body: ticket.respuesta ?? "" },
+      ],
+      cta: { label: "Ir al centro de ayuda", url: `${requireAppBaseUrl()}/soporte` },
+      footnote: "Recibiste este correo porque hiciste una consulta en el centro de ayuda de Custodiado.",
     });
   } catch (error) {
     console.error(`[email] failed to notify user ${userId} of soporte reply:`, error);

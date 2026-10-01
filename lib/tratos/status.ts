@@ -75,3 +75,26 @@ export function panelLinksToDetailPage(status: TratoStatus): boolean {
   const category = categorizeForPanel(status);
   return category === "completado" || category === "cancelado" || status === "release_pending";
 }
+
+/**
+ * A trato nobody has paid for yet expires after this long without moving
+ * forward — counted from creation while `awaiting_acceptance`, and from the
+ * acceptance while `awaiting_payment`. Without this, a trato created and
+ * abandoned (never shared, or the other side never showed up) stayed "en
+ * curso" forever, cluttering the panel's "Requiere tu atención". Nothing
+ * was charged at either stage, so expiring is just the same pre-payment
+ * cancel `lib/tratos/cancel.ts` already does by hand — see
+ * `expireIfStale` in ./repository, applied lazily whenever a trato is read.
+ */
+export const PENDING_TRATO_TTL_MS = 72 * 60 * 60 * 1000;
+
+export const EXPIRED_CANCEL_REASON = "Venció: pasaron 72 horas sin que se completara el pago.";
+
+export function isExpiredPending(
+  trato: { status: TratoStatus; created_at: string; accepted_at: string | null },
+  now: number = Date.now()
+): boolean {
+  if (trato.status === "awaiting_acceptance") return now - Date.parse(trato.created_at) >= PENDING_TRATO_TTL_MS;
+  if (trato.status === "awaiting_payment") return now - Date.parse(trato.accepted_at ?? trato.created_at) >= PENDING_TRATO_TTL_MS;
+  return false;
+}

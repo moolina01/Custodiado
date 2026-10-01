@@ -19,7 +19,7 @@ function parseRole(value: string | string[] | undefined): Role | undefined {
 // now decided *inside* each path: a toggle in "crear-datos", or inferred
 // from the trato once a code is looked up). `?role=` still exists on its
 // own for deep links into a trato where the role is already known
-// (components/panel/PanelView.tsx, ActiveTratoBanner.tsx) — those pass
+// (components/panel/PanelView.tsx) — those pass
 // `role` together with `code`, not `mode`.
 function parseMode(value: string | string[] | undefined): Exclude<Mode, null> | undefined {
   return value === "crear" || value === "codigo" ? value : undefined;

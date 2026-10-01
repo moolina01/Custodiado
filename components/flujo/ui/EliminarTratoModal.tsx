@@ -8,6 +8,10 @@ type EliminarTratoModalProps = {
   isSubmitting: boolean;
   onConfirm: () => void;
   onClose: () => void;
+  // Overrides the default body copy — written for the flow's own case (the
+  // buyer, waiting on the seller to accept). `/panel` reuses this modal for
+  // either role and for `awaiting_payment` too, where that copy is wrong.
+  message?: string;
 };
 
 /**
@@ -18,7 +22,7 @@ type EliminarTratoModalProps = {
  * `FlujoApp` resets the wizard straight back to "inicio" for a fresh start.
  * Same overlay/card convention as `FlujoErrorModal`/`TransferIdentityModal`.
  */
-export default function EliminarTratoModal({ isSubmitting, onConfirm, onClose }: EliminarTratoModalProps) {
+export default function EliminarTratoModal({ isSubmitting, onConfirm, onClose, message }: EliminarTratoModalProps) {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !isSubmitting) onClose();
@@ -79,7 +83,8 @@ export default function EliminarTratoModal({ isSubmitting, onConfirm, onClose }:
 
         <div style={{ fontSize: "17px", fontWeight: "700", color: colors.brandDeep, marginBottom: "8px" }}>¿Eliminar este trato?</div>
         <div style={{ fontSize: "14.5px", color: colors.textMuted, lineHeight: "1.5", marginBottom: "24px" }}>
-          El vendedor ya no podrá aceptarlo con este código. No se te cobró nada, así que no hay nada que devolver — puedes empezar un trato nuevo de inmediato.
+          {message ??
+            "El vendedor ya no podrá aceptarlo con este código. No se te cobró nada, así que no hay nada que devolver — puedes empezar un trato nuevo de inmediato."}
         </div>
 
         <button

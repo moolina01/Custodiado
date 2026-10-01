@@ -19,7 +19,7 @@ export type TratoStatus =
   | "refund_failed"
   | "cancelled";
 
-export type BankAccountType = "checking_account" | "sight_account";
+export type BankAccountType = "checking_account" | "sight_account" | "savings_account";
 
 export type CreatedByRole = "comprador" | "vendedor";
 

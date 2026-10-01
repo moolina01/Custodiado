@@ -21,7 +21,7 @@ import { primaryButtonStyle } from "@/components/auth/buttonStyle";
 export default function CompleteProfileForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") || "/flujo";
+  const next = searchParams.get("next") || "/panel";
 
   const [loading, setLoading] = useState(true);
   const [suggestedName, setSuggestedName] = useState<string | null>(null);
@@ -52,7 +52,7 @@ export default function CompleteProfileForm() {
   }, [next, router]);
 
   const rutInvalid = rut !== "" && !isValidRut(rut);
-  const rutHint = rutInvalid ? "Ese RUT no parece válido." : "Debe ser tu RUT — el mismo con el que recibes o pagas en cada trato.";
+  const rutHint = rutInvalid ? "Ese RUT no parece válido." : "Debe ser tu RUT — lo usamos para identificarte en cada trato.";
   const effectiveName = suggestedName ?? name;
   const canSubmit = effectiveName.trim() !== "" && isValidRut(rut);
 

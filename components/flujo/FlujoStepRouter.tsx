@@ -85,11 +85,14 @@ export type FlujoStepContext = {
   // the step now that it renders its own primary button (see ./flow's
   // `NO_NEXT_BUTTON_SCREENS`).
   onConfirmMeetup: () => void;
-  // "listo"'s own in-card "Volver al inicio" — same `handleNext` the
+  // "listo"'s own in-card "Crear otro trato" — same `handleNext` the
   // generic nav button used to trigger for this screen (see ./flow's
   // `NO_NEXT_BUTTON_SCREENS`); past the wizard's last step it resets back
   // to "inicio" (see useWizardState's `goNext`).
   onFinish: () => void;
+  // "Crear otro trato" on the final "Código confirmado" screen — resets the
+  // wizard to "inicio"; the finished trato keeps going in Mis tratos.
+  onStartNewTrato: () => void;
   onCancelarConfirm: () => void;
   // Which side actually triggered the cancellation — see CanceladoStep.
   cancelledByRole: CreatedByRole | null;
@@ -230,6 +233,7 @@ const STEP_RENDERERS: Record<Screen, StepRenderer> = {
         releaseCodeError={ctx.releaseCodeError}
         onVerifyReleaseCode={ctx.onVerifyReleaseCode}
         onDevVerifyReleaseCode={ctx.onDevVerifyReleaseCode}
+        onStartNewTrato={ctx.onStartNewTrato}
       />
     ) : (
       <QrStep

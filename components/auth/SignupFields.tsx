@@ -44,7 +44,7 @@ export default function SignupFields({ onSuccess, footer, googleNext }: SignupFi
   const step1Valid = emailLooksValid && password.length >= 8;
 
   const rutInvalid = rut !== "" && !isValidRut(rut);
-  const rutHint = rutInvalid ? "Ese RUT no parece válido." : "Debe ser tu RUT — el mismo con el que recibes o pagas en cada trato.";
+  const rutHint = rutInvalid ? "Ese RUT no parece válido." : "Debe ser tu RUT — lo usamos para identificarte en cada trato.";
   const step2Valid = name.trim() !== "" && isValidRut(rut);
 
   const handleContinue = (event: FormEvent) => {

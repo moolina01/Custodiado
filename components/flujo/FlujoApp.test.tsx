@@ -1,8 +1,8 @@
 import { StrictMode } from "react";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import FlujoApp from "./FlujoApp";
-import { loadTratoCode, saveTratoCode, saveWizard } from "./persistence";
+import { loadTratoCode, loadWizard, saveTratoCode, saveWizard } from "./persistence";
 import type { Trato } from "./__mocks__/api";
 
 // Manual mock of `./api` (see `__mocks__/api.ts`) — stands in for the
@@ -175,8 +175,17 @@ describe("FlujoApp", () => {
     expect(screen.getByText("¿Dónde te depositamos?")).toBeInTheDocument();
 
     fillBankFields("Banco Estado", "checking_account", "000123456789");
+    // "Guardar y continuar" only opens the summary — nothing's saved until
+    // the seller confirms what they see there.
+    fireEvent.click(screen.getByText("Guardar y continuar"));
+    const summary = within(screen.getByRole("dialog", { name: "¿Está todo bien?" }));
+    expect(summary.getByText("0001 2345 6789")).toBeInTheDocument();
+    expect(summary.getByText("Cuenta corriente")).toBeInTheDocument();
+    expect(summary.getByText("Banco Estado")).toBeInTheDocument();
+    expect(screen.getByText("¿Dónde te depositamos?")).toBeInTheDocument();
+
     await act(async () => {
-      fireEvent.click(screen.getByText("Guardar y continuar")); // calls submitBankDetailsRequest
+      fireEvent.click(screen.getByText("Sí, los datos están bien")); // calls submitBankDetailsRequest
     });
     expect(screen.getByRole("heading", { name: "Pago protegido" })).toBeInTheDocument();
 
@@ -236,7 +245,7 @@ describe("FlujoApp", () => {
     // "cancelado" is terminal but not a dead end: with the wizard persisted
     // (see components/flujo/persistence.ts), a stray reload no longer
     // resets it for free, so it needs its own explicit way back to "inicio".
-    fireEvent.click(screen.getByText("Volver al inicio"));
+    fireEvent.click(screen.getByText("Crear otro trato"));
     expect(screen.getByText("Crear el trato")).toBeInTheDocument();
   });
 
@@ -298,6 +307,48 @@ describe("FlujoApp", () => {
 
     expect(screen.getByRole("heading", { name: "Pago protegido" })).toBeInTheDocument();
     expect(screen.queryByText("Datos del trato")).not.toBeInTheDocument();
+  });
+
+  // Once the release code is confirmed (`release_pending`) the flow is over
+  // for both sides: the final screen still shows, but `/flujo` detaches from
+  // the trato (nothing persisted) — the pending transfer is followed from
+  // Mis tratos, and coming back to /flujo starts a fresh flow.
+  it("detaches the flow from the trato once the code is confirmed, and starts fresh from there", async () => {
+    saveTratoCode("comprador", "ABC123");
+    seedTrato({ code: "ABC123", status: "release_pending", createdByRole: "comprador" });
+
+    const { unmount } = await act(async () => {
+      const result = render(<FlujoApp initialRole="comprador" />);
+      await vi.advanceTimersByTimeAsync(0);
+      return result;
+    });
+
+    expect(screen.getByRole("heading", { name: "Código confirmado" })).toBeInTheDocument();
+    expect(screen.getByText("Ir a mis tratos")).toHaveAttribute("href", "/panel");
+    expect(loadTratoCode("comprador")).toBeNull();
+    expect(loadWizard("comprador")).toBeNull();
+
+    // Coming back later doesn't resurrect the finished trato.
+    unmount();
+    await act(async () => {
+      render(<FlujoApp initialRole="comprador" />);
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByText("¿Cómo quieres comenzar?")).toBeInTheDocument();
+  });
+
+  it("'Crear otro trato' on the confirmed screen goes back to a fresh inicio", async () => {
+    saveTratoCode("comprador", "ABC123");
+    seedTrato({ code: "ABC123", status: "release_pending", createdByRole: "comprador" });
+
+    await act(async () => {
+      render(<FlujoApp initialRole="comprador" />);
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    fireEvent.click(screen.getByText("Crear otro trato"));
+    expect(screen.getByText("¿Cómo quieres comenzar?")).toBeInTheDocument();
+    expect(loadTratoCode("comprador")).toBeNull();
   });
 
   // Regression: `useTrato`'s `restore` used to clear the persisted code on
@@ -417,7 +468,7 @@ describe("FlujoApp", () => {
     await advancePoll();
     expect(screen.getByRole("heading", { name: "Entrega confirmada" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText("Volver al inicio"));
+    fireEvent.click(screen.getByText("Crear otro trato"));
     expect(screen.getByText("¿Cómo quieres comenzar?")).toBeInTheDocument();
     expect(loadTratoCode("comprador")).toBeNull();
   });

@@ -9,10 +9,10 @@ import LoginFields from "@/components/auth/LoginFields";
 export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") || "/flujo";
+  const next = searchParams.get("next") || "/panel";
   const callbackFailed = searchParams.get("error") === "auth_callback_failed";
   const googleUnavailable = searchParams.get("error") === "google_unavailable";
-  const signupHref = next !== "/flujo" ? `/signup?next=${encodeURIComponent(next)}` : "/signup";
+  const signupHref = next !== "/panel" ? `/signup?next=${encodeURIComponent(next)}` : "/signup";
 
   return (
     <LoginFields

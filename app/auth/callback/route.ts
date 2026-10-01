@@ -20,7 +20,7 @@ export const runtime = "nodejs";
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/flujo";
+  const next = searchParams.get("next") ?? "/panel";
 
   if (code) {
     const supabase = await createAuthClient();

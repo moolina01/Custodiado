@@ -39,7 +39,7 @@ export type WizardFields = {
   code: string;
   bankName: string; // e.g. "Banco Estado" — see lib/mercadopago/banks.ts
   account: string;
-  accountType: string; // "checking_account" | "sight_account" | "" (not chosen yet)
+  accountType: string; // a BankAccountType (lib/tratos/types.ts), or "" (not chosen yet)
 };
 
 export type WizardState = {
