@@ -1,7 +1,7 @@
 import "server-only";
 import { getMercadoPagoAccessToken } from "./client";
 
-export type BankAccountType = "checking_account" | "sight_account";
+export type BankAccountType = "checking_account" | "sight_account" | "savings_account";
 
 export type PayoutDestination = {
   holderId: string; // RUT
@@ -128,6 +128,9 @@ export function resolveBankId(_bankName: string): string {
 
 function mapAccountType(type: BankAccountType): string {
   if (type === "checking_account") return "current";
+  // TODO: unconfirmed, same as "checking" below — verify against a real
+  // Money Out test call before payouts go live.
+  if (type === "savings_account") return "savings";
   // TODO: unconfirmed — "checking" is a placeholder, not verified against
   // a real Money Out test call for a "cuenta vista" destination.
   return "checking";

@@ -1,9 +1,11 @@
+import Link from "next/link";
 import { useState } from "react";
 import Card from "../ui/Card";
 import Callout from "../ui/Callout";
 import StepHeading from "../ui/StepHeading";
 import OutcomeCircle, { CheckIcon } from "../ui/OutcomeCircle";
 import { colors } from "../theme";
+import RateExperienceCard from "../ui/RateExperienceCard";
 import { normalizeTratoCode } from "@/lib/codeFormat";
 import type { Role } from "../types";
 
@@ -32,6 +34,11 @@ type ReleaseCodeStepProps = {
   // `/dev-release-code` and submits it through the same path a real typed
   // code would, for testing without a second device.
   onDevVerifyReleaseCode: () => void;
+
+  // "Crear otro trato" on the confirmed screen — this is where the flow ends
+  // for both sides (see `isFlowEnded` in ../flow); the pending transfer is
+  // followed from Mis tratos, not from here.
+  onStartNewTrato: () => void;
 };
 
 const IS_DEV = process.env.NODE_ENV !== "production";
@@ -78,6 +85,7 @@ export default function ReleaseCodeStep({
   releaseCodeError,
   onVerifyReleaseCode,
   onDevVerifyReleaseCode,
+  onStartNewTrato,
 }: ReleaseCodeStepProps) {
   const isBuyer = role === "comprador";
   const tips = isBuyer ? BUYER_TIPS : SELLER_TIPS;
@@ -99,7 +107,7 @@ export default function ReleaseCodeStep({
   // a seller reporting exactly that: submitted the code, button went gray,
   // reloaded, still gray, assumed the app was bricked).
   if (isReleasePending) {
-    return <ReleaseConfirmed role={role} summaryAmount={summaryAmount} dealCode={dealCode} />;
+    return <ReleaseConfirmed role={role} summaryAmount={summaryAmount} dealCode={dealCode} onStartNewTrato={onStartNewTrato} />;
   }
 
   return (
@@ -254,8 +262,18 @@ export default function ReleaseCodeStep({
   );
 }
 
-/** What either side sees once the handshake's already confirmed — replaces the code form/display outright instead of just disabling it in place (see the comment above `isReleasePending`'s early return). */
-function ReleaseConfirmed({ role, summaryAmount, dealCode }: { role: Role; summaryAmount: string; dealCode: string }) {
+/** What either side sees once the handshake's already confirmed — replaces the code form/display outright instead of just disabling it in place (see the comment above `isReleasePending`'s early return). It's also the end of the flow: a quick status recap of the trato (followed in detail from Mis tratos) plus "Crear otro trato" to start fresh. */
+function ReleaseConfirmed({
+  role,
+  summaryAmount,
+  dealCode,
+  onStartNewTrato,
+}: {
+  role: Role;
+  summaryAmount: string;
+  dealCode: string;
+  onStartNewTrato: () => void;
+}) {
   const isBuyer = role === "comprador";
   const panelHref = dealCode ? `/panel/${normalizeTratoCode(dealCode)}` : "/panel";
 
@@ -274,31 +292,107 @@ function ReleaseConfirmed({ role, summaryAmount, dealCode }: { role: Role; summa
         align="center"
       />
 
-      <Card shadow>
-        <div style={{ display: "flex", alignItems: "center", gap: "9px", fontSize: "14px", fontWeight: "700", color: colors.successAlt, justifyContent: "center" }}>
-          <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: colors.successAlt, animation: "dotBlink 2s ease-in-out infinite" }} />
-          Confirmado, transferencia en camino
+      <Card shadow style={{ textAlign: "left" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "12px", paddingBottom: "14px", marginBottom: "16px", borderBottom: `1px solid ${colors.borderSoft}` }}>
+          <span style={{ fontSize: "13px", color: colors.textFaint }}>{dealCode ? `Trato #${dealCode}` : "Tu trato"}</span>
+          <span style={{ fontSize: "17px", fontWeight: "700", letterSpacing: "-0.02em" }}>{summaryAmount}</span>
+        </div>
+
+        <TimelineItem state="done" label="Pago en custodia" />
+        <TimelineItem state="done" label="Código confirmado" />
+        <TimelineItem
+          state="current"
+          label={isBuyer ? "Transferencia al vendedor" : "Transferencia a tu cuenta"}
+          detail="En curso · hasta 12 horas"
+          last
+        />
+
+        <div style={{ fontSize: "13px", color: colors.textFaint, marginTop: "16px", paddingTop: "14px", borderTop: `1px solid ${colors.borderSoft}` }}>
+          {isBuyer ? "Te avisamos por correo cuando la transferencia quede confirmada." : "Te avisamos por correo apenas el dinero llegue a tu cuenta."}
         </div>
       </Card>
 
-      <a
-        href={panelHref}
+      <RateExperienceCard dealCode={dealCode} />
+
+      <Link
+        href="/panel"
         style={{
           display: "block",
           textAlign: "center",
-          marginTop: "16px",
+          background: colors.brand,
+          color: "#ffffff",
+          fontWeight: "700",
+          fontSize: "16px",
+          padding: "15px 18px",
+          borderRadius: "12px",
+          marginTop: "18px",
+          boxShadow: "0 8px 24px rgba(22,35,74,0.24)",
+        }}
+      >
+        Ir a mis tratos
+      </Link>
+
+      <button
+        onClick={onStartNewTrato}
+        style={{
+          display: "block",
+          width: "100%",
+          marginTop: "10px",
           background: "#ffffff",
           border: `1px solid ${colors.border}`,
           color: colors.brandDeep,
+          fontFamily: "inherit",
           fontWeight: "600",
           fontSize: "15px",
           padding: "14px",
           borderRadius: "12px",
+          cursor: "pointer",
         }}
       >
-        Seguir el estado en Mis tratos
-      </a>
-      <div style={{ fontSize: "13px", color: colors.textFaint, marginTop: "10px" }}>Ahí también podés reportar un problema si hace falta.</div>
+        Crear otro trato
+      </button>
+      <div style={{ fontSize: "13px", color: colors.textFaint, marginTop: "10px" }}>
+        Sigue la transferencia (y reporta un problema si hace falta) desde{" "}
+        <a href={panelHref} style={{ color: colors.brandDeep, fontWeight: "600", textDecoration: "underline" }}>
+          el detalle del trato
+        </a>
+        .
+      </div>
+    </div>
+  );
+}
+
+/** One row of the confirmed screen's status recap — a done check, or the pulsing dot for what's still in progress. */
+function TimelineItem({ state, label, detail, last = false }: { state: "done" | "current"; label: string; detail?: string; last?: boolean }) {
+  const isDone = state === "done";
+  return (
+    <div style={{ display: "flex", gap: "12px" }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
+        <span
+          style={{
+            width: "20px",
+            height: "20px",
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: isDone ? colors.successAlt : colors.successBg,
+          }}
+        >
+          {isDone ? (
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 13l4 4L19 7" />
+            </svg>
+          ) : (
+            <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: colors.successAlt, animation: "dotBlink 2s ease-in-out infinite" }} />
+          )}
+        </span>
+        {!last && <span style={{ width: "2px", flex: 1, minHeight: "14px", background: colors.successAlt, opacity: 0.35, margin: "3px 0" }} />}
+      </div>
+      <div style={{ paddingBottom: last ? 0 : "12px", paddingTop: "1px" }}>
+        <div style={{ fontSize: "14.5px", fontWeight: isDone ? "600" : "700", color: isDone ? colors.textMuted : colors.brandDeep }}>{label}</div>
+        {detail && <div style={{ fontSize: "13px", color: colors.successAlt, fontWeight: "600", marginTop: "2px" }}>{detail}</div>}
+      </div>
     </div>
   );
 }

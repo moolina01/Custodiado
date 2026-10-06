@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import ActiveTratoBanner from "@/components/custodio/ActiveTratoBanner";
 import AnnouncementBar from "@/components/custodio/AnnouncementBar";
 import Navbar from "@/components/custodio/Navbar";
 import Hero from "@/components/custodio/Hero";
@@ -10,7 +9,8 @@ import LogosMarquee from "@/components/custodio/LogosMarquee";
 // import HowItWorks from "@/components/custodio/HowItWorks";
 import TrustBanner from "@/components/custodio/TrustBanner";
 import DealCode from "@/components/custodio/DealCode";
-import Testimonials from "@/components/custodio/Testimonials";
+// Testimonials oculta temporalmente (ver más abajo).
+// import Testimonials from "@/components/custodio/Testimonials";
 import Faq from "@/components/custodio/Faq";
 import BlogPreview from "@/components/custodio/BlogPreview";
 import ClosingCta from "@/components/custodio/ClosingCta";
@@ -60,7 +60,6 @@ export default function Home() {
       <ScrollReveal />
       <AnnouncementBar />
       <Navbar />
-      <ActiveTratoBanner />
 
       <main>
         <Hero />
@@ -69,7 +68,9 @@ export default function Home() {
         <ClosingCta />
         <TrustBanner />
         <DealCode />
-        <Testimonials />
+        {/* Testimonials oculta temporalmente: los testimonios son de ejemplo,
+        no de usuarios reales — ver conversación en el repo. */}
+        {/* <Testimonials /> */}
         <Faq />
         <BlogPreview />
       </main>

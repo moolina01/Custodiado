@@ -14,7 +14,8 @@ export const signupSchema = z.object({
   email: emailSchema,
   password: passwordSchema,
   name: nameSchema,
-  rut: rutSchema,
+  // El RUT ya no se pide al registrarse — opcional por si se vuelve a activar.
+  rut: rutSchema.optional(),
 });
 export type SignupPayload = z.infer<typeof signupSchema>;
 
@@ -34,10 +35,9 @@ export const resetPasswordConfirmSchema = z.object({
 });
 export type ResetPasswordConfirmPayload = z.infer<typeof resetPasswordConfirmSchema>;
 
-// SPEC 04 (Google): mismos nombre/RUT que `signupSchema`, pero solos — para
-// cuando la cuenta ya existe (Google ya la creó) y solo falta el perfil.
+// SPEC 04 (Google): mismo nombre que `signupSchema`, solo — para cuando la
+// cuenta ya existe (Google ya la creó) y solo falta el perfil.
 export const completeProfileSchema = z.object({
   name: nameSchema,
-  rut: rutSchema,
 });
 export type CompleteProfilePayload = z.infer<typeof completeProfileSchema>;

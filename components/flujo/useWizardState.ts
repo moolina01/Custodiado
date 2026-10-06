@@ -36,7 +36,7 @@ const initialState: WizardState = {
   mode: null,
   stepIndex: 0,
   cancelStage: "none",
-  fields: { item: "", amount: "", deliveryMethod: "presencial", code: "", bankName: "", account: "", accountType: "" },
+  fields: { item: "", amount: "", deliveryMethod: "presencial", code: "", bankRut: "", bankName: "", account: "", accountType: "" },
 };
 
 function createReducer(role: Role) {
@@ -97,7 +97,10 @@ function createReducer(role: Role) {
 }
 
 
-export function useWizardState(role: Role) {
+// `restore: false` — an explicit fresh start (`/flujo?mode=…`, from the
+// panel's "Crear trato"/"Ingresar código"): whatever was saved belongs to a
+// trato the panel already lists, not to the new one being started.
+export function useWizardState(role: Role, { persist = true, restore = true }: { persist?: boolean; restore?: boolean } = {}) {
   const reducer = useMemo(() => createReducer(role), [role]);
   const [state, dispatch] = useReducer(reducer, initialState);
 
@@ -114,6 +117,7 @@ export function useWizardState(role: Role) {
   useIsomorphicLayoutEffect(() => {
     if (hasRestoredRef.current) return;
     hasRestoredRef.current = true;
+    if (!restore) return;
     const saved = loadWizard(role);
     if (saved) dispatch({ type: "restore", state: saved });
     // Empty deps is deliberate — runs once per mount (see comment above); role changes afterwards shouldn't re-trigger a restore.
@@ -136,9 +140,11 @@ export function useWizardState(role: Role) {
     // the alternative is silently corrupting the *real* session.
     const isUnresolvedCodigoEntry = state.mode === "codigo" && state.stepIndex === 1;
     if (isUnresolvedCodigoEntry) return;
-    if (isBlank) clearWizard(role);
+    // `persist: false` once the flow has ended (see `isFlowEnded` in ./flow):
+    // the final screen stays up in memory, but a reload starts fresh.
+    if (isBlank || !persist) clearWizard(role);
     else saveWizard(role, state);
-  }, [role, state]);
+  }, [role, state, persist]);
 
   const screen = screenFor(role, state.mode, state.stepIndex, state.cancelStage);
   const canGoBack = state.stepIndex > 0 && screen !== "cancelado";

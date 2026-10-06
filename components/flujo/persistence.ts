@@ -56,14 +56,14 @@ function remove(key: string) {
 
 const CANCEL_STAGES: CancelStage[] = ["none", "form", "done"];
 const MODES: Mode[] = ["crear", "codigo", null];
-const FIELD_NAMES: (keyof WizardFields)[] = ["item", "amount", "deliveryMethod", "code", "bankName", "account", "accountType"];
+const FIELD_NAMES: (keyof WizardFields)[] = ["item", "amount", "deliveryMethod", "code", "bankRut", "bankName", "account", "accountType"];
 
 // Kept in sync with `useWizardState`'s own `initialState.fields` — used to
 // backfill a field added *after* some entries were already saved (see
 // `isValidPersistedWizard` below), so a trato someone's mid-flow on when a
 // new field ships doesn't get thrown away wholesale just because that one
 // key hasn't been typed into yet.
-const DEFAULT_FIELDS: WizardFields = { item: "", amount: "", deliveryMethod: "presencial", code: "", bankName: "", account: "", accountType: "" };
+const DEFAULT_FIELDS: WizardFields = { item: "", amount: "", deliveryMethod: "presencial", code: "", bankRut: "", bankName: "", account: "", accountType: "" };
 
 /**
  * Defensive against a shape from an older deploy — a malformed entry is
@@ -119,4 +119,20 @@ export function clearTratoCode(role: Role): void {
 export function clearAllFlujoState(role: Role): void {
   clearWizard(role);
   clearTratoCode(role);
+}
+
+// Which milestone (`completedMilestones` count, see ./flow) this browser has
+// already shown for a given trato — lets `useMilestoneCelebration` replay
+// "Pago protegido" for someone who closed the tab while waiting and came
+// back after it happened, without replaying it on every reload after that.
+// Keyed by trato code, not role: it's the same trato either way.
+const SEEN_MILESTONE_KEY_PREFIX = "custodio:flujo:seen-milestone:";
+
+export function loadSeenMilestone(code: string): number | null {
+  const value = readJSON<{ count: number }>(SEEN_MILESTONE_KEY_PREFIX + code);
+  return typeof value?.count === "number" ? value.count : null;
+}
+
+export function saveSeenMilestone(code: string, count: number): void {
+  writeJSON(SEEN_MILESTONE_KEY_PREFIX + code, { count });
 }

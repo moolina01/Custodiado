@@ -36,6 +36,16 @@ import { NextResponse, type NextRequest } from "next/server";
 export default async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
+  // La home (`/`) es la cara pública del sitio: sin sesión se ve normal, y
+  // con sesión el lugar de cada cuenta es su panel (`/panel`), desde donde
+  // se crean y se siguen los tratos. La mayoría de las visitas a `/` son
+  // anónimas, así que sin una cookie de Supabase (`sb-…`) ni se consulta
+  // la sesión — no le suma un round-trip a cada visita al landing.
+  const isHome = request.nextUrl.pathname === "/";
+  if (isHome && !request.cookies.getAll().some((cookie) => cookie.name.startsWith("sb-"))) {
+    return response;
+  }
+
   const url = process.env.SUPABASE_URL;
   const anonKey = process.env.SUPABASE_ANON_KEY;
   if (!url || !anonKey) {
@@ -61,6 +71,10 @@ export default async function proxy(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  if (isHome) {
+    return user ? NextResponse.redirect(new URL("/panel", request.url)) : response;
+  }
 
   if (!user) {
     // `/api/tratos*`: a `fetch()` from `components/flujo/api.ts`/
@@ -93,7 +107,11 @@ export const config = {
   //
   // `/soporte`/`/api/soporte*`: mismo gate duro — sin sesión no hay a quién
   // responderle una consulta.
+  //
+  // `/`: no es un gate — solo redirige a `/panel` si ya hay sesión (ver
+  // arriba); sin sesión la home se ve igual que siempre.
   matcher: [
+    "/",
     "/api/tratos",
     "/api/tratos/:path*",
     "/panel",
@@ -105,6 +123,8 @@ export const config = {
     "/api/admin/:path*",
     "/soporte",
     "/soporte/:path*",
+    // `/calificar/[code]` — rating a trato needs to know which account is rating.
+    "/calificar/:path*",
     "/api/soporte",
     "/api/soporte/:path*",
   ],

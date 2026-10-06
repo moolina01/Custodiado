@@ -571,18 +571,149 @@ a.footer-icon-link:hover {
 .panel-card:hover {
   box-shadow: 0 10px 28px rgba(11,18,32, 0.08);
   transform: translateY(-2px);
-  border-color: #c7d6d0;
+  border-color: #c3cfe3;
+}
+.panel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 16px;
+}
+/* The two actions on the panel's shader band — solid white primary,
+   frosted secondary, same pill shape as the landing's CTAs. */
+.panel-band-primary,
+.panel-band-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 15px;
+  padding: 13px 22px;
+  border-radius: 9999px;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+.panel-band-primary {
+  background: #ffffff;
+  color: #0b1220;
+  box-shadow: 0 10px 30px rgba(11, 18, 32, 0.35);
+}
+.panel-band-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(10px);
+}
+.panel-band-primary:hover,
+.panel-band-secondary:hover {
+  transform: translateY(-1px);
+}
+.panel-band-secondary:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+.panel-band-primary:focus-visible,
+.panel-band-secondary:focus-visible,
+.panel-history-row:focus-visible,
+.panel-text-btn:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+.panel-text-btn {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 11px 6px;
+  cursor: pointer;
+}
+.panel-text-btn:hover {
+  text-decoration: underline;
+}
+.panel-history-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 14px 18px;
+  transition: background 0.15s ease;
+}
+.panel-history-row:hover {
+  background: #f5f7fb;
+}
+/* The milestone a trato is currently on, in its card's track. */
+.panel-track-current {
+  animation: panelTrackPulse 1.8s ease-in-out infinite;
+}
+@keyframes panelTrackPulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.8; }
+}
+.panel-skeleton {
+  border-radius: 8px;
+  background: linear-gradient(90deg, #e8ecf5 0%, #f2f5fb 50%, #e8ecf5 100%);
+  background-size: 200% 100%;
+  animation: panelShimmer 1.4s ease-in-out infinite;
+}
+@keyframes panelShimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
 }
 .panel-btn-primary:hover {
   background: #0f1830 !important;
+}
+/* `.custodio-landing a` (0,1,1) outranks the plain band classes (0,1,0) —
+   it painted "Ingresar código" navy on the dark shader (nearly invisible)
+   and turned both labels blue on hover. Same pin-the-color trick as
+   `a.hero-cta-buyer:hover`. */
+.custodio-landing a.panel-band-primary,
+.custodio-landing a.panel-band-primary:hover {
+  color: #0b1220;
+}
+.custodio-landing a.panel-band-secondary,
+.custodio-landing a.panel-band-secondary:hover {
+  color: #ffffff;
+}
+/* Panel action cards / banners: layout and colors are inline (PanelView,
+   PanelBanners) — only hover/focus live here. */
+.panel-action,
+.panel-promo-cta {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.custodio-landing a.panel-action:hover,
+.custodio-landing a.panel-promo-cta:hover {
+  transform: translateY(-2px);
+}
+.custodio-landing a.panel-action:not(.panel-action-primary):hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.16) !important;
+}
+.custodio-landing a.panel-action-primary:hover,
+.custodio-landing a.panel-promo-cta:hover {
+  color: #0b1220;
+}
+.custodio-landing a.panel-action:focus-visible,
+.custodio-landing a.panel-promo-cta:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel-action,
+  .panel-promo-cta {
+    transition: none;
+  }
 }
 .panel-btn-secondary:hover {
   border-color: #16234a !important;
   color: #16234a !important;
 }
 @media (prefers-reduced-motion: reduce) {
-  .panel-card {
+  .panel-card,
+  .panel-band-primary,
+  .panel-band-secondary {
     transition: none;
+  }
+  .panel-track-current,
+  .panel-skeleton {
+    animation: none;
   }
 }
 
@@ -679,6 +810,91 @@ a.footer-icon-link:hover {
 }
 .flujo-outcome-icon-path-delay {
   animation-delay: 0.45s;
+}
+
+/* MilestoneCelebration: the "this just happened" moment between two
+ * wizard screens (e.g. "Pago protegido" once the buyer's payment lands).
+ * Sequence: backdrop fades in → core pops → (lock) shackle drops shut →
+ * two rings ripple out → badge pops and its check draws → text rises in.
+ * Everything is `both`-filled so nothing flashes before its turn. */
+@keyframes flujoCelebrationFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.flujo-celebration-backdrop {
+  animation: flujoCelebrationFade 0.3s ease both;
+}
+@keyframes flujoCelebrationCore {
+  0% { opacity: 0; transform: scale(0.4); }
+  60% { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.flujo-celebration-core {
+  animation: flujoCelebrationCore 0.55s 0.05s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes flujoCelebrationShackle {
+  0%, 35% { transform: translateY(-3.5px); }
+  70% { transform: translateY(0.6px); }
+  100% { transform: translateY(0); }
+}
+.flujo-celebration-shackle {
+  animation: flujoCelebrationShackle 0.75s 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.flujo-celebration-ring {
+  position: absolute;
+  inset: 14px;
+  border-radius: 50%;
+  border: 2px solid;
+  opacity: 0;
+  animation: flujoCelebrationRing 1.2s 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.flujo-celebration-ring-late {
+  animation-delay: 1.05s;
+}
+@keyframes flujoCelebrationRing {
+  0% { opacity: 0.6; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.7); }
+}
+.flujo-celebration-badge {
+  animation: flujoCelebrationCore 0.45s 0.95s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.flujo-celebration-check {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: flujoDraw 0.4s 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.flujo-celebration-core .flujo-celebration-check {
+  animation-delay: 0.45s;
+}
+@keyframes flujoCelebrationText {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.flujo-celebration-text {
+  animation: flujoCelebrationText 0.5s 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.flujo-celebration-text-late {
+  animation-delay: 0.8s;
+}
+
+/* TratoStatusStepper: milestones that just turned done fill in one after
+ * another (left to right, staggered via inline animation-delay) instead
+ * of all snapping at once when the status jumps more than one step. */
+@keyframes flujoMilestoneFill {
+  0% { transform: scale(0.6); background: #ffffff; }
+  60% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+.flujo-milestone-new {
+  animation: flujoMilestoneFill 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes flujoLineFill {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.flujo-milestone-line-fill {
+  transform-origin: left center;
+  animation: flujoLineFill 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /* FlujoErrorModal: backdrop fades in, card pops in a beat after — an
@@ -807,8 +1023,23 @@ a.footer-icon-link:hover {
   .flujo-fade-in,
   .flujo-error-backdrop,
   .flujo-error-modal,
-  .flujo-pulse-ring {
+  .flujo-pulse-ring,
+  .flujo-celebration-backdrop,
+  .flujo-celebration-core,
+  .flujo-celebration-shackle,
+  .flujo-celebration-ring,
+  .flujo-celebration-badge,
+  .flujo-celebration-check,
+  .flujo-celebration-text,
+  .flujo-milestone-new,
+  .flujo-milestone-line-fill {
     animation: none !important;
+  }
+  .flujo-celebration-check {
+    stroke-dashoffset: 0;
+  }
+  .flujo-celebration-ring {
+    display: none;
   }
   .flujo-outcome-icon-path {
     stroke-dashoffset: 0;
@@ -823,5 +1054,26 @@ a.footer-icon-link:hover {
   }
   .flujo-spinner {
     animation: none !important;
+  }
+}
+
+/* /calificar/[code] — the star picker grows a touch on hover/press. */
+.rating-star {
+  transition: transform 0.15s ease;
+}
+.rating-star:hover {
+  transform: scale(1.12);
+}
+.rating-star:active {
+  transform: scale(0.95);
+}
+.rating-star:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rating-star {
+    transition: none;
   }
 }

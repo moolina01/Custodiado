@@ -27,7 +27,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
-export type SignupInput = { email: string; password: string; name: string; rut: string };
+export type SignupInput = { email: string; password: string; name: string; rut?: string };
 export function signupRequest(input: SignupInput): Promise<{ id: string; email: string; name: string }> {
   return request("/api/auth/signup", { method: "POST", body: JSON.stringify(input) });
 }
@@ -64,7 +64,7 @@ export function pendingProfileRequest(): Promise<PendingProfileResponse> {
   return request("/api/auth/pending-profile");
 }
 
-export type CompleteProfileInput = { name: string; rut: string };
+export type CompleteProfileInput = { name: string };
 export function completeProfileRequest(input: CompleteProfileInput): Promise<{ id: string; email: string; name: string }> {
   return request("/api/auth/complete-profile", { method: "POST", body: JSON.stringify(input) });
 }

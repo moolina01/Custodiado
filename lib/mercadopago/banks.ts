@@ -22,7 +22,6 @@ export const CHILE_BANKS: string[] = [
   "Banco Consorcio",
   "Banco Ripley",
   "Banco Internacional",
-  "Banco BBVA",
   "HSBC",
   "Coopeuch / Dale",
   "Mercado Pago",

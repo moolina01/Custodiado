@@ -4,7 +4,9 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { calculateFee } from "@/lib/pricing";
 import { generateTratoCode, normalizeTratoCode } from "@/lib/codes";
 import { getProfileByUserId } from "@/lib/profiles/repository";
+import { cleanRut } from "@/lib/rut";
 import type { BankDetailsPayload } from "./validation";
+import { EXPIRED_CANCEL_REASON, isExpiredPending } from "./status";
 import type { CreateTratoInput, CreatedByRole, TratoRow } from "./types";
 
 // The trato's status when bank details may still be submitted/updated —
@@ -71,12 +73,37 @@ export async function createTrato(input: CreateTratoInput, userId: string): Prom
   throw new Error("No se pudo generar un código de trato único, reintenta.");
 }
 
+/**
+ * Lazy expiry (see `isExpiredPending` in ./status): a pre-payment trato
+ * past its TTL is cancelled the moment anything reads it, instead of by a
+ * scheduled job — every read path goes through `getTratoByCode` or
+ * `getTratosForUser`, so nobody can ever see (or act on) one that should
+ * already be gone. Same atomic status guard as every other transition: if
+ * it moved on in the meantime (accepted, paid), the update matches nothing
+ * and the fresh row is returned instead. No emails — nobody did anything.
+ */
+async function expireIfStale(row: TratoRow): Promise<TratoRow> {
+  if (!isExpiredPending(row)) return row;
+  const db = getSupabaseAdmin();
+  const { data, error } = await db
+    .from(TABLE)
+    .update({ status: "cancelled", cancel_reason: EXPIRED_CANCEL_REASON, cancelled_at: new Date().toISOString(), cancelled_by_role: null })
+    .eq("id", row.id)
+    .eq("status", row.status)
+    .select()
+    .maybeSingle();
+  if (error) throw new Error(`No se pudo vencer el trato: ${error.message}`);
+  if (data) return data as TratoRow;
+  const { data: fresh } = await db.from(TABLE).select().eq("id", row.id).maybeSingle();
+  return (fresh as TratoRow | null) ?? row;
+}
+
 export async function getTratoByCode(rawCode: string): Promise<TratoRow | null> {
   const db = getSupabaseAdmin();
   const code = normalizeTratoCode(rawCode);
   const { data, error } = await db.from(TABLE).select().eq("code", code).maybeSingle();
   if (error) throw new Error(`No se pudo buscar el trato: ${error.message}`);
-  return (data as TratoRow | null) ?? null;
+  return data ? expireIfStale(data as TratoRow) : null;
 }
 
 /**
@@ -93,7 +120,7 @@ export async function getTratosForUser(userId: string): Promise<TratoRow[]> {
     .or(`buyer_user_id.eq.${userId},seller_user_id.eq.${userId}`)
     .order("created_at", { ascending: false });
   if (error) throw new Error(`No se pudieron listar los tratos: ${error.message}`);
-  return (data as TratoRow[] | null) ?? [];
+  return Promise.all(((data as TratoRow[] | null) ?? []).map(expireIfStale));
 }
 
 /**
@@ -200,6 +227,7 @@ export async function submitSellerBankDetails(rawCode: string, input: BankDetail
   const { data, error } = await db
     .from(TABLE)
     .update({
+      seller_rut: cleanRut(input.rut),
       seller_bank_name: input.bankName,
       seller_account_number: input.accountNumber,
       seller_account_type: input.accountType,
@@ -401,7 +429,9 @@ export async function beginManualRelease(rawCode: string): Promise<TratoRow | nu
 export type MarkReleasedResult =
   | { outcome: "not_found" }
   | { outcome: "wrong_status"; trato: TratoRow }
-  | { outcome: "released"; trato: TratoRow };
+  // `transitioned`: this call is the one that flipped it (vs. a repeated
+  // click on an already-released trato) — the completion email keys off it.
+  | { outcome: "released"; trato: TratoRow; transitioned: boolean };
 
 /** The admin's "ya transferí" action — `release_pending -> released`, done by hand after the manual bank transfer. */
 export async function markReleasedManually(rawCode: string): Promise<MarkReleasedResult> {
@@ -415,11 +445,11 @@ export async function markReleasedManually(rawCode: string): Promise<MarkRelease
     .select()
     .maybeSingle();
   if (error) throw new Error(`No se pudo marcar el trato como pagado: ${error.message}`);
-  if (data) return { outcome: "released", trato: data as TratoRow };
+  if (data) return { outcome: "released", trato: data as TratoRow, transitioned: true };
 
   const existing = await getTratoByCode(code);
   if (!existing) return { outcome: "not_found" };
-  if (existing.status === "released") return { outcome: "released", trato: existing };
+  if (existing.status === "released") return { outcome: "released", trato: existing, transitioned: false };
   return { outcome: "wrong_status", trato: existing };
 }
 

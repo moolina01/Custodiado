@@ -6,7 +6,8 @@ import Callout from "@/components/flujo/ui/Callout";
 import FormField from "@/components/flujo/ui/FormField";
 import { colors } from "@/components/flujo/theme";
 import AuthHeading from "./AuthHeading";
-import GoogleButton from "./GoogleButton";
+// Google deshabilitado por ahora — descomentar para volver a mostrarlo.
+// import GoogleButton from "./GoogleButton";
 import { ApiError, loginRequest } from "./api";
 import { primaryButtonStyle } from "./buttonStyle";
 
@@ -74,7 +75,7 @@ export default function LoginFields({ onSuccess, footer, banner, googleNext }: L
         {isSubmitting ? "Un momento…" : "Entrar"}
       </button>
 
-      <GoogleButton next={googleNext} />
+      {/* <GoogleButton next={googleNext} /> */}
 
       {footer}
     </form>

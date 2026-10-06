@@ -132,6 +132,14 @@ export const TRATO_MILESTONES = ["Trato creado", "Trato aceptado", "Esperando pa
  * those in practice, so the exact count returned for them here doesn't
  * surface anywhere; it just needs to not crash a `switch`.
  */
+// Screens that render before any trato exists yet for *this* flow attempt —
+// "crear-datos"/"crear-modalidad" pre-submit, "codigo-ingresar" pre-resolve.
+// `FlujoApp` uses this to force `completedMilestones(undefined)` here even if
+// `trato` (from a just-finished/cancelled previous attempt) hasn't been
+// cleared out of state yet — a stale trato lingering into a fresh "Datos del
+// trato" screen must never leak its progress into the tracker above it.
+export const PRE_TRATO_SCREENS: Screen[] = ["crear-datos", "crear-modalidad", "codigo-ingresar"];
+
 export function completedMilestones(status: TratoStatus | undefined): number {
   if (!status) return 0;
   switch (status) {
@@ -153,6 +161,21 @@ export function completedMilestones(status: TratoStatus | undefined): number {
   }
 }
 
+/**
+ * Statuses where the wizard's job is done for *both* sides — the handshake
+ * already went through (or the trato got cancelled/refunded), and whatever
+ * is still pending (the admin's manual transfer, the refund landing) is
+ * tracked from Mis tratos (`/panel`), not from here. `FlujoApp` uses this to
+ * detach the flow from the trato: the final screen still shows in memory,
+ * but nothing is persisted anymore, so reloading/returning to `/flujo`
+ * starts a fresh flow instead of resurrecting a finished trato.
+ */
+export const FLOW_ENDED_STATUSES: TratoStatus[] = ["release_pending", "released", "refunded", "cancelled", "refund_failed"];
+
+export function isFlowEnded(status: TratoStatus | undefined): boolean {
+  return status !== undefined && FLOW_ENDED_STATUSES.includes(status);
+}
+
 const NO_PROGRESS_SCREENS: Screen[] = ["inicio", "cancelar", "cancelado"];
 
 export function showsProgress(screen: Screen): boolean {
@@ -166,7 +189,7 @@ export function showsProgress(screen: Screen): boolean {
 // buttons here — now that real webhooks confirm all three, they advance
 // themselves via polling instead of trusting a "yes, the other side did it"
 // click. "cancelado" is terminal but *does* still get the generic
-// "Volver al inicio" here (unlike "listo", which now renders its own): with
+// "Crear otro trato" here (unlike "listo", which now renders its own): with
 // the wizard's progress persisted (see ./persistence), a reload no longer
 // resets it for free the way it used to, so leaving it out here would trap
 // the user on a cancelled deal with no way back to "inicio" short of
@@ -230,7 +253,7 @@ export function nextButtonLabel(screen: Screen, role: Role): string {
       return isBuyer ? "Escanear el QR" : "El comprador ya escaneó";
     case "listo":
     case "cancelado":
-      return "Volver al inicio";
+      return "Crear otro trato";
     default:
       return "Continuar";
   }

@@ -34,7 +34,7 @@ export default function ResetPasswordConfirmPage() {
     setIsSubmitting(true);
     try {
       await confirmPasswordResetRequest({ password });
-      router.push("/flujo");
+      router.push("/panel");
       router.refresh();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "No se pudo fijar la nueva contraseña.");

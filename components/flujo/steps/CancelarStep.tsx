@@ -30,7 +30,7 @@ export default function CancelarStep({ role, summaryItem, totalAmount, isRefundP
     <div>
       <StepHeading
         title="Cancelar el trato"
-        subtitle={isBuyer ? "Te devolvemos el total al medio de pago con el que pagaste, el vendedor no recibe nada." : "Cancelamos el trato y le devolvemos el total al comprador."}
+        subtitle={isBuyer ? "Te devolvemos el total al medio de pago con el que pagaste, el vendedor no recibe nada." : "Le devolvemos el total al comprador y tú no recibes el pago de esta venta."}
       />
 
       <Card>
@@ -41,13 +41,15 @@ export default function CancelarStep({ role, summaryItem, totalAmount, isRefundP
             <div style={{ fontSize: "13.5px", color: colors.textFaint, marginTop: "12px" }}>Incluye la comisión, llega en 1 a 2 días hábiles.</div>
           </>
         ) : (
-          <SummaryRow label="Le devolvemos al comprador" value={totalAmount} strong valueColor={colors.successAlt} last />
+          <SummaryRow label="El comprador recupera" value={totalAmount} strong valueColor={colors.textMuted} last />
         )}
       </Card>
 
       <div style={{ marginTop: "16px" }}>
         <Callout tone="warning">
-          Si ya te juntaste y recibiste el producto, no canceles: escanea el QR, cancelar un trato ya cumplido puede dejarte fuera de Custodiado.
+          {isBuyer
+            ? "Si ya te juntaste y recibiste el producto, no canceles: dale el código de liberación al vendedor. Cancelar un trato ya cumplido puede dejarte fuera de Custodiado."
+            : "Si ya entregaste el producto, no canceles: pídele al comprador el código de liberación para recibir tu pago. Si cancelas, la plata vuelve al comprador."}
         </Callout>
       </div>
 

@@ -11,6 +11,7 @@ export type ReleaseResult =
   | { outcome: "already_released"; trato: TratoRow }
   | { outcome: "submitted"; trato: TratoRow };
 
+// `seller_rut` = RUT del titular de la cuenta, pedido junto con los datos bancarios (BancoStep).
 const SELLER_BANK_FIELDS = ["seller_rut", "seller_bank_name", "seller_account_number", "seller_account_type"] as const;
 
 function hasSellerBankDetails(trato: TratoRow): boolean {

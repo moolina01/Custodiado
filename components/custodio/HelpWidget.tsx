@@ -4,6 +4,7 @@ import { useState } from "react";
 import { colors } from "./theme";
 import { FAQ_ITEMS, QUICK_QUESTIONS, type ChatMessage } from "./data";
 import Logo from "./Logo";
+import { WHATSAPP_SUPPORT_URL } from "@/components/flujo/data";
 
 // How long the fake "typing…" indicator shows before the bot answer appears.
 const BOT_REPLY_DELAY_MS = 900;
@@ -218,7 +219,7 @@ export default function HelpWidget() {
                       </button>
                     ))}
                   </div>
-                  <a href="https://wa.me/56900000000" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", background: colors.brand, color: "#ffffff", fontWeight: "700", fontSize: "15px", padding: "14px 20px", borderRadius: "13px" }}>
+                  <a href={WHATSAPP_SUPPORT_URL} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", background: colors.brand, color: "#ffffff", fontWeight: "700", fontSize: "15px", padding: "14px 20px", borderRadius: "13px" }}>
                     <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#7EB6F5" }} />
                     Hablar con un humano
                   </a>

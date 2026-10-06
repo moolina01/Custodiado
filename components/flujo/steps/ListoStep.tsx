@@ -1,8 +1,10 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import Card from "../ui/Card";
 import OutcomeCircle, { CheckIcon } from "../ui/OutcomeCircle";
 import StepHeading from "../ui/StepHeading";
 import { colors } from "../theme";
+import RateExperienceCard from "../ui/RateExperienceCard";
 import { normalizeTratoCode } from "@/lib/codeFormat";
 import type { Role } from "../types";
 
@@ -147,28 +149,25 @@ export default function ListoStep({
         </div>
       </div>
 
-      <button
-        onClick={onNext}
-        disabled={isSubmitting}
+      <RateExperienceCard dealCode={dealCode} />
+
+      <Link
+        href="/panel"
         style={{
           display: "block",
-          width: "100%",
+          textAlign: "center",
           background: colors.brand,
-          border: "none",
           color: "#ffffff",
-          fontFamily: "inherit",
           fontWeight: "700",
           fontSize: "16px",
           padding: "15px 18px",
           borderRadius: "12px",
-          cursor: isSubmitting ? "default" : "pointer",
-          opacity: isSubmitting ? 0.65 : 1,
           marginTop: "18px",
           boxShadow: "0 8px 24px rgba(22,35,74,0.24)",
         }}
       >
-        {isSubmitting ? "Un momento…" : "Volver al inicio"}
-      </button>
+        Ir a mis tratos
+      </Link>
 
       <a
         href={panelHref}
@@ -187,6 +186,27 @@ export default function ListoStep({
       >
         {isBuyer ? "Ver comprobante del trato" : "Ver detalle del pago"}
       </a>
+
+      <button
+        onClick={onNext}
+        disabled={isSubmitting}
+        style={{
+          display: "block",
+          width: "100%",
+          marginTop: "6px",
+          background: "none",
+          border: "none",
+          color: colors.brandDeep,
+          fontFamily: "inherit",
+          fontWeight: "600",
+          fontSize: "14.5px",
+          padding: "10px",
+          cursor: isSubmitting ? "default" : "pointer",
+          textDecoration: "underline",
+        }}
+      >
+        Crear otro trato
+      </button>
 
       <a
         href="/soporte"

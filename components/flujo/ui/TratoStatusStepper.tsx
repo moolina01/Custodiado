@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import { colors } from "../theme";
 
 type TratoStatusStepperProps = {
@@ -27,7 +27,24 @@ type TratoStatusStepperProps = {
  * *labels* that shrink and wrap on a narrow screen, not the whole tracker
  * spilling past the edge.
  */
+const STAGGER_MS = 180;
+
 export default function TratoStatusStepper({ steps, completedCount }: TratoStatusStepperProps) {
+  // Where the most recent advance started from — milestones from here up
+  // to `completedCount` are the ones that *just* turned done, and fill in
+  // one after another (`.flujo-milestone-new`, staggered below) instead of
+  // all snapping at once when the status jumps more than one step (e.g.
+  // "Trato aceptado" → "Pago protegido" in a single webhook). Tracked with
+  // the "adjust state while rendering" pattern rather than a ref/effect so
+  // the very render that shows the new count already knows which ones are
+  // new. Going backwards (a fresh trato after a finished one) just resets.
+  const [previousCount, setPreviousCount] = useState(completedCount);
+  const [newFrom, setNewFrom] = useState(completedCount);
+  if (completedCount !== previousCount) {
+    setPreviousCount(completedCount);
+    setNewFrom(completedCount > previousCount ? previousCount : completedCount);
+  }
+
   return (
     <div style={{ display: "flex", alignItems: "flex-start" }}>
       {steps.map((label, i) => {
@@ -38,6 +55,10 @@ export default function TratoStatusStepper({ steps, completedCount }: TratoStatu
         // ones further out, so the tracker itself reads as "live", not
         // just a static record of what's already happened.
         const isCurrent = i === completedCount;
+        const isNew = done && i >= newFrom;
+        const delay = `${(i - newFrom) * STAGGER_MS}ms`;
+        const lineDone = i < completedCount - 1;
+        const lineIsNew = lineDone && i + 1 >= newFrom;
         return (
           <Fragment key={label}>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: "1 1 0", minWidth: 0 }}>
@@ -45,7 +66,7 @@ export default function TratoStatusStepper({ steps, completedCount }: TratoStatu
                 className={[
                   "flujo-milestone-circle",
                   isCurrent && "flujo-pulse-ring",
-                  isLastCompleted && "flujo-milestone-circle-active",
+                  isNew ? "flujo-milestone-new" : isLastCompleted && "flujo-milestone-circle-active",
                 ]
                   .filter(Boolean)
                   .join(" ")}
@@ -59,6 +80,7 @@ export default function TratoStatusStepper({ steps, completedCount }: TratoStatu
                   justifyContent: "center",
                   background: done ? colors.roleSeller : "#ffffff",
                   border: done ? "none" : `2px solid ${isCurrent ? colors.accent : colors.border}`,
+                  animationDelay: isNew ? delay : undefined,
                 }}
               >
                 {done && (
@@ -88,9 +110,17 @@ export default function TratoStatusStepper({ steps, completedCount }: TratoStatu
                   flexShrink: 0,
                   height: "2px",
                   marginTop: "10px", // centers on the 22px circle above
-                  background: i < completedCount - 1 ? colors.roleSeller : colors.border,
+                  background: lineDone && !lineIsNew ? colors.roleSeller : colors.border,
+                  overflow: "hidden",
                 }}
-              />
+              >
+                {lineIsNew && (
+                  <div
+                    className="flujo-milestone-line-fill"
+                    style={{ height: "100%", background: colors.roleSeller, animationDelay: `${(i + 1 - newFrom) * STAGGER_MS - 90}ms` }}
+                  />
+                )}
+              </div>
             )}
           </Fragment>
         );

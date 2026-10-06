@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { notifyFundsHeld } from "@/lib/email/paymentNotifications";
+import { notifyAdminPaymentOnCancelledTrato } from "@/lib/email/adminNotifications";
 import { getOrder } from "@/lib/mercadopago/payments";
 import { getPayout } from "@/lib/mercadopago/payouts";
 import { parseMercadoPagoWebhookEvent, verifyMercadoPagoWebhookSignature, webhookResourceType, type MercadoPagoWebhookEvent } from "@/lib/mercadopago/webhooks";
@@ -93,6 +94,11 @@ async function handleEvent(event: MercadoPagoWebhookEvent): Promise<string | nul
       if (order.status === "processed") {
         const result = await resolvePaymentApproved(externalReference, order.id);
         if (result.outcome === "matched") await notifyFundsHeld(result.trato);
+        // Payment landed after the trato was cancelled (expired or by hand)
+        // — nothing to hold it for anymore; the admin refunds it manually.
+        if (result.outcome === "already_settled" && result.trato.status === "cancelled") {
+          await notifyAdminPaymentOnCancelledTrato(result.trato, order.id);
+        }
         return result.outcome === "not_found" ? null : result.trato.id;
       }
       if (order.status === "refunded") {

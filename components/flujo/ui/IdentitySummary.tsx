@@ -26,7 +26,7 @@ export default function IdentitySummary({ name, rut }: IdentitySummaryProps) {
       <div style={{ fontSize: "15px", fontWeight: "700" }}>
         {name ? (
           <>
-            {name} <span style={{ fontWeight: "500", color: colors.textMuted }}>· {formatRut(rut)}</span>
+            {name} {rut && <span style={{ fontWeight: "500", color: colors.textMuted }}>· {formatRut(rut)}</span>}
           </>
         ) : (
           "Cargando…"

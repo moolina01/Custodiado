@@ -62,7 +62,7 @@ export default function CuentaView() {
           <>
             <Card shadow>
               <SummaryRow label="Nombre" value={state.profile.name} />
-              <SummaryRow label="RUT" value={formatRut(state.profile.rut)} />
+              {state.profile.rut && <SummaryRow label="RUT" value={formatRut(state.profile.rut)} />}
               <SummaryRow label="Email" value={state.profile.email} last />
             </Card>
 

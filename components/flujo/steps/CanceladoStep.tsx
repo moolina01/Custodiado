@@ -1,3 +1,4 @@
+import Link from "next/link";
 import Card from "../ui/Card";
 import OutcomeCircle, { UndoIcon } from "../ui/OutcomeCircle";
 import StepHeading from "../ui/StepHeading";
@@ -19,7 +20,7 @@ type CanceladoStepProps = {
   cancelledByRole: CreatedByRole | null;
 };
 
-/** Terminal screen after a trato ends in a refund — no further actions. Copy varies by both whose screen this is and who cancelled. */
+/** Terminal screen after a trato ends in a refund — the flow ends here (FlujoApp's generic button offers "Crear otro trato"); the refund itself is followed from Mis tratos. Copy varies by both whose screen this is and who cancelled. */
 export default function CanceladoStep({ role, summaryItem, summaryAmount, totalAmount, cancelledByRole }: CanceladoStepProps) {
   const isBuyer = role === "comprador";
   const iCancelled = cancelledByRole === role;
@@ -45,6 +46,26 @@ export default function CanceladoStep({ role, summaryItem, summaryAmount, totalA
           <SummaryRow label="Precio acordado" value={summaryAmount} last />
         )}
       </Card>
+
+      {/* Secundario: el botón principal ("Crear otro trato") lo pone
+          FlujoNavButtons debajo, igual que antes. */}
+      <Link
+        href="/panel"
+        style={{
+          display: "block",
+          textAlign: "center",
+          marginTop: "16px",
+          background: "#ffffff",
+          border: `1px solid ${colors.border}`,
+          color: colors.brandDeep,
+          fontWeight: "600",
+          fontSize: "15px",
+          padding: "14px",
+          borderRadius: "12px",
+        }}
+      >
+        Ir a mis tratos
+      </Link>
     </div>
   );
 }

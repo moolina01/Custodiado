@@ -4,9 +4,11 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import Callout from "@/components/flujo/ui/Callout";
 import FormField from "@/components/flujo/ui/FormField";
 import { colors } from "@/components/flujo/theme";
-import { isValidRut } from "@/lib/rut";
+// RUT deshabilitado en el registro — descomentar para volver a pedirlo.
+// import { isValidRut } from "@/lib/rut";
 import AuthHeading from "./AuthHeading";
-import GoogleButton from "./GoogleButton";
+// Google deshabilitado por ahora — descomentar para volver a mostrarlo.
+// import GoogleButton from "./GoogleButton";
 import { ApiError, signupRequest } from "./api";
 import { primaryButtonStyle, secondaryButtonStyle } from "./buttonStyle";
 
@@ -19,7 +21,8 @@ type SignupFieldsProps = {
 };
 
 /**
- * Registro en dos pasos: 1) email + contraseña, 2) nombre + RUT. Ningún
+ * Registro en dos pasos: 1) email + contraseña, 2) nombre (el RUT ya no se
+ * pide — queda comentado más abajo). Ningún
  * llamado al backend hasta que se confirma el paso 2 — `signupRequest`
  * sigue mandando los 4 campos juntos en un solo `POST /api/auth/signup`,
  * exactamente igual que antes; esto es puramente una forma distinta de
@@ -36,16 +39,17 @@ export default function SignupFields({ onSuccess, footer, googleNext }: SignupFi
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [rut, setRut] = useState("");
+  // const [rut, setRut] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const emailLooksValid = /\S+@\S+\.\S+/.test(email);
   const step1Valid = emailLooksValid && password.length >= 8;
 
-  const rutInvalid = rut !== "" && !isValidRut(rut);
-  const rutHint = rutInvalid ? "Ese RUT no parece válido." : "Debe ser tu RUT — el mismo con el que recibes o pagas en cada trato.";
-  const step2Valid = name.trim() !== "" && isValidRut(rut);
+  // const rutInvalid = rut !== "" && !isValidRut(rut);
+  // const rutHint = rutInvalid ? "Ese RUT no parece válido." : "Debe ser tu RUT — lo usamos para identificarte en cada trato.";
+  // const step2Valid = name.trim() !== "" && isValidRut(rut);
+  const step2Valid = name.trim() !== "";
 
   const handleContinue = (event: FormEvent) => {
     event.preventDefault();
@@ -59,7 +63,7 @@ export default function SignupFields({ onSuccess, footer, googleNext }: SignupFi
     setError(null);
     setIsSubmitting(true);
     try {
-      await signupRequest({ email, password, name, rut });
+      await signupRequest({ email, password, name });
       onSuccess();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "No se pudo crear la cuenta.");
@@ -96,7 +100,7 @@ export default function SignupFields({ onSuccess, footer, googleNext }: SignupFi
           Siguiente
         </button>
 
-        <GoogleButton next={googleNext} />
+        {/* <GoogleButton next={googleNext} /> */}
 
         {footer}
       </form>
@@ -105,13 +109,14 @@ export default function SignupFields({ onSuccess, footer, googleNext }: SignupFi
 
   return (
     <form onSubmit={handleSubmit}>
-      <AuthHeading eyebrow="Un último dato" title="Nombre y RUT" />
+      <AuthHeading eyebrow="Un último dato" title="Tu nombre" />
       <p style={{ fontSize: "14.5px", color: colors.textMuted, margin: "-14px 0 22px" }}>
-        Se piden una sola vez acá — después los usamos automáticamente en cada trato.
+        Se pide una sola vez acá — después lo usamos automáticamente en cada trato.
       </p>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
         <FormField label="Tu nombre" hideLabel value={name} onChange={setName} placeholder="Cómo te va a ver la otra persona" />
+        {/* RUT deshabilitado en el registro — descomentar para volver a pedirlo.
         <div>
           <FormField
             label="Tu RUT"
@@ -123,6 +128,7 @@ export default function SignupFields({ onSuccess, footer, googleNext }: SignupFi
           />
           <div style={{ fontSize: "13px", color: rutInvalid ? colors.dangerText : colors.textFaint, marginTop: "7px" }}>{rutHint}</div>
         </div>
+        */}
       </div>
 
       {error && (

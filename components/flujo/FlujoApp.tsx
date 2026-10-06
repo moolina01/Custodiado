@@ -12,13 +12,25 @@ import FlujoNavButtons from "./ui/FlujoNavButtons";
 import FlujoFooter from "./ui/FlujoFooter";
 import TratoStatusStepper from "./ui/TratoStatusStepper";
 import StepTransition from "./ui/StepTransition";
+import { isValidRut } from "@/lib/rut";
 import TransferIdentityModal from "./ui/TransferIdentityModal";
 import EliminarTratoModal from "./ui/EliminarTratoModal";
 import { devQrTokenRequest, devReleaseCodeRequest } from "./api";
 import { logoutRequest } from "@/components/auth/api";
 import { DEFAULT_ITEM_LABEL } from "./data";
 import { calculateFee, money, toAmountNumber } from "./format";
-import { TRATO_MILESTONES, completedMilestones, errorHeading, missingFieldsMessage, nextButtonLabel, screenForExistingTrato, showsNextButton, showsProgress } from "./flow";
+import {
+  PRE_TRATO_SCREENS,
+  TRATO_MILESTONES,
+  completedMilestones,
+  errorHeading,
+  isFlowEnded,
+  missingFieldsMessage,
+  nextButtonLabel,
+  screenForExistingTrato,
+  showsNextButton,
+  showsProgress,
+} from "./flow";
 import { clearAllFlujoState, loadTratoCode } from "./persistence";
 import { clearRoleCookie, saveRoleCookie } from "./roleCookie";
 import { useAdvanceOnTratoStatus } from "./useAdvanceOnTratoStatus";
@@ -30,6 +42,9 @@ import { RELEASE_METHOD } from "./releaseMethod";
 import { useSession } from "@/components/auth/useSession";
 import { useTrato } from "./useTrato";
 import { useWizardState } from "./useWizardState";
+import { useMilestoneCelebration } from "./useMilestoneCelebration";
+import MilestoneCelebration from "./ui/MilestoneCelebration";
+import ConfirmBankDetailsModal from "./ui/ConfirmBankDetailsModal";
 import { formatTratoCodeForDisplay, normalizeTratoCode } from "@/lib/codeFormat";
 import type { Mode, Role, Screen } from "./types";
 
@@ -71,8 +86,8 @@ type FlujoAppProps = { initialRole?: Role; initialMode?: Exclude<Mode, null>; in
  */
 export default function FlujoApp({ initialRole, initialMode, initialCode }: FlujoAppProps) {
   // No longer fixed by the URL alone: `initialRole` still covers deep links
-  // into a trato where the role is already known (PanelView,
-  // ActiveTratoBanner — those pass `?role=` together with `?code=`), but a
+  // into a trato where the role is already known (PanelView passes `?role=`
+  // together with `?code=`), but a
   // fresh start via `?mode=` has none yet. Defaults to "comprador" as a
   // harmless placeholder — every screen that can render before the real
   // role is decided ("inicio", "codigo-ingresar") has identical content
@@ -92,8 +107,15 @@ export default function FlujoApp({ initialRole, initialMode, initialCode }: Fluj
   };
   const isBuyer = role === "comprador";
   const router = useRouter();
-  const wizard = useWizardState(role);
+  // Once the trato reaches a status where the flow is over for both sides
+  // (`isFlowEnded`), the wizard and the trato are detached: the final screen
+  // stays up in memory, but neither hook persists anything, so reloading/
+  // coming back to /flujo starts a fresh flow and the finished trato is
+  // followed from Mis tratos instead. `useTrato` checks the same thing on its
+  // own; it's called first so the wizard can be told too. "Crear otro trato"
+  // (or any landing on "inicio") clears the trato, which turns this back off.
   const tratoState = useTrato(role);
+  const wizard = useWizardState(role, { persist: !isFlowEnded(tratoState.trato?.status), restore: !initialMode });
   const help = useHelpChat();
   // SPEC 04: identidad de la cuenta logueada — de solo lectura en
   // CrearDatosStep/DetalleStep vía IdentitySummary.
@@ -175,7 +197,10 @@ export default function FlujoApp({ initialRole, initialMode, initialCode }: Fluj
   // it like every other modal in the app.
   const [showTransferIdentityModal, setShowTransferIdentityModal] = useState(false);
   useEffect(() => {
-    if (screen === "pagar") setShowTransferIdentityModal(true);
+    // Disabled for now: same-RUT-as-the-deposit is no longer a requirement
+    // (product decision), so this warning would be misleading. Left
+    // commented instead of removed in case the rule comes back.
+    // if (screen === "pagar") setShowTransferIdentityModal(true);
   }, [screen]);
 
   // Buyer's "Eliminar trato" confirm modal (CrearCodigoStep, `awaiting_acceptance`
@@ -218,6 +243,7 @@ export default function FlujoApp({ initialRole, initialMode, initialCode }: Fluj
   useEffect(() => {
     if (session.status !== "authenticated") return;
     if (initialCode) return; // SPEC 05: the deep-link effect below handles this case instead
+    if (initialMode) return; // explicit fresh start (`?mode=`, e.g. the panel's "Crear trato") — don't pull a saved trato back in
     // A trato already live in memory means the wizard is already tracking
     // the real thing — through this exact restore already having run, or
     // (the case that actually broke without this guard) through a *fresh*
@@ -250,7 +276,7 @@ export default function FlujoApp({ initialRole, initialMode, initialCode }: Fluj
       wizard.jumpToScreen(role, mode, screenForExistingTrato(found.status, role, mode === "crear", found.hasSellerBankDetails));
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- tratoState.restore/wizard.reset/wizard.jumpToScreen are stable for a fixed `role`; re-running this on every render of theirs would refetch on every state change instead of once per session-status transition.
-  }, [session.status, role, initialCode]);
+  }, [session.status, role, initialCode, initialMode]);
 
   // SPEC 05: `/flujo?code=...` — how the panel (`/panel`) opens an
   // in-progress trato in the wizard, instead of dumping the user on
@@ -295,6 +321,11 @@ export default function FlujoApp({ initialRole, initialMode, initialCode }: Fluj
     if (session.status !== "authenticated") return;
     if (screen !== "inicio") return;
     startedInitialModeRef.current = true;
+    // Defensive: a fresh flow must never carry over a previous attempt's
+    // trato (e.g. one just cancelled — see the "landed on inicio" cleanup
+    // effect below, which should already have cleared it by the time this
+    // runs, but this is the point where it would actually surface as a bug).
+    resetTrato();
     wizard.start(initialMode);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- wizard.start is stable; the ref guard is what prevents this from re-firing once it has actually run.
   }, [session.status, initialMode, initialCode, screen]);
@@ -442,6 +473,21 @@ export default function FlujoApp({ initialRole, initialMode, initialCode }: Fluj
   const releasedAt = trato?.releasedAt ?? null;
   const counterpartName = (trato ? (isBuyer ? trato.sellerName : trato.buyerName) : null) ?? "—";
 
+  // Same count the stepper shows — a stale trato lingering into a fresh
+  // pre-trato screen must not count (see PRE_TRATO_SCREENS in ./flow).
+  const milestoneCount = completedMilestones(PRE_TRATO_SCREENS.includes(screen) ? undefined : trato?.status);
+  // "Pago protegido"/"Trato aceptado" moments — see useMilestoneCelebration
+  // for exactly when. Never over a cancellation: a refund also sits at the
+  // "Pago protegido" count, but there's nothing to celebrate there.
+  const isCancelScreen = screen === "cancelar" || screen === "cancelado";
+  const celebration = useMilestoneCelebration(
+    trato && !isCancelScreen ? trato.code : null,
+    milestoneCount,
+    trato?.createdByRole === role
+  );
+  const counterpartLabel = isBuyer ? "El vendedor" : "El comprador";
+  const counterpartDisplay = counterpartName !== "—" ? counterpartName : counterpartLabel;
+
   const whatsappHref = useMemo(() => {
     if (!trato) return "https://wa.me/";
     const displayCode = formatTratoCodeForDisplay(trato.code);
@@ -502,18 +548,33 @@ export default function FlujoApp({ initialRole, initialMode, initialCode }: Fluj
     if (accepted) wizard.goNext();
   };
 
-  const handleBancoSubmit = async () => {
+  // "Guardar y continuar" on "banco" only validates and opens a summary
+  // (`ConfirmBankDetailsModal`) — the actual save happens once the seller
+  // confirms what they see there. A wrong digit is the easiest way for the
+  // payout to bounce, and nobody re-reads a form they just filled.
+  const [showBankConfirm, setShowBankConfirm] = useState(false);
+
+  const handleBancoSubmit = () => {
     const missing: string[] = [];
+    if (!fields.bankRut.trim()) missing.push("el RUT del titular");
     if (!fields.bankName) missing.push("el banco");
     if (!fields.accountType) missing.push("el tipo de cuenta");
     if (!fields.account.trim()) missing.push("el número de cuenta");
     if (missing.length > 0) return setValidationError(missingFieldsMessage(missing, "guardar tus datos bancarios"));
+    if (!isValidRut(fields.bankRut)) return setValidationError("Revisa el RUT del titular, no parece válido.");
+    setShowBankConfirm(true);
+  };
 
+  const handleBancoConfirm = async () => {
     const saved = await tratoState.saveBankDetails({
+      rut: fields.bankRut,
       bankName: fields.bankName,
       accountNumber: fields.account,
       accountType: fields.accountType,
     });
+    // On failure the modal closes too, so `FlujoErrorModal` (below) isn't
+    // stacked under it — the form is still filled in to retry.
+    setShowBankConfirm(false);
     if (saved) wizard.goNext();
   };
 
@@ -596,7 +657,7 @@ export default function FlujoApp({ initialRole, initialMode, initialCode }: Fluj
           ? handleDetalleAccept
           : screen === "banco"
             ? handleBancoSubmit
-            : // "listo"'s own "Volver al inicio" works via plain goNext (see
+            : // "listo"'s own "Crear otro trato" works via plain goNext (see
               // useWizardState: advancing past the last step resets the
               // wizard). "cancelado" needs the explicit `reset` instead —
               // it sits outside the step sequence entirely (cancelStage
@@ -644,7 +705,10 @@ export default function FlujoApp({ initialRole, initialMode, initialCode }: Fluj
       <div style={{ maxWidth: "560px", margin: "0 auto", padding: "26px 20px 64px" }}>
         {showsProgress(screen) && (
           <div style={{ marginBottom: "28px" }}>
-            <TratoStatusStepper steps={TRATO_MILESTONES} completedCount={completedMilestones(trato?.status)} />
+            <TratoStatusStepper
+              steps={TRATO_MILESTONES}
+              completedCount={milestoneCount}
+            />
           </div>
         )}
 
@@ -660,8 +724,18 @@ export default function FlujoApp({ initialRole, initialMode, initialCode }: Fluj
             fields={fields}
             onFieldChange={wizard.setField}
             onCodeChange={(value) => wizard.setField("code", value)}
-            onStartCrear={() => requireAuthOrGate(() => wizard.start("crear"))}
-            onStartCodigo={() => requireAuthOrGate(() => wizard.start("codigo"))}
+            onStartCrear={() =>
+              requireAuthOrGate(() => {
+                resetTrato(); // defensive: never carry a previous attempt's trato into a fresh flow
+                wizard.start("crear");
+              })
+            }
+            onStartCodigo={() =>
+              requireAuthOrGate(() => {
+                resetTrato();
+                wizard.start("codigo");
+              })
+            }
             onOpenCancel={wizard.openCancel}
             onOpenDeleteTrato={() => setShowDeleteTratoModal(true)}
             dealCode={trato ? formatTratoCodeForDisplay(trato.code) : ""}
@@ -678,6 +752,7 @@ export default function FlujoApp({ initialRole, initialMode, initialCode }: Fluj
             onPay={handlePay}
             onConfirmMeetup={handleNext}
             onFinish={handleNext}
+            onStartNewTrato={wizard.reset}
             onForceAdvancePayment={() => tratoState.forceAdvancePayment()}
             isSubmitting={tratoState.isSubmitting}
             isRefundPending={trato?.status === "refund_pending"}
@@ -740,6 +815,45 @@ export default function FlujoApp({ initialRole, initialMode, initialCode }: Fluj
       {showAuthGate && <AuthModal role={role} onClose={() => setShowAuthGate(false)} onAuthenticated={handleAuthenticated} />}
 
       {showTransferIdentityModal && <TransferIdentityModal onClose={() => setShowTransferIdentityModal(false)} />}
+
+      {showBankConfirm && screen === "banco" && (
+        <ConfirmBankDetailsModal
+          bankRut={fields.bankRut}
+          bankName={fields.bankName}
+          accountType={fields.accountType}
+          accountNumber={fields.account}
+          amount={summaryAmount}
+          isSubmitting={tratoState.isSubmitting}
+          onConfirm={handleBancoConfirm}
+          onClose={() => setShowBankConfirm(false)}
+        />
+      )}
+
+      {celebration.celebrating === "protegido" && (
+        <MilestoneCelebration
+          milestone="protegido"
+          title="Pago protegido"
+          amount={summaryAmount}
+          message={
+            isBuyer
+              ? `Tu pago quedó retenido en custodia. ${counterpartDisplay} ya puede coordinar la entrega contigo.`
+              : `${counterpartDisplay} pagó y la plata quedó retenida. Ya puedes coordinar la entrega con tranquilidad.`
+          }
+          onDismiss={celebration.dismiss}
+        />
+      )}
+      {celebration.celebrating === "aceptado" && (
+        <MilestoneCelebration
+          milestone="aceptado"
+          title="¡Aceptaron tu trato!"
+          message={
+            isBuyer
+              ? `${counterpartDisplay} aceptó. Ahora paga para dejar la plata en custodia.`
+              : `${counterpartDisplay} aceptó. Ahora falta que pague — te avisamos apenas la plata quede protegida.`
+          }
+          onDismiss={celebration.dismiss}
+        />
+      )}
 
       {showDeleteTratoModal && (
         <EliminarTratoModal

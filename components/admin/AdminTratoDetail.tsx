@@ -8,6 +8,7 @@ import StepHeading from "@/components/flujo/ui/StepHeading";
 import SummaryRow from "@/components/flujo/ui/SummaryRow";
 import { colors } from "@/components/flujo/theme";
 import { money } from "@/lib/pricing";
+import { accountTypeLabel } from "@/lib/tratos/accountType";
 import { formatDate } from "@/components/panel/format";
 import { ApiError, adminTratoDetailRequest, confirmRefundRequest, markTratoPaidRequest, type AdminTrato } from "./api";
 
@@ -143,7 +144,7 @@ function Detail({
             Datos bancarios del vendedor
           </div>
           <SummaryRow label="Banco" value={trato.sellerBankName ?? "—"} />
-          <SummaryRow label="Tipo de cuenta" value={trato.sellerAccountType === "checking_account" ? "Cuenta corriente" : "Cuenta vista"} />
+          <SummaryRow label="Tipo de cuenta" value={accountTypeLabel(trato.sellerAccountType)} />
           <SummaryRow label="Número de cuenta" value={trato.sellerAccountNumber ?? "—"} last />
         </Card>
       )}

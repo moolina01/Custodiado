@@ -27,8 +27,8 @@ export default function RetenidosStep({ role, summaryItem, counterpartLabel, cou
         title="Pago protegido"
         subtitle={
           isBuyer
-            ? "Tu dinero está retenido de forma segura hasta que confirmes la entrega."
-            : "El dinero del comprador está retenido de forma segura hasta que confirmes la entrega."
+            ? "Tu dinero está retenido de forma segura hasta que tú y el vendedor confirmen la entrega."
+            : "El dinero del comprador está retenido de forma segura hasta que tú y el comprador confirmen la entrega."
         }
       />
 

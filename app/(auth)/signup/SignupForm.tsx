@@ -8,8 +8,8 @@ import SignupFields from "@/components/auth/SignupFields";
 export default function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") || "/flujo";
-  const loginHref = next !== "/flujo" ? `/login?next=${encodeURIComponent(next)}` : "/login";
+  const next = searchParams.get("next") || "/panel";
+  const loginHref = next !== "/panel" ? `/login?next=${encodeURIComponent(next)}` : "/login";
 
   return (
     <SignupFields

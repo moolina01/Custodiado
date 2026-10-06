@@ -42,11 +42,19 @@ export function getAdminEmails(): string[] {
  * caller sending to multiple distinct recipients needs one failure not to
  * block the others.
  */
-export async function sendEmail(params: { to: string | string[]; subject: string; text: string }): Promise<void> {
-  await getResendClient().emails.send({
+// `html` is optional: most notifications are still plain text; the ones
+// built with `renderBrandedEmail` (lib/email/brandedTemplate.ts) send both,
+// with `text` as the fallback for clients that don't render HTML.
+export async function sendEmail(params: { to: string | string[]; subject: string; text: string; html?: string }): Promise<void> {
+  // Resend's SDK reports API failures (unverified domain, bad key, quota…)
+  // in the returned `error` instead of throwing — surface them as throws so
+  // callers' try/catch actually sees them.
+  const { error } = await getResendClient().emails.send({
     from: getAdminNotificationFrom(),
     to: params.to,
     subject: params.subject,
     text: params.text,
+    ...(params.html ? { html: params.html } : {}),
   });
+  if (error) throw new Error(`Resend ${error.name} (${error.statusCode}): ${error.message}`);
 }

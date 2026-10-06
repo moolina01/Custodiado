@@ -66,7 +66,19 @@ export async function cancelTrato(rawCode: string, userId: string, reason?: stri
     // refund landing back on their card/account, so the email has to go
     // out before that call, not after.
     await notifyCancellation(begun, role);
-    return submitRefundToMercadoPago(begun);
+    // From here the cancellation is already committed (status flipped,
+    // both sides emailed) — a failed refund call must not come back as
+    // "No se pudo cancelar el trato", which contradicts the email they just
+    // got. Return the trato as `refund_pending` instead: the cancel screen
+    // shows "Procesando la devolución…" with its retry button, and that
+    // retry (`continueRefund`) does surface the error if it fails again.
+    try {
+      return await submitRefundToMercadoPago(begun);
+    } catch (error) {
+      console.error(`[cancel] refund for ${begun.code} failed after the cancellation was committed:`, error);
+      const latest = await getTratoByCode(begun.code);
+      return { outcome: "submitted", trato: latest ?? begun };
+    }
   }
 
   if (existing.status === "refund_pending") {
@@ -121,6 +133,15 @@ async function submitRefundToMercadoPago(trato: TratoRow): Promise<CancelResult>
   if (!trato.mercadopago_order_id) {
     // Shouldn't happen — funds_held is only reached once a Checkout API payment resolved.
     throw new Error("El trato no tiene un pago de Mercado Pago asociado para reembolsar.");
+  }
+
+  // Dev-only "Simular pago" (`forceMarkFundsHeld`) never created a real
+  // Mercado Pago order — there's nothing to refund there (the API would
+  // 404), so resolve straight to `refunded`.
+  if (trato.mercadopago_order_id.startsWith("dev_forced_")) {
+    const resolution = await resolvePaymentRefunded(trato.code);
+    if (resolution.outcome === "matched") await notifyRefundCompleted(resolution.trato);
+    return resolution.outcome === "not_found" ? { outcome: "not_found" } : { outcome: "submitted", trato: resolution.trato };
   }
 
   const order = await refundOrder(trato.mercadopago_order_id, trato.refund_idempotency_key);

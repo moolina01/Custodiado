@@ -19,6 +19,7 @@ import {
   type Trato,
 } from "./api";
 import { clearTratoCode, saveTratoCode } from "./persistence";
+import { isFlowEnded } from "./flow";
 import type { Role } from "./types";
 
 /**
@@ -41,8 +42,12 @@ export function useTrato(role: Role) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Once the flow has ended (see `isFlowEnded` in ./flow) the trato lives on
+  // in /panel, but `/flujo` shouldn't restore it anymore.
   useEffect(() => {
-    if (trato) saveTratoCode(role, trato.code);
+    if (!trato) return;
+    if (isFlowEnded(trato.status)) clearTratoCode(role);
+    else saveTratoCode(role, trato.code);
   }, [role, trato]);
 
   const create = useCallback(async (role: Role, item: string, amountClp: number) => {

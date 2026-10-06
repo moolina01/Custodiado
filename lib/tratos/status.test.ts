@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ALLOWED_FROM, categorizeForPanel, isTerminalStatus, panelLinksToDetailPage } from "./status";
+import { ALLOWED_FROM, PENDING_TRATO_TTL_MS, categorizeForPanel, isExpiredPending, isTerminalStatus, panelLinksToDetailPage } from "./status";
 import type { TratoStatus } from "./types";
 
 describe("categorizeForPanel", () => {
@@ -48,5 +48,28 @@ describe("panelLinksToDetailPage", () => {
 
   it("carves out release_pending — nothing left to do in the wizard, just wait or report a problem", () => {
     expect(panelLinksToDetailPage("release_pending")).toBe(true);
+  });
+});
+
+describe("isExpiredPending", () => {
+  const now = Date.parse("2026-10-10T12:00:00Z");
+  const ago = (ms: number) => new Date(now - ms).toISOString();
+
+  it("expires an unaccepted trato 72h after it was created", () => {
+    expect(isExpiredPending({ status: "awaiting_acceptance", created_at: ago(PENDING_TRATO_TTL_MS), accepted_at: null }, now)).toBe(true);
+    expect(isExpiredPending({ status: "awaiting_acceptance", created_at: ago(PENDING_TRATO_TTL_MS - 60_000), accepted_at: null }, now)).toBe(false);
+  });
+
+  it("counts an unpaid trato's 72h from its acceptance, not its creation", () => {
+    const old = ago(PENDING_TRATO_TTL_MS * 2);
+    expect(isExpiredPending({ status: "awaiting_payment", created_at: old, accepted_at: ago(60_000) }, now)).toBe(false);
+    expect(isExpiredPending({ status: "awaiting_payment", created_at: old, accepted_at: ago(PENDING_TRATO_TTL_MS) }, now)).toBe(true);
+  });
+
+  it("never expires a trato once money is involved", () => {
+    const old = ago(PENDING_TRATO_TTL_MS * 10);
+    for (const status of ["funds_held", "release_pending", "refund_pending", "released"] as const) {
+      expect(isExpiredPending({ status, created_at: old, accepted_at: old }, now)).toBe(false);
+    }
   });
 });
