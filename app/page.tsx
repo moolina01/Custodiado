@@ -17,11 +17,37 @@ import ClosingCta from "@/components/custodio/ClosingCta";
 import Footer from "@/components/custodio/Footer";
 import HelpWidget from "@/components/custodio/HelpWidget";
 import ScrollReveal from "@/components/custodio/ScrollReveal";
+import JsonLd from "@/components/custodio/JsonLd";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Custodiado.cl — Vende y compra sin miedo por Marketplace",
   description:
-    "Custodiamos tu dinero hasta que veas el producto, pago seguro entre particulares, procesado por Mercado Pago.",
+    "Custodiamos tu dinero hasta que veas el producto: pago seguro entre particulares en Chile para Marketplace, Yapo e Instagram, procesado por Mercado Pago.",
+  alternates: { canonical: "/" },
+};
+
+// Structured data so Google knows who's behind the site (brand name, logo,
+// knowledge panel) instead of guessing it from the page text.
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${SITE_URL}/#organization`,
+      name: SITE_NAME,
+      url: SITE_URL,
+      logo: `${SITE_URL}/icon.png`,
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}/#website`,
+      name: SITE_NAME,
+      url: SITE_URL,
+      inLanguage: "es-CL",
+      publisher: { "@id": `${SITE_URL}/#organization` },
+    },
+  ],
 };
 
 // This page is just composition: each section is its own small component
@@ -30,6 +56,7 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <div className="custodio-landing">
+      <JsonLd data={jsonLd} />
       <ScrollReveal />
       <AnnouncementBar />
       <Navbar />
