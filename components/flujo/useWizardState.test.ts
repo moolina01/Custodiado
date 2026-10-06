@@ -22,6 +22,7 @@ describe("useWizardState", () => {
       amount: "",
       deliveryMethod: "presencial",
       code: "",
+      bankRut: "",
       bankName: "",
       account: "",
       accountType: "",
@@ -179,7 +180,7 @@ describe("useWizardState", () => {
         mode: "crear",
         stepIndex: 3, // crear-codigo
         cancelStage: "none",
-        fields: { item: "Bicicleta", amount: "180.000", code: "", bankName: "", account: "", accountType: "" }, // no deliveryMethod
+        fields: { item: "Bicicleta", amount: "180.000", code: "", bankRut: "", bankName: "", account: "", accountType: "" }, // no deliveryMethod
       })
     );
 

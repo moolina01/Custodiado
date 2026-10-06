@@ -660,6 +660,47 @@ a.footer-icon-link:hover {
 .panel-btn-primary:hover {
   background: #0f1830 !important;
 }
+/* `.custodio-landing a` (0,1,1) outranks the plain band classes (0,1,0) —
+   it painted "Ingresar código" navy on the dark shader (nearly invisible)
+   and turned both labels blue on hover. Same pin-the-color trick as
+   `a.hero-cta-buyer:hover`. */
+.custodio-landing a.panel-band-primary,
+.custodio-landing a.panel-band-primary:hover {
+  color: #0b1220;
+}
+.custodio-landing a.panel-band-secondary,
+.custodio-landing a.panel-band-secondary:hover {
+  color: #ffffff;
+}
+/* Panel action cards / banners: layout and colors are inline (PanelView,
+   PanelBanners) — only hover/focus live here. */
+.panel-action,
+.panel-promo-cta {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.custodio-landing a.panel-action:hover,
+.custodio-landing a.panel-promo-cta:hover {
+  transform: translateY(-2px);
+}
+.custodio-landing a.panel-action:not(.panel-action-primary):hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.16) !important;
+}
+.custodio-landing a.panel-action-primary:hover,
+.custodio-landing a.panel-promo-cta:hover {
+  color: #0b1220;
+}
+.custodio-landing a.panel-action:focus-visible,
+.custodio-landing a.panel-promo-cta:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel-action,
+  .panel-promo-cta {
+    transition: none;
+  }
+}
 .panel-btn-secondary:hover {
   border-color: #16234a !important;
   color: #16234a !important;

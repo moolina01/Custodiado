@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { MAX_TRATO_AMOUNT, MIN_TRATO_AMOUNT } from "@/lib/pricing";
 import { isValidBankName } from "@/lib/mercadopago/banks";
+import { isValidRut } from "@/lib/rut";
 
 const roleSchema = z.enum(["comprador", "vendedor"]);
 const itemSchema = z.string().trim().min(1, "Falta el producto").max(200);
@@ -26,11 +27,11 @@ export const acceptTratoSchema = z.object({
 });
 export type AcceptTratoPayload = z.infer<typeof acceptTratoSchema>;
 
-// The seller's payout destination for the Mercado Pago Payouts release —
-// SPEC 04: ya no lleva `rut` — el RUT de identidad viene del perfil de la
-// cuenta logueada (mismo que ya quedó guardado en `seller_rut` al
-// crear/aceptar), así que no hace falta que el cliente lo reenvíe acá.
+// The seller's payout destination. `rut` es el del titular de la cuenta —
+// a quién se le transfiere (se guarda en `seller_rut`); la cuenta ya no
+// pide RUT al registrarse, así que este es el único lugar donde se pide.
 export const bankDetailsSchema = z.object({
+  rut: z.string().trim().refine(isValidRut, "RUT inválido"),
   bankName: z.string().refine(isValidBankName, "Banco no reconocido"),
   accountNumber: z
     .string()

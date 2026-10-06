@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { calculateFee } from "@/lib/pricing";
 import { generateTratoCode, normalizeTratoCode } from "@/lib/codes";
 import { getProfileByUserId } from "@/lib/profiles/repository";
+import { cleanRut } from "@/lib/rut";
 import type { BankDetailsPayload } from "./validation";
 import { EXPIRED_CANCEL_REASON, isExpiredPending } from "./status";
 import type { CreateTratoInput, CreatedByRole, TratoRow } from "./types";
@@ -226,6 +227,7 @@ export async function submitSellerBankDetails(rawCode: string, input: BankDetail
   const { data, error } = await db
     .from(TABLE)
     .update({
+      seller_rut: cleanRut(input.rut),
       seller_bank_name: input.bankName,
       seller_account_number: input.accountNumber,
       seller_account_type: input.accountType,

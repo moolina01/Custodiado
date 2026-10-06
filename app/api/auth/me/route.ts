@@ -20,7 +20,7 @@ export async function GET() {
     const profile = await getProfileByUserId(user.id);
     if (!profile) return jsonError(409, "Falta completar el perfil (nombre y RUT).");
 
-    return jsonOk({ id: user.id, email: user.email, name: profile.name, rut: profile.rut });
+    return jsonOk({ id: user.id, email: user.email, name: profile.name, rut: profile.rut ?? "" });
   } catch (error) {
     return jsonError(500, error instanceof Error ? error.message : "Error inesperado al leer la sesión.");
   }

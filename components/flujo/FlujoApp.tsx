@@ -12,6 +12,7 @@ import FlujoNavButtons from "./ui/FlujoNavButtons";
 import FlujoFooter from "./ui/FlujoFooter";
 import TratoStatusStepper from "./ui/TratoStatusStepper";
 import StepTransition from "./ui/StepTransition";
+import { isValidRut } from "@/lib/rut";
 import TransferIdentityModal from "./ui/TransferIdentityModal";
 import EliminarTratoModal from "./ui/EliminarTratoModal";
 import { devQrTokenRequest, devReleaseCodeRequest } from "./api";
@@ -555,15 +556,18 @@ export default function FlujoApp({ initialRole, initialMode, initialCode }: Fluj
 
   const handleBancoSubmit = () => {
     const missing: string[] = [];
+    if (!fields.bankRut.trim()) missing.push("el RUT del titular");
     if (!fields.bankName) missing.push("el banco");
     if (!fields.accountType) missing.push("el tipo de cuenta");
     if (!fields.account.trim()) missing.push("el número de cuenta");
     if (missing.length > 0) return setValidationError(missingFieldsMessage(missing, "guardar tus datos bancarios"));
+    if (!isValidRut(fields.bankRut)) return setValidationError("Revisa el RUT del titular, no parece válido.");
     setShowBankConfirm(true);
   };
 
   const handleBancoConfirm = async () => {
     const saved = await tratoState.saveBankDetails({
+      rut: fields.bankRut,
       bankName: fields.bankName,
       accountNumber: fields.account,
       accountType: fields.accountType,
@@ -814,6 +818,7 @@ export default function FlujoApp({ initialRole, initialMode, initialCode }: Fluj
 
       {showBankConfirm && screen === "banco" && (
         <ConfirmBankDetailsModal
+          bankRut={fields.bankRut}
           bankName={fields.bankName}
           accountType={fields.accountType}
           accountNumber={fields.account}

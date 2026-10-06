@@ -27,6 +27,7 @@ export class ApiError extends Error {
 }
 
 export type BankDetailsInput = {
+  rut: string;
   bankName: string;
   accountNumber: string;
   accountType: string;

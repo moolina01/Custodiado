@@ -8,7 +8,7 @@
 export interface ProfileRow {
   id: string; // = auth.users.id
   name: string;
-  rut: string; // normalized, no dots/dashes — see cleanRut in lib/rut.ts
+  rut: string | null; // null si se registró sin RUT; normalized, no dots/dashes — see cleanRut in lib/rut.ts
   created_at: string;
   updated_at: string;
 }

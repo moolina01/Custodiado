@@ -62,10 +62,9 @@ export function acceptTratoRequest(code: string, role: Role): Promise<TratoWithS
   });
 }
 
-// SPEC 04: no lleva `rut` — el RUT de identidad ya quedó guardado desde el
-// perfil al crear/aceptar; el servidor lo usa directo, no hace falta
-// reenviarlo acá.
+// `rut` es el del titular de la cuenta de destino — a quién se le transfiere.
 export type BankDetailsInput = {
+  rut: string;
   bankName: string;
   accountNumber: string;
   accountType: string;

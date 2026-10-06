@@ -3,10 +3,11 @@
 import Logo from "./Logo";
 import { TextHoverEffect } from "@/components/ui/text-hover-effect";
 import { MeshBackground } from "@/components/ui/mesh-background";
+import { WHATSAPP_SUPPORT_URL } from "@/components/flujo/data";
 
 // Same placeholder support number `HelpWidget`/`HelpChat` already link to —
 // swap all three together once a real support line replaces it.
-const WHATSAPP_URL = "https://wa.me/56900000000";
+const WHATSAPP_URL = WHATSAPP_SUPPORT_URL;
 
 const MailGlyph = () => (
   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">

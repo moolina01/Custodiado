@@ -53,12 +53,8 @@ describe("resetPasswordConfirmSchema", () => {
 });
 
 describe("completeProfileSchema", () => {
-  it("accepts a valid name + RUT, without email/password", () => {
-    expect(completeProfileSchema.safeParse({ name: "María Pérez", rut: "12.345.678-5" }).success).toBe(true);
-  });
-
-  it("rejects an invalid RUT", () => {
-    expect(completeProfileSchema.safeParse({ name: "María Pérez", rut: "12.345.678-9" }).success).toBe(false);
+  it("accepts a valid name, without email/password/RUT", () => {
+    expect(completeProfileSchema.safeParse({ name: "María Pérez" }).success).toBe(true);
   });
 
   it("rejects an empty name", () => {

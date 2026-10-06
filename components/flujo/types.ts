@@ -37,6 +37,7 @@ export type WizardFields = {
   amount: string; // thousands-formatted as the user types it, e.g. "180.000"
   deliveryMethod: string; // "presencial" | "envio" (envío is preview-only, disabled — see ModalidadStep)
   code: string;
+  bankRut: string; // RUT del titular de la cuenta de destino — a quién se le transfiere
   bankName: string; // e.g. "Banco Estado" — see lib/mercadopago/banks.ts
   account: string;
   accountType: string; // a BankAccountType (lib/tratos/types.ts), or "" (not chosen yet)

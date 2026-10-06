@@ -79,6 +79,7 @@ function fillBankFields(bankName: string, accountType: string, accountNumber: st
   fireEvent.change(bankSelect, { target: { value: bankName } });
   fireEvent.change(accountTypeSelect, { target: { value: accountType } });
   fireEvent.change(screen.getByPlaceholderText("000123456789"), { target: { value: accountNumber } });
+  fireEvent.change(screen.getByPlaceholderText("12.345.678-9"), { target: { value: "12.345.678-5" } });
 }
 
 beforeEach(() => {
@@ -296,7 +297,7 @@ describe("FlujoApp", () => {
       mode: "crear",
       stepIndex: 1, // "crear-datos" — long stale; the real trato below is already funds_held
       cancelStage: "none",
-      fields: { item: "", amount: "", deliveryMethod: "presencial", code: "", bankName: "", account: "", accountType: "" },
+      fields: { item: "", amount: "", deliveryMethod: "presencial", code: "", bankRut: "", bankName: "", account: "", accountType: "" },
     });
     seedTrato({ code: "ABC123", status: "funds_held", createdByRole: "comprador" });
 

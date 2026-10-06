@@ -56,14 +56,14 @@ function remove(key: string) {
 
 const CANCEL_STAGES: CancelStage[] = ["none", "form", "done"];
 const MODES: Mode[] = ["crear", "codigo", null];
-const FIELD_NAMES: (keyof WizardFields)[] = ["item", "amount", "deliveryMethod", "code", "bankName", "account", "accountType"];
+const FIELD_NAMES: (keyof WizardFields)[] = ["item", "amount", "deliveryMethod", "code", "bankRut", "bankName", "account", "accountType"];
 
 // Kept in sync with `useWizardState`'s own `initialState.fields` — used to
 // backfill a field added *after* some entries were already saved (see
 // `isValidPersistedWizard` below), so a trato someone's mid-flow on when a
 // new field ships doesn't get thrown away wholesale just because that one
 // key hasn't been typed into yet.
-const DEFAULT_FIELDS: WizardFields = { item: "", amount: "", deliveryMethod: "presencial", code: "", bankName: "", account: "", accountType: "" };
+const DEFAULT_FIELDS: WizardFields = { item: "", amount: "", deliveryMethod: "presencial", code: "", bankRut: "", bankName: "", account: "", accountType: "" };
 
 /**
  * Defensive against a shape from an older deploy — a malformed entry is

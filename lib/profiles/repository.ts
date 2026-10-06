@@ -19,11 +19,11 @@ export type CreateProfileResult = { outcome: "created"; profile: ProfileRow } | 
  * auth user it just created rather than leave a session with no profile
  * behind it — see the signup route for that cleanup.
  */
-export async function createProfile(userId: string, name: string, rut: string): Promise<CreateProfileResult> {
+export async function createProfile(userId: string, name: string, rut: string | null): Promise<CreateProfileResult> {
   const db = getSupabaseAdmin();
   const { data, error } = await db
     .from(TABLE)
-    .insert({ id: userId, name, rut: cleanRut(rut) })
+    .insert({ id: userId, name, rut: rut ? cleanRut(rut) : null })
     .select()
     .single();
 

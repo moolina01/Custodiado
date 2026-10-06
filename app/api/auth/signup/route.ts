@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     if (error) return jsonError(400, error.message);
     if (!data.user) return jsonError(500, "No se pudo crear la cuenta.");
 
-    const profileResult = await createProfile(data.user.id, name, rut);
+    const profileResult = await createProfile(data.user.id, name, rut ?? null);
 
     if (profileResult.outcome === "rut_taken") {
       // No dejar una cuenta huérfana sin perfil detrás — se registró el

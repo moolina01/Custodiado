@@ -67,4 +67,4 @@ export const QA_BY_ROLE: Record<Role, [string, string][]> = {
   vendedor: QA_SELLER,
 };
 
-export const WHATSAPP_SUPPORT_URL = "https://wa.me/56900000000";
+export const WHATSAPP_SUPPORT_URL = "https://wa.me/56949378795";

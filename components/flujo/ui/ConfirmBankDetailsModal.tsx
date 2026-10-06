@@ -4,8 +4,10 @@ import { useEffect } from "react";
 import ButtonSpinner from "./ButtonSpinner";
 import { colors } from "../theme";
 import { accountTypeLabel, groupAccountNumber } from "@/lib/tratos/accountType";
+import { formatRut } from "@/lib/rut";
 
 type ConfirmBankDetailsModalProps = {
+  bankRut: string;
   bankName: string;
   accountType: string;
   accountNumber: string;
@@ -25,6 +27,7 @@ type ConfirmBankDetailsModalProps = {
  * FlujoApp's top level for the same stacking reason.
  */
 export default function ConfirmBankDetailsModal({
+  bankRut,
   bankName,
   accountType,
   accountNumber,
@@ -42,6 +45,7 @@ export default function ConfirmBankDetailsModal({
   }, [onClose, isSubmitting]);
 
   const rows: [string, string][] = [
+    ["RUT del titular", formatRut(bankRut)],
     ["Banco", bankName],
     ["Tipo de cuenta", accountTypeLabel(accountType)],
   ];

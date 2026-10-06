@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const user = await requireSessionUser();
-    const result = await createProfile(user.id, parsed.data.name, parsed.data.rut);
+    const result = await createProfile(user.id, parsed.data.name, null);
 
     if (result.outcome === "rut_taken") {
       return jsonError(400, "Ese RUT ya está asociado a otra cuenta.");
