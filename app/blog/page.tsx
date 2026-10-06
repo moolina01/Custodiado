@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   title: "Blog — Custodiado.cl",
   description:
     "Guías para comprar y vender seguro por Marketplace, Yapo y otros sitios entre particulares.",
+  alternates: { canonical: "/blog" },
 };
 
 function BlogCard({ post, delay }: { post: BlogPost; delay: number }) {

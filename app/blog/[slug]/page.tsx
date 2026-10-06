@@ -7,7 +7,9 @@ import Footer from "@/components/custodio/Footer";
 import ScrollReveal from "@/components/custodio/ScrollReveal";
 import Reveal from "@/components/custodio/Reveal";
 import { colors } from "@/components/custodio/theme";
+import JsonLd from "@/components/custodio/JsonLd";
 import { BLOG_POSTS, type BlogPostBlock } from "@/components/custodio/data";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 function findPost(slug: string) {
   return BLOG_POSTS.find((post) => post.slug === slug && post.content);
@@ -21,7 +23,22 @@ export async function generateMetadata({ params }: PageProps<"/blog/[slug]">): P
   const { slug } = await params;
   const post = findPost(slug);
   if (!post) return {};
-  return { title: `${post.title} — Custodiado.cl`, description: post.excerpt };
+  return {
+    title: `${post.title} — Custodiado.cl`,
+    description: post.excerpt,
+    alternates: { canonical: post.href },
+    // A page-level `openGraph` replaces the root one wholesale, so the
+    // shared fields (and the root `opengraph-image`) are repeated here.
+    openGraph: {
+      type: "article",
+      title: post.title,
+      description: post.excerpt,
+      url: post.href,
+      siteName: SITE_NAME,
+      locale: "es_CL",
+      images: "/opengraph-image",
+    },
+  };
 }
 
 function Block({ block }: { block: BlogPostBlock }) {
@@ -82,8 +99,20 @@ export default async function BlogPostPage({ params }: PageProps<"/blog/[slug]">
   const post = findPost(slug);
   if (!post) notFound();
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.title,
+    description: post.excerpt,
+    url: `${SITE_URL}${post.href}`,
+    inLanguage: "es-CL",
+    ...(post.author && { author: { "@type": "Person", name: post.author.name } }),
+    publisher: { "@type": "Organization", name: SITE_NAME, url: SITE_URL, logo: `${SITE_URL}/icon.png` },
+  };
+
   return (
     <div className="custodio-landing">
+      <JsonLd data={jsonLd} />
       <ScrollReveal />
       <Navbar />
 

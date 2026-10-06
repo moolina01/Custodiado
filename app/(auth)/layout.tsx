@@ -1,6 +1,10 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Logo from "@/components/custodio/Logo";
 import { colors } from "@/components/flujo/theme";
+
+// Login/registro/reset: nothing worth showing in search results.
+export const metadata: Metadata = { robots: { index: false, follow: true } };
 
 /**
  * SPEC 04: shared chrome for `/login`, `/signup`, `/reset-password` and
